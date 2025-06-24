@@ -1,0 +1,118 @@
+{
+  "project_info": {
+    "project_number": "1094004848939",
+    "project_id": "uexplustourismapp",
+    "storage_bucket": "uexplustourismapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094004848939:android:1d54f357a9ebcff2af6d6e",
+        "android_client_info": {
+          "package_name": "com.example.tourism_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCR6eR9hilQmzDSas_KxxU2uVbE5EmS80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rashmika.tourismApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094004848939:android:bc6aab66bdeb498faf6d6e",
+        "android_client_info": {
+          "package_name": "com.example.tourism_app_new"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCR6eR9hilQmzDSas_KxxU2uVbE5EmS80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rashmika.tourismApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1094004848939:android:c09ccc1856cdd3c8af6d6e",
+        "android_client_info": {
+          "package_name": "com.example.tourism_host"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCR6eR9hilQmzDSas_KxxU2uVbE5EmS80"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.rashmika.tourismApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
