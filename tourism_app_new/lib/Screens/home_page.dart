@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
 import 'package:tourism_app_new/Screens/Auth/login.dart';
+import 'package:tourism_app_new/Screens/google_map.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 
@@ -94,6 +95,15 @@ class _HomePageState extends State<HomePage> {
                   );
                 },
                 child: const Text("Search Properties by City"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => GoogleMapScreen()),
+                  );
+                },
+                child: const Text("google map"),
               ),
             ],
           ),
