@@ -3,6 +3,7 @@ import 'package:tourism_app_new/core/services/api_service.dart';
 import 'package:tourism_app_new/models/property_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:tourism_app_new/widgets/property_card.dart'; // Import PropertyCard
 
 class PropertyListPage extends StatefulWidget {
   final String city;
@@ -48,21 +49,16 @@ class _PropertyListPageState extends State<PropertyListPage> {
 
   Future<List<Property>> fetchFilteredPropertiesByCity(String city) async {
     try {
-      // Optional normalization
       final normalizedCity = city.trim().toLowerCase().replaceAll(
         RegExp(r'\s+'),
         ' ',
       );
-
-      // Call the API
       final allProperties = await ApiService.filterProperties({}, city: city);
 
-      // Debug print
       for (var p in allProperties) {
         print("🔍 Property: ${p.propertyName} | City: ${p.address.city}");
       }
 
-      // Smart filtering (contains & case-insensitive)
       return allProperties
           .where((p) => (p.address.city).toLowerCase().contains(normalizedCity))
           .toList();
@@ -87,6 +83,8 @@ class _PropertyListPageState extends State<PropertyListPage> {
           }
 
           final properties = snapshot.data!;
+          print("🧱 UI Rendering ${properties.length} property cards");
+
           if (properties.isEmpty) {
             return const Center(child: Text('No properties found'));
           }
@@ -95,23 +93,7 @@ class _PropertyListPageState extends State<PropertyListPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // List of Properties
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: properties.length,
-                  itemBuilder: (context, index) {
-                    final property = properties[index];
-                    return ListTile(
-                      title: Text(property.propertyName),
-                      subtitle: Text('ID: ${property.id}'),
-                      leading: const Icon(Icons.home),
-                    );
-                  },
-                ),
-                const SizedBox(height: 10),
-
-                // Google Map
+                // 🗺️ Google Map
                 if (_targetLocation != null)
                   SizedBox(
                     height: 300,
@@ -140,6 +122,17 @@ class _PropertyListPageState extends State<PropertyListPage> {
                       child: CircularProgressIndicator(),
                     ),
                   ),
+                // 🔽 Property Cards
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: properties.length,
+                  itemBuilder: (context, index) {
+                    final property = properties[index];
+                    return PropertyCard(property: property);
+                  },
+                ),
+                const SizedBox(height: 10),
               ],
             ),
           );

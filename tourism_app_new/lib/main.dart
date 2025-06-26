@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:tourism_app_new/Screens/Auth/login.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
+import 'package:tourism_app_new/Screens/home_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
       ),
-      home: RegistrationScreen(),
+      home: HomePage(),
     );
   }
 }

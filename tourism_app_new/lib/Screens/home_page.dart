@@ -5,6 +5,10 @@ import 'package:tourism_app_new/Screens/Auth/login.dart';
 import 'package:tourism_app_new/Screens/google_map.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
+import 'package:tourism_app_new/widgets/bottom_navbar.dart';
+
+// Import your custom navigation bar
+// import 'path_to_your_animated_bottom_nav_bar.dart'; // Add this import
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -15,6 +19,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   User? _user;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -24,7 +29,6 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadTokenAndUser() async {
     final user = FirebaseAuth.instance.currentUser;
-
     setState(() {
       _user = user;
     });
@@ -41,11 +45,58 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _onNavBarTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  Widget _buildUserInfo() {
     final displayName =
         _user?.email ??
         (_user?.isAnonymous ?? false ? "Anonymous User" : "Unknown");
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '✅ Login Successful!',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 12),
+            Text('👤 User: $displayName'),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () async {
+                final token = await SharedPreferecesUtil.getToken();
+                print(token);
+                showDialog(
+                  context: context,
+                  builder:
+                      (_) => AlertDialog(
+                        title: const Text('Saved Token'),
+                        content: SelectableText(token ?? 'No token found'),
+                      ),
+                );
+              },
+              child: const Text("Test Get Firebase Token"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Define the 3 pages you want to show for each tab:
+    final pages = <Widget>[
+      _buildUserInfo(),
+      const SearchPage(),
+      GoogleMapScreen(),
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -58,57 +109,25 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '✅ Login Successful!',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 12),
-              Text('👤 User: $displayName'),
-              const SizedBox(height: 12),
-              ElevatedButton(
-                onPressed: () async {
-                  final token = await SharedPreferecesUtil.getToken();
-                  print(token);
-                  showDialog(
-                    context: context,
-                    builder:
-                        (_) => AlertDialog(
-                          title: const Text('Saved Token'),
-                          content: SelectableText(token ?? 'No token found'),
-                        ),
-                  );
-                },
-                child: const Text("Test Get Firebase Token"),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SearchPage()),
-                  );
-                },
-                child: const Text("Search Properties by City"),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => GoogleMapScreen()),
-                  );
-                },
-                child: const Text("google map"),
-              ),
-            ],
-          ),
-        ),
+      body: pages[_selectedIndex],
+      // Replace the default BottomNavigationBar with your custom one
+      bottomNavigationBar: AnimatedBottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavBarTapped,
       ),
+
+      // OLD CODE - Remove this:
+      // bottomNavigationBar: BottomNavigationBar(
+      //   currentIndex: _selectedIndex,
+      //   onTap: _onNavBarTapped,
+      //   selectedItemColor: Colors.blue,
+      //   unselectedItemColor: Colors.grey,
+      //   items: const [
+      //     BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+      //     BottomNavigationBarItem(icon: Icon(Icons.map), label: 'Map'),
+      //   ],
+      // ),
     );
   }
 }
