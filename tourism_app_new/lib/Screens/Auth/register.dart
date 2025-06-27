@@ -4,6 +4,7 @@ import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
 import 'package:tourism_app_new/Screens/Auth/login.dart';
 import 'package:tourism_app_new/Screens/home_page.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:tourism_app_new/constants/buttons.dart';
 
 class RegistrationScreen extends StatefulWidget {
   @override
@@ -283,28 +284,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   const SizedBox(height: 20),
 
                   // Create Account button
-                  SizedBox(
-                    width: double.infinity,
+                  CommonButton(
+                    label: 'Create my Account',
+                    onPressed: _register,
+                    isLoading: _isRegistering,
                     height: 50,
-                    child: ElevatedButton(
-                      onPressed: _isRegistering ? null : _register,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      child:
-                          _isRegistering
-                              ? CircularProgressIndicator(color: Colors.white)
-                              : const Text(
-                                'Create my Account',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.white,
-                                ),
-                              ),
-                    ),
+                    fontSize: 16,
                   ),
 
                   const SizedBox(height: 16),

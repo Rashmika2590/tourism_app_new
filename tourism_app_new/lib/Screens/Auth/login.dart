@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
+import 'package:tourism_app_new/Screens/Auth/forgot_password.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
 import 'package:tourism_app_new/Screens/home_page.dart';
+import 'package:tourism_app_new/constants/buttons.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -151,7 +153,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
                                   onPressed: () {
-                                    // TODO: Forgot password logic
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => const ForgotPasswordPage(),
+                                      ),
+                                    );
                                   },
                                   child: Text(
                                     'Forgot your password?',
@@ -162,30 +170,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-                              SizedBox(
-                                width: double.infinity,
+                              CommonButton(
+                                label: 'Login',
+                                onPressed: _login,
+                                isLoading: _isLoading,
                                 height: screenHeight * 0.065,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading ? null : _login,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.orange,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                  ),
-                                  child:
-                                      _isLoading
-                                          ? CircularProgressIndicator(
-                                            color: Colors.white,
-                                          )
-                                          : Text(
-                                            'Login',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: screenHeight * 0.02,
-                                            ),
-                                          ),
-                                ),
+                                fontSize: screenHeight * 0.02,
                               ),
                               SizedBox(height: screenHeight * 0.02),
                               Row(

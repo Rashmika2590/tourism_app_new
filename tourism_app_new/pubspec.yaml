@@ -39,6 +39,7 @@ dependencies:
   google_fonts : ^4.0.4
   google_maps_flutter: ^2.9.0
   geocoding: ^3.0.0
+  go_router: ^14.0.1
 
 dev_dependencies:
   flutter_test:
@@ -67,6 +68,7 @@ flutter:
     - assets/images/background_leaf.jpg
     - assets/images/google_icon.png
     - assets/images/signup_background.png
+    - assets/images/forgot_password.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
