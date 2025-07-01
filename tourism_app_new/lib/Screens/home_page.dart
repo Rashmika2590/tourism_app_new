@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
-import 'package:tourism_app_new/Screens/Auth/login.dart';
 import 'package:tourism_app_new/Screens/google_map.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
+import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/bottom_navbar.dart';
 
 // Import your custom navigation bar
@@ -37,11 +37,18 @@ class _HomePageState extends State<HomePage> {
   Future<void> _logout() async {
     await AuthService().signOut();
     if (mounted) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => LoginScreen()),
-        (route) => false,
-      );
+      Navigator.pushNamed(context, AppRoutes.login);
+
+      /*************  ✨ Windsurf Command ⭐  *************/
+      /// Updates the selected index for the navigation bar and refreshes
+      /// the UI to display the corresponding page.
+      ///
+      /// This method is called when a user taps on a navigation item in
+      /// the bottom navigation bar.
+      ///
+      /// [index] is the zero-based index of the navigation item that was tapped.
+
+      /*******  8182ce6f-8df2-49c5-bfc3-5f33104adad5  *******/
     }
   }
 

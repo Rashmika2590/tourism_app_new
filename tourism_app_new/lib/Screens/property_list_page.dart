@@ -17,7 +17,6 @@ class PropertyListPage extends StatefulWidget {
 class _PropertyListPageState extends State<PropertyListPage> {
   late Future<List<Property>> _filteredProperties;
   LatLng? _targetLocation;
-  late GoogleMapController _mapController;
 
   @override
   void initState() {
@@ -43,9 +42,7 @@ class _PropertyListPageState extends State<PropertyListPage> {
     }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
-  }
+  void _onMapCreated(GoogleMapController controller) {}
 
   Future<List<Property>> fetchFilteredPropertiesByCity(String city) async {
     try {

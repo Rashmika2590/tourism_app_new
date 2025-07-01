@@ -1,10 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
-import 'package:tourism_app_new/Screens/Auth/login.dart';
-import 'package:tourism_app_new/Screens/home_page.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:tourism_app_new/constants/buttons.dart';
+import 'package:tourism_app_new/routs.dart';
+import 'package:tourism_app_new/widgets/auth_backround.dart';
 
 class RegistrationScreen extends StatefulWidget {
   @override
@@ -61,10 +61,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isRegistering = false);
 
       if (user != null) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => HomePage()),
-        );
+        Navigator.pushNamed(context, AppRoutes.home);
       } else {
         ScaffoldMessenger.of(
           context,
@@ -81,250 +78,241 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
     return Scaffold(
       resizeToAvoidBottomInset: false,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/images/signup_background.png', fit: BoxFit.cover),
-          Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SizedBox(height: screenHeight * 0.08),
-                  Text(
-                    "Create Account",
-                    style: TextStyle(
-                      fontSize: screenHeight * 0.035,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+      body: AnimatedBackground(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: screenHeight * 0.08),
+                Text(
+                  "Create Account",
+                  style: TextStyle(
+                    fontSize: screenHeight * 0.035,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  Text(
-                    "Just a few steps and you're good",
-                    style: TextStyle(
-                      fontSize: screenWidth * 0.04,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
+                ),
+                Text(
+                  "Just a few steps and you're good",
+                  style: TextStyle(
+                    fontSize: screenWidth * 0.04,
+                    color: Colors.white.withOpacity(0.9),
                   ),
-                  SizedBox(height: screenHeight * 0.03),
+                ),
+                SizedBox(height: screenHeight * 0.03),
 
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              CircleAvatar(
-                                backgroundColor: Colors.white,
-                                radius: 30,
-                                child: Icon(Icons.person_outline, size: 36),
-                              ),
-                              const SizedBox(height: 20),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(20),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.7),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.white,
+                              radius: 30,
+                              child: Icon(Icons.person_outline, size: 36),
+                            ),
+                            const SizedBox(height: 20),
 
-                              _buildLabeledField(
-                                label: 'Full Name',
-                                hint: 'Enter your full name',
-                                child: TextFormField(
-                                  controller: _fullNameController,
-                                  decoration: _fieldDecoration(
-                                    'Enter your full name',
-                                  ),
-                                  validator:
-                                      (value) =>
-                                          value == null || value.isEmpty
-                                              ? 'Enter your name'
-                                              : null,
+                            _buildLabeledField(
+                              label: 'Full Name',
+                              hint: 'Enter your full name',
+                              child: TextFormField(
+                                controller: _fullNameController,
+                                decoration: _fieldDecoration(
+                                  'Enter your full name',
                                 ),
+                                validator:
+                                    (value) =>
+                                        value == null || value.isEmpty
+                                            ? 'Enter your name'
+                                            : null,
                               ),
-                              const SizedBox(height: 12),
+                            ),
+                            const SizedBox(height: 12),
 
-                              _buildLabeledField(
-                                label: 'Email Address',
-                                hint: 'Enter your email',
-                                child: TextFormField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  decoration: _fieldDecoration(
-                                    'Enter your email',
-                                  ),
-                                  validator: _validateEmail,
+                            _buildLabeledField(
+                              label: 'Email Address',
+                              hint: 'Enter your email',
+                              child: TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                decoration: _fieldDecoration(
+                                  'Enter your email',
                                 ),
+                                validator: _validateEmail,
                               ),
+                            ),
 
-                              const SizedBox(height: 12),
+                            const SizedBox(height: 12),
 
-                              _buildLabeledField(
-                                label: 'Phone Number',
-                                hint: 'Enter your phone number',
-                                child: IntlPhoneField(
-                                  decoration: _fieldDecoration(
-                                    'Enter your phone number',
-                                  ),
-                                  initialCountryCode: 'LK',
-                                  onChanged:
-                                      (phone) =>
-                                          _phoneNumber.value =
-                                              phone.completeNumber,
+                            _buildLabeledField(
+                              label: 'Phone Number',
+                              hint: 'Enter your phone number',
+                              child: IntlPhoneField(
+                                decoration: _fieldDecoration(
+                                  'Enter your phone number',
                                 ),
+                                initialCountryCode: 'LK',
+                                onChanged:
+                                    (phone) =>
+                                        _phoneNumber.value =
+                                            phone.completeNumber,
                               ),
-                              _buildLabeledField(
-                                label: 'Password',
-                                hint: 'Enter your password',
-                                child: TextFormField(
-                                  controller: _passwordController,
-                                  obscureText: _obscurePassword,
-                                  decoration: _fieldDecoration(
-                                    'Enter your password',
-                                  ).copyWith(
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                      ),
-                                      onPressed:
-                                          () => setState(
-                                            () =>
-                                                _obscurePassword =
-                                                    !_obscurePassword,
-                                          ),
+                            ),
+                            _buildLabeledField(
+                              label: 'Password',
+                              hint: 'Enter your password',
+                              child: TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                decoration: _fieldDecoration(
+                                  'Enter your password',
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
                                     ),
-                                  ),
-                                  validator: _validatePassword,
-                                ),
-                              ),
-
-                              const SizedBox(height: 12),
-
-                              _buildLabeledField(
-                                label: 'Confirm Password',
-                                hint: 'Re-enter your password',
-                                child: TextFormField(
-                                  controller: _confirmPasswordController,
-                                  obscureText: _obscureConfirmPassword,
-                                  decoration: _fieldDecoration(
-                                    'Re-enter your password',
-                                  ).copyWith(
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscureConfirmPassword
-                                            ? Icons.visibility
-                                            : Icons.visibility_off,
-                                      ),
-                                      onPressed:
-                                          () => setState(
-                                            () =>
-                                                _obscureConfirmPassword =
-                                                    !_obscureConfirmPassword,
-                                          ),
-                                    ),
-                                  ),
-                                  validator: _validateConfirmPassword,
-                                ),
-                              ),
-
-                              const SizedBox(height: 20),
-
-                              Row(
-                                children: [
-                                  Checkbox(
-                                    value: _agreeToTerms,
-                                    activeColor: Colors.orange,
-                                    onChanged:
-                                        (value) => setState(
-                                          () => _agreeToTerms = value ?? false,
+                                    onPressed:
+                                        () => setState(
+                                          () =>
+                                              _obscurePassword =
+                                                  !_obscurePassword,
                                         ),
                                   ),
-                                  Expanded(
-                                    child: RichText(
-                                      text: TextSpan(
-                                        text: 'I agree to the ',
-                                        style: TextStyle(color: Colors.black),
-                                        children: [
-                                          TextSpan(
-                                            text: 'Terms',
-                                            style: TextStyle(
-                                              color: Colors.deepOrange,
-                                            ),
-                                          ),
-                                          TextSpan(
-                                            text: ' & ',
-                                            style: TextStyle(
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          TextSpan(
-                                            text: 'Privacy Policy',
-                                            style: TextStyle(
-                                              color: Colors.deepOrange,
-                                            ),
-                                          ),
-                                        ],
+                                ),
+                                validator: _validatePassword,
+                              ),
+                            ),
+
+                            const SizedBox(height: 12),
+
+                            _buildLabeledField(
+                              label: 'Confirm Password',
+                              hint: 'Re-enter your password',
+                              child: TextFormField(
+                                controller: _confirmPasswordController,
+                                obscureText: _obscureConfirmPassword,
+                                decoration: _fieldDecoration(
+                                  'Re-enter your password',
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                    ),
+                                    onPressed:
+                                        () => setState(
+                                          () =>
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword,
+                                        ),
+                                  ),
+                                ),
+                                validator: _validateConfirmPassword,
+                              ),
+                            ),
+
+                            const SizedBox(height: 20),
+
+                            Row(
+                              children: [
+                                Checkbox(
+                                  value: _agreeToTerms,
+                                  activeColor: Colors.orange,
+                                  onChanged:
+                                      (value) => setState(
+                                        () => _agreeToTerms = value ?? false,
                                       ),
+                                ),
+                                Expanded(
+                                  child: RichText(
+                                    text: TextSpan(
+                                      text: 'I agree to the ',
+                                      style: TextStyle(color: Colors.black),
+                                      children: [
+                                        TextSpan(
+                                          text: 'Terms',
+                                          style: TextStyle(
+                                            color: Colors.deepOrange,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: ' & ',
+                                          style: TextStyle(color: Colors.black),
+                                        ),
+                                        TextSpan(
+                                          text: 'Privacy Policy',
+                                          style: TextStyle(
+                                            color: Colors.deepOrange,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-                  // Create Account button
-                  CommonButton(
-                    label: 'Create my Account',
-                    onPressed: _register,
-                    isLoading: _isRegistering,
-                    height: 50,
-                    fontSize: 16,
-                  ),
+                // Create Account button
+                CommonButton(
+                  label: 'Create my Account',
+                  onPressed: _register,
+                  isLoading: _isRegistering,
+                  height: 50,
+                  fontSize: 16,
+                ),
 
-                  const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-                  // Already have an account? Sign in
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Already have an account? ",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => LoginScreen()),
-                          );
-                        },
-                        child: const Text(
-                          'Sign in',
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+                // Already have an account? Sign in
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Already have an account? ",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushNamed(context, AppRoutes.login);
+                      },
+                      child: const Text(
+                        'Sign in',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    ],
-                  ),
-                  SizedBox(height: screenHeight * 0.05),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: screenHeight * 0.05),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
