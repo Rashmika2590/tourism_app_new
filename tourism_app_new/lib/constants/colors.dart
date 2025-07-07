@@ -7,6 +7,7 @@ class AppColors {
   static const Color textPrimary = Color(0xFF333333);
   static const Color buttonColor = Colors.orange;
   static const Color buttonText = Colors.white;
+  static const Color mainGreen = Color(0xFF00C2AE);
 }
 
 class AppGradients {
@@ -19,6 +20,10 @@ class AppGradients {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     stops: [0.0, 1.0, 1.0],
+  );
+
+  static const LinearGradient buttonGradient = LinearGradient(
+    colors: [Color(0xFF3DDAD7), Color(0xFF00B3A6)],
   );
 
   // Add more gradients as needed

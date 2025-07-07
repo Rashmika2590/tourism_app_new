@@ -24,18 +24,11 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
 
   static const double navBarHeight = 70;
   static const double bubbleSize = 60;
-
   static const double cutoutRadius = bubbleSize / 2 + 15;
-
-  static const double iconSize = 28;
-  static const double iconSizeUnselected = 26;
-
-  // Reduced gap for shallower cutout and less padding
+  static const double iconSize = 37;
+  static const double iconSizeUnselected = 35;
   static const double gapBetweenBubbleAndBar = 15;
-
   static const double horizontalPadding = 10;
-
-  // Reduced vertical offset to bring bubble closer to bar
   static const double bubbleVerticalOffset = 5;
 
   @override
@@ -43,12 +36,17 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
     final width = MediaQuery.of(context).size.width - (horizontalPadding * 2);
     final itemWidth = width / icons.length;
 
+    final bubbleCenterX =
+        horizontalPadding +
+        itemWidth * widget.currentIndex +
+        (itemWidth - bubbleSize) / 2;
+
     return SizedBox(
       height: navBarHeight + bubbleSize + bubbleVerticalOffset,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // Nav bar with cutout and shadow
+          // Nav bar with cutout
           Positioned(
             bottom: bubbleVerticalOffset + 15,
             left: horizontalPadding,
@@ -63,10 +61,9 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
                       0,
                       52,
                       45,
-                    ).withOpacity(0.2), // black shadow with 50% opacity
-                    spreadRadius: 0, // how much shadow spreads
-                    blurRadius: 10, // softness of shadow
-                    offset: Offset(5, 10), // vertical offset
+                    ).withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: Offset(5, 10),
                   ),
                 ],
               ),
@@ -117,33 +114,44 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
             ),
           ),
 
-          // Floating bubble positioned closer to the bar
-          Positioned(
-            bottom: bubbleVerticalOffset + 35,
-            left:
-                horizontalPadding +
-                itemWidth * widget.currentIndex +
-                (itemWidth - bubbleSize) / 2,
-            child: Container(
-              height: bubbleSize,
-              width: bubbleSize,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                shape: BoxShape.circle,
-                border: Border.all(color: Colors.black, width: 1.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color.fromARGB(255, 0, 0, 0).withOpacity(0.5),
-                    blurRadius: 7,
-                    offset: Offset(3, 5),
+          // Floating bubble inside cutout — perfectly aligned
+          AnimatedPositioned(
+            duration: Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+            left: bubbleCenterX,
+            bottom: navBarHeight - cutoutRadius + bubbleVerticalOffset + 15,
+            child: AnimatedSwitcher(
+              duration: Duration(milliseconds: 500),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(scale: animation, child: child);
+              },
+              child: Container(
+                key: ValueKey<int>(widget.currentIndex),
+                height: bubbleSize,
+                width: bubbleSize,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black, width: 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(
+                        255,
+                        0,
+                        0,
+                        0,
+                      ).withOpacity(0.5),
+                      blurRadius: 7,
+                      offset: Offset(3, 5),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Icon(
+                    icons[widget.currentIndex],
+                    size: iconSize,
+                    color: Colors.black,
                   ),
-                ],
-              ),
-              child: Center(
-                child: Icon(
-                  icons[widget.currentIndex],
-                  size: iconSize,
-                  color: Colors.black,
                 ),
               ),
             ),
