@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tourism_app_new/Screens/profile_page.dart';
+import 'package:tourism_app_new/Screens/profile/profile_page.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 import 'package:tourism_app_new/widgets/bottom_navbar.dart';
