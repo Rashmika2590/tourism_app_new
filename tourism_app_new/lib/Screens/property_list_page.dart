@@ -120,14 +120,17 @@ class _PropertyListPageState extends State<PropertyListPage> {
                     ),
                   ),
                 // 🔽 Property Cards
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: properties.length,
-                  itemBuilder: (context, index) {
-                    final property = properties[index];
-                    return PropertyCard(property: property);
-                  },
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: properties.length,
+                    itemBuilder: (context, index) {
+                      final property = properties[index];
+                      return PropertyCard(property: property);
+                    },
+                  ),
                 ),
                 const SizedBox(height: 10),
               ],

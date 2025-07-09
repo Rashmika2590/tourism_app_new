@@ -627,27 +627,21 @@ class _SearchPageState extends State<SearchPage>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0), // No padding
+          padding: const EdgeInsets.symmetric(horizontal: 0),
           child: Text(
             title,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ),
-        const SizedBox(height: 10),
         SizedBox(
-          height: 200,
-          child: ListView.separated(
+          height: 210,
+          child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: properties.length,
-            padding: const EdgeInsets.only(
-              left: 0,
-              right: 16,
-            ), // Remove left gap
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            padding: EdgeInsets.zero, // Remove padding
             itemBuilder: (context, index) {
-              return Container(
-                width: 320,
-                margin: index == 0 ? const EdgeInsets.only(left: 0) : null,
+              return SizedBox(
+                width: 320, // Tight card width
                 child: PropertyCard(property: properties[index], onTap: () {}),
               );
             },

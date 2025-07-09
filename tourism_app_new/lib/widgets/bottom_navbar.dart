@@ -130,7 +130,7 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
                 height: bubbleSize,
                 width: bubbleSize,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.white.withOpacity(0.9),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.black, width: 1.0),
                   boxShadow: [

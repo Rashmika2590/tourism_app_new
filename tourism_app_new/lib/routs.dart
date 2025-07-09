@@ -5,10 +5,13 @@ import 'package:tourism_app_new/Screens/Auth/register.dart';
 import 'package:tourism_app_new/Screens/notification.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/property_list_page.dart';
+import 'package:tourism_app_new/Screens/splash_screen.dart';
 import '../Screens/home_page.dart';
 import '../Screens/Auth/login.dart';
 
 class AppRoutes {
+  static const String splachscreen = '/splachscreen';
+
   static const String home = '/home';
   static const String login = '/login';
   static const String register = '/register';
@@ -20,6 +23,8 @@ class AppRoutes {
   static const String profile_settings = '/Profile_settings';
 
   static Map<String, WidgetBuilder> routes = {
+    splachscreen: (context) => AnimatedSplashScreen(),
+
     home: (context) => HomePage(),
     login: (context) => LoginScreen(),
     register: (context) => RegistrationScreen(),

@@ -228,21 +228,31 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   ) {
     return Column(
       children: [
-        Container(
-          decoration: BoxDecoration(
-            //border: Border.all(color: Colors.orange.withOpacity(0.4)),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: SwitchListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-            secondary: Icon(icon, color: AppColors.textPrimary),
-            title: Text(title),
-            value: value,
-            onChanged: onChanged,
-            activeColor: AppColors.buttonColor.withOpacity(0.5),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: AppColors.textPrimary),
+                const SizedBox(width: 12),
+                Text(title, style: const TextStyle(fontSize: 16)),
+              ],
+            ),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: Colors.white, // Thumb when ON
+              activeTrackColor: AppColors.buttonColor, // Track when ON
+              inactiveThumbColor: Colors.white, // Thumb when OFF
+              inactiveTrackColor: AppColors.mainGreen.withOpacity(
+                0.3,
+              ), // Track when OFF
+              splashRadius: 60,
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
+
+        const Divider(height: 1),
       ],
     );
   }
