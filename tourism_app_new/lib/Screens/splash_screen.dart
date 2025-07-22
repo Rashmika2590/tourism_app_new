@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/login.dart';
+import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 
 class AnimatedSplashScreen extends StatefulWidget {
   const AnimatedSplashScreen({super.key});
@@ -104,11 +105,13 @@ class _AnimatedSplashScreenState extends State<AnimatedSplashScreen>
     _navigateNext();
   }
 
-  void _navigateNext() {
+  void _navigateNext() async {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => LoginScreen()),
     );
+    final token = await SharedPreferecesUtil.getToken();
+    print(token);
   }
 
   @override
