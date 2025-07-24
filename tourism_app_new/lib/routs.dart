@@ -7,7 +7,6 @@ import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
 import 'package:tourism_app_new/Screens/property_list_page.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
-import 'package:tourism_app_new/models/property_model.dart';
 import '../Screens/home_page.dart';
 import '../Screens/Auth/login.dart';
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tourism_app_new/widgets/activity_row.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class HotelBookingScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _HotelBookingScreenState extends State<HotelBookingScreen> {
             children: [
               _buildMainSearchCard(),
               SizedBox(height: 20),
+              ExclusiveAddonsWidget(),
               ReviewCarousel(),
             ],
           ),

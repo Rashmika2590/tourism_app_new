@@ -104,6 +104,7 @@ class AuthService {
   }
 
   // Get currently signed-in user
+
   User? getCurrentUser() {
     return _auth.currentUser;
   }
