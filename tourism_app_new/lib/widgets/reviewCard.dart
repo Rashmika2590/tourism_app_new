@@ -33,7 +33,7 @@ class ReviewCarousel extends StatelessWidget {
       {
         "name": "Dinesh R",
         "text":
-            "he place was spotless, check-in was smooth, and the Wi-Fi was fast enough for video calls.",
+            "The place was spotless, check-in was smooth, and the Wi-Fi was fast enough for video calls.",
         "profileImage": "https://randomuser.me/api/portraits/men/1.jpg",
         "images": [
           "https://picsum.photos/id/1011/200",
@@ -45,7 +45,7 @@ class ReviewCarousel extends StatelessWidget {
       {
         "name": "Dinesh R",
         "text":
-            "he place was spotless, check-in was smooth, hgjhgjufgfgfyfdfdydyfdfydfdgddyddand the Wi-Fi was fast enough for video calls.",
+            "The place was spotless, check-in was smooth, and the Wi-Fi was fast enough for video calls and many more things that I want to write here to test the expandable functionality of this review card component.",
         "profileImage": "https://randomuser.me/api/portraits/men/1.jpg",
         "images": [
           "https://picsum.photos/id/1011/200",
@@ -57,7 +57,7 @@ class ReviewCarousel extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 400,
+      height: MediaQuery.of(context).size.height * 0.4,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: reviewList.length,
@@ -76,7 +76,7 @@ class ReviewCarousel extends StatelessWidget {
   }
 }
 
-class ReviewCard extends StatelessWidget {
+class ReviewCard extends StatefulWidget {
   final String reviewerName;
   final String reviewText;
   final String profileImageUrl;
@@ -93,7 +93,46 @@ class ReviewCard extends StatelessWidget {
   });
 
   @override
+  State<ReviewCard> createState() => _ReviewCardState();
+}
+
+class _ReviewCardState extends State<ReviewCard> {
+  bool isExpanded = false;
+  bool showSeeMore = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTextOverflow();
+    });
+  }
+
+  void _checkTextOverflow() {
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '"${widget.reviewText}"',
+        style: const TextStyle(fontSize: 14),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 4, // Allow 4 lines before showing "See more"
+    );
+    textPainter.layout(maxWidth: 156); // Card width minus padding
+
+    if (textPainter.didExceedMaxLines) {
+      setState(() {
+        showSeeMore = true;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final defaultHeight = screenHeight * 0.4 - 70; // Default fixed height
+    final maxExpandedHeight =
+        screenHeight * 0.8; // Maximum height when expanded
+
     return Container(
       width: 180,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -101,10 +140,21 @@ class ReviewCard extends StatelessWidget {
         clipBehavior: Clip.none,
         alignment: Alignment.topCenter,
         children: [
-          // Card content
-          Container(
+          // Main Green Container
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
             margin: const EdgeInsets.only(top: 30),
             padding: const EdgeInsets.fromLTRB(12, 40, 12, 12),
+            constraints:
+                isExpanded
+                    ? BoxConstraints(
+                      minHeight: defaultHeight,
+                      maxHeight: maxExpandedHeight,
+                    ) // Limited expansion with max height
+                    : BoxConstraints(
+                      maxHeight: defaultHeight,
+                    ), // Force fixed height when collapsed
             decoration: BoxDecoration(
               color: Colors.teal.shade200,
               borderRadius: BorderRadius.circular(20),
@@ -117,37 +167,92 @@ class ReviewCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(5, (index) {
                     return Icon(
-                      index < starRating ? Icons.star : Icons.star_border,
+                      index < widget.starRating
+                          ? Icons.star
+                          : Icons.star_border,
                       color: Colors.orange,
                       size: 16,
                     );
                   }),
                 ),
                 const SizedBox(height: 8),
-                // Review Text
-                Text(
-                  '"$reviewText"',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 14, color: Colors.white),
+
+                // Review Text with See More/Less
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              Text(
+                                '"${widget.reviewText}"',
+                                textAlign: TextAlign.center,
+                                maxLines:
+                                    isExpanded
+                                        ? null
+                                        : (showSeeMore ? 4 : null),
+                                overflow:
+                                    isExpanded
+                                        ? null
+                                        : (showSeeMore
+                                            ? TextOverflow.ellipsis
+                                            : null),
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (showSeeMore) ...[
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isExpanded = !isExpanded;
+                            });
+                          },
+                          child: Text(
+                            isExpanded ? 'See less' : 'See more',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white70,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 8),
+
+                const SizedBox(height: 16),
+
                 // Reviewer Name
                 Text(
-                  '-$reviewerName',
+                  '-${widget.reviewerName}',
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 8),
-                // Review Images
+
+                const SizedBox(height: 12),
+
+                // Review Images - Always at bottom of container
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     for (
                       int i = 0;
-                      i < (reviewImages.length > 2 ? 2 : reviewImages.length);
+                      i <
+                          (widget.reviewImages.length > 2
+                              ? 2
+                              : widget.reviewImages.length);
                       i++
                     )
                       Padding(
@@ -155,14 +260,29 @@ class ReviewCard extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: Image.network(
-                            reviewImages[i],
+                            widget.reviewImages[i],
                             height: 32,
                             width: 32,
                             fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                height: 32,
+                                width: 32,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.image_not_supported,
+                                  size: 16,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
-                    if (reviewImages.length > 2)
+                    if (widget.reviewImages.length > 2)
                       Container(
                         height: 32,
                         width: 32,
@@ -172,7 +292,7 @@ class ReviewCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          '+${reviewImages.length - 2}',
+                          '+${widget.reviewImages.length - 2}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -184,12 +304,19 @@ class ReviewCard extends StatelessWidget {
               ],
             ),
           ),
-          // Circle Avatar
+          // Circle Avatar - Outside the container
           Positioned(
             top: 0,
             child: CircleAvatar(
-              backgroundImage: NetworkImage(profileImageUrl),
+              backgroundImage: NetworkImage(widget.profileImageUrl),
               radius: 30,
+              onBackgroundImageError: (exception, stackTrace) {
+                // Handle image loading error
+              },
+              child:
+                  widget.profileImageUrl.isEmpty
+                      ? const Icon(Icons.person, size: 30)
+                      : null,
             ),
           ),
         ],

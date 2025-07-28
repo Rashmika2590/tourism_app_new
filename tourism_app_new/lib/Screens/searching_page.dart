@@ -1,10 +1,14 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/property_model.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/property_card.dart';
 import 'property_list_page.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -53,6 +57,29 @@ class _SearchPageState extends State<SearchPage>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter a location')));
+    }
+  }
+
+  Future<List<String>> _getSuggestions(String query) async {
+    final response = await http.get(
+      Uri.parse(
+        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s',
+      ),
+    );
+
+    if (response.statusCode == 200) {
+      final Map<String, dynamic> data = json.decode(response.body);
+      if (data['status'] == 'OK') {
+        final predictions = data['predictions'] as List<dynamic>;
+        return predictions
+            .map((prediction) => prediction['description'] as String)
+            .toList();
+      } else {
+        print('Error from API: ${data['status']}');
+        return [];
+      }
+    } else {
+      throw Exception('Failed to load suggestions');
     }
   }
 
@@ -290,13 +317,29 @@ class _SearchPageState extends State<SearchPage>
                   borderRadius: BorderRadius.circular(40),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: TextField(
-                  controller: _cityController,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    icon: Icon(Icons.search),
-                    hintText: 'Where do want to go?',
+                child: TypeAheadField<String>(
+                  textFieldConfiguration: TextFieldConfiguration(
+                    style: TextStyle(fontSize: 15.0),
+                    controller: _cityController,
+                    decoration: InputDecoration(
+                      labelText: '   Where do want to go?',
+                      labelStyle: TextStyle(
+                        fontSize: 14.0,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ),
+                  suggestionsCallback: (pattern) async {
+                    if (pattern.isEmpty) return [];
+                    return await _getSuggestions(pattern);
+                  },
+                  itemBuilder: (context, suggestion) {
+                    return ListTile(title: Text(suggestion));
+                  },
+                  onSuggestionSelected: (suggestion) {
+                    _cityController.text = suggestion;
+                  },
                 ),
               ),
               const SizedBox(height: 10),
