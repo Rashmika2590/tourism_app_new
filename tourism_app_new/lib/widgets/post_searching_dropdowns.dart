@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/widgets/activity_row.dart';
-import 'package:tourism_app_new/widgets/reviewCard.dart';
 
-class HotelBookingScreen extends StatefulWidget {
+class MainSearchCard extends StatefulWidget {
   @override
-  _HotelBookingScreenState createState() => _HotelBookingScreenState();
+  _MainSearchCardState createState() => _MainSearchCardState();
 }
 
-class _HotelBookingScreenState extends State<HotelBookingScreen> {
+class _MainSearchCardState extends State<MainSearchCard> {
   DateTime selectedDate = DateTime(2024, 12, 20);
   TimeOfDay selectedTime = TimeOfDay(hour: 7, minute: 30);
   String selectedDuration = "7 Hours";
@@ -24,25 +22,6 @@ class _HotelBookingScreenState extends State<HotelBookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              _buildMainSearchCard(),
-              SizedBox(height: 20),
-              ExclusiveAddonsWidget(),
-              ReviewCarousel(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMainSearchCard() {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
+import 'package:tourism_app_new/Screens/property_details_page.dart';
 import 'package:tourism_app_new/core/services/api_service.dart';
 import 'package:tourism_app_new/models/property_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -135,7 +135,7 @@ class _PropertyListPageState extends State<PropertyListPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => HotelBookingScreen(),
+                              builder: (context) => PropertyDetailsPage(),
                             ),
                           );
                         },
