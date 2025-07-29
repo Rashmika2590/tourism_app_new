@@ -245,9 +245,34 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
+  // Helper method to get responsive padding based on screen size
+  EdgeInsets _getResponsivePadding(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return const EdgeInsets.all(8);
+    } else if (screenWidth < 480) {
+      return const EdgeInsets.all(12);
+    } else {
+      return const EdgeInsets.all(16);
+    }
+  }
+
+  // Helper method to get responsive font size
+  double _getResponsiveFontSize(BuildContext context, double baseSize) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    if (screenWidth < 360) {
+      return baseSize - 2;
+    } else if (screenWidth > 480) {
+      return baseSize + 1;
+    }
+    return baseSize;
+  }
+
   @override
   Widget build(BuildContext context) {
     final properties = getMockProperties();
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -260,20 +285,27 @@ class _SearchPageState extends State<SearchPage>
             });
           },
           child: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: _getResponsivePadding(context),
             children: [
-              // Header
+              // Header with responsive layout
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset('assets/logo/crabigo_logo.png', height: 40),
+                  Flexible(
+                    child: Image.asset(
+                      'assets/logo/crabigo_logo.png',
+                      height: screenWidth < 360 ? 32 : 40,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                   CircleAvatar(
-                    radius: 16,
+                    radius: screenWidth < 360 ? 14 : 16,
                     backgroundColor: Colors.white,
                     child: IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.notifications_none,
                         color: Colors.black,
+                        size: screenWidth < 360 ? 18 : 20,
                       ),
                       onPressed: () {
                         Navigator.pushNamed(context, AppRoutes.notification);
@@ -284,6 +316,9 @@ class _SearchPageState extends State<SearchPage>
                   ),
                 ],
               ),
+              SizedBox(height: screenHeight * 0.015),
+
+              // Responsive TabBar
               Container(
                 decoration: BoxDecoration(
                   border: Border(
@@ -296,6 +331,9 @@ class _SearchPageState extends State<SearchPage>
                   unselectedLabelColor: Colors.grey,
                   indicatorColor: Colors.orange,
                   indicatorWeight: 2.5,
+                  labelStyle: TextStyle(
+                    fontSize: _getResponsiveFontSize(context, 14),
+                  ),
                   tabs: const [
                     Tab(icon: Icon(Icons.bed), text: "Quick Stay"),
                     Tab(
@@ -306,28 +344,48 @@ class _SearchPageState extends State<SearchPage>
                 ),
               ),
               const SizedBox(height: 12),
-              const Text(
+              Text(
                 "Book a stay for just a few hours — Quick Stay lets you check in and out within 24 hours.",
-                style: TextStyle(fontSize: 10, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(context, 10),
+                  color: Colors.grey,
+                ),
               ),
               const SizedBox(height: 20),
+
+              // Location Input with removed underline
               Container(
+                height: screenHeight * 0.05,
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(40),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.symmetric(
+                  horizontal:
+                      screenWidth < 360 ? 8 : 12, // reduce vertical padding
+                ),
                 child: TypeAheadField<String>(
                   textFieldConfiguration: TextFieldConfiguration(
-                    style: TextStyle(fontSize: 15.0),
+                    style: TextStyle(
+                      fontSize: _getResponsiveFontSize(context, 15.0),
+                    ),
                     controller: _cityController,
                     decoration: InputDecoration(
-                      labelText: '   Where do want to go?',
+                      prefixIcon: Icon(Icons.search, color: Colors.grey),
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 12),
+                      labelText: '   Where do you want to go?',
                       labelStyle: TextStyle(
-                        fontSize: 14.0,
+                        fontSize: _getResponsiveFontSize(context, 14.0),
                         fontWeight: FontWeight.w500,
                         color: Colors.grey,
                       ),
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      focusedErrorBorder: InputBorder.none,
                     ),
                   ),
                   suggestionsCallback: (pattern) async {
@@ -342,15 +400,19 @@ class _SearchPageState extends State<SearchPage>
                   },
                 ),
               ),
+
               const SizedBox(height: 10),
+
+              // Booking Container with responsive design
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: EdgeInsets.all(screenWidth < 360 ? 10 : 12),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Column(
                   children: [
+                    // Book Now/Later Toggle - Responsive
                     Row(
                       children: [
                         Expanded(
@@ -362,7 +424,9 @@ class _SearchPageState extends State<SearchPage>
                               });
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: EdgeInsets.symmetric(
+                                vertical: screenWidth < 360 ? 8 : 10,
+                              ),
                               decoration: BoxDecoration(
                                 gradient:
                                     selectedTabIndex == 0
@@ -379,19 +443,22 @@ class _SearchPageState extends State<SearchPage>
                                           ? Colors.white
                                           : Colors.grey.shade700,
                                   fontWeight: FontWeight.w600,
+                                  fontSize: _getResponsiveFontSize(context, 14),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 5),
                         Expanded(
                           child: GestureDetector(
                             onTap: () async {
                               await _selectDateTime();
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding: EdgeInsets.symmetric(
+                                vertical: screenWidth < 360 ? 8 : 10,
+                              ),
                               decoration: BoxDecoration(
                                 gradient:
                                     selectedTabIndex == 1 &&
@@ -407,19 +474,26 @@ class _SearchPageState extends State<SearchPage>
                                 ),
                               ),
                               alignment: Alignment.center,
-                              child: Text(
-                                selectedDateTime != null
-                                    ? DateFormat(
-                                      'dd MMM, h:mm a',
-                                    ).format(selectedDateTime!)
-                                    : "Book Later",
-                                style: TextStyle(
-                                  color:
-                                      selectedTabIndex == 1 &&
-                                              selectedDateTime != null
-                                          ? Colors.white
-                                          : Colors.grey.shade700,
-                                  fontWeight: FontWeight.w600,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  selectedDateTime != null
+                                      ? DateFormat(
+                                        'dd MMM, h:mm a',
+                                      ).format(selectedDateTime!)
+                                      : "Book Later",
+                                  style: TextStyle(
+                                    color:
+                                        selectedTabIndex == 1 &&
+                                                selectedDateTime != null
+                                            ? Colors.white
+                                            : Colors.grey.shade700,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: _getResponsiveFontSize(
+                                      context,
+                                      14,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -427,108 +501,82 @@ class _SearchPageState extends State<SearchPage>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 10),
 
-                    // Duration and Guest Dropdown Section
+                    // Duration and Guest Dropdown Section - Responsive
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    isDurationDropdownOpen =
-                                        !isDurationDropdownOpen;
-                                    isGuestDropdownOpen = false;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.access_time,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          selectedDuration ?? 'Duration',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color:
-                                                selectedDuration != null
-                                                    ? Colors.black
-                                                    : Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ),
-                                      Icon(
-                                        isDurationDropdownOpen
-                                            ? Icons.keyboard_arrow_up
-                                            : Icons.keyboard_arrow_down,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ],
+                        // Responsive layout for dropdowns
+                        screenWidth < 360
+                            ? Column(
+                              children: [
+                                _buildDropdownField(
+                                  context,
+                                  Icons.access_time,
+                                  selectedDuration ?? 'Choose duration',
+                                  isDurationDropdownOpen,
+                                  () {
+                                    setState(() {
+                                      isDurationDropdownOpen =
+                                          !isDurationDropdownOpen;
+                                      isGuestDropdownOpen = false;
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 8),
+                                _buildDropdownField(
+                                  context,
+                                  Icons.person_outline,
+                                  '${adultsCount + childrenCount} guests',
+                                  isGuestDropdownOpen,
+                                  () {
+                                    setState(() {
+                                      isGuestDropdownOpen =
+                                          !isGuestDropdownOpen;
+                                      isDurationDropdownOpen = false;
+                                    });
+                                  },
+                                ),
+                              ],
+                            )
+                            : Row(
+                              children: [
+                                Expanded(
+                                  child: _buildDropdownField(
+                                    context,
+                                    Icons.access_time,
+                                    selectedDuration ?? 'Choose duration',
+                                    isDurationDropdownOpen,
+                                    () {
+                                      setState(() {
+                                        isDurationDropdownOpen =
+                                            !isDurationDropdownOpen;
+                                        isGuestDropdownOpen = false;
+                                      });
+                                    },
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    isGuestDropdownOpen = !isGuestDropdownOpen;
-                                    isDurationDropdownOpen = false;
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.person_outline,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          '${adultsCount + childrenCount} guests',
-                                          style: const TextStyle(fontSize: 14),
-                                        ),
-                                      ),
-                                      Icon(
-                                        isGuestDropdownOpen
-                                            ? Icons.keyboard_arrow_up
-                                            : Icons.keyboard_arrow_down,
-                                        color: Colors.grey.shade700,
-                                      ),
-                                    ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _buildDropdownField(
+                                    context,
+                                    Icons.person_outline,
+                                    '${adultsCount + childrenCount} guests',
+                                    isGuestDropdownOpen,
+                                    () {
+                                      setState(() {
+                                        isGuestDropdownOpen =
+                                            !isGuestDropdownOpen;
+                                        isDurationDropdownOpen = false;
+                                      });
+                                    },
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
-                        ),
 
-                        // Duration Dropdown
+                        // Duration Dropdown Menu
                         if (isDurationDropdownOpen)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
@@ -550,6 +598,10 @@ class _SearchPageState extends State<SearchPage>
                                 final duration = durations[index];
                                 final isSelected = duration == selectedDuration;
                                 return ListTile(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: screenWidth < 360 ? 12 : 16,
+                                    vertical: 4,
+                                  ),
                                   title: Text(
                                     duration,
                                     style: TextStyle(
@@ -561,6 +613,10 @@ class _SearchPageState extends State<SearchPage>
                                           isSelected
                                               ? FontWeight.bold
                                               : FontWeight.normal,
+                                      fontSize: _getResponsiveFontSize(
+                                        context,
+                                        14,
+                                      ),
                                     ),
                                   ),
                                   trailing:
@@ -581,11 +637,13 @@ class _SearchPageState extends State<SearchPage>
                             ),
                           ),
 
-                        // Guest Dropdown
+                        // Guest Dropdown Menu
                         if (isGuestDropdownOpen)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(
+                              screenWidth < 360 ? 12 : 16,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -621,11 +679,13 @@ class _SearchPageState extends State<SearchPage>
                 ),
               ),
               const SizedBox(height: 15),
+
+              // Responsive Search Button
               Align(
                 alignment: Alignment.center,
                 child: Container(
-                  width: 300,
-                  height: 40,
+                  width: screenWidth < 360 ? screenWidth * 0.8 : 300,
+                  height: screenWidth < 360 ? 36 : 40,
                   decoration: BoxDecoration(
                     gradient: AppGradients.buttonGradient,
                     borderRadius: BorderRadius.circular(30),
@@ -634,17 +694,19 @@ class _SearchPageState extends State<SearchPage>
                     onPressed: _search,
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
-                      backgroundColor: Colors.orange,
+                      backgroundColor: Colors.transparent,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: EdgeInsets.symmetric(
+                        vertical: screenWidth < 360 ? 8 : 10,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Search',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: _getResponsiveFontSize(context, 16),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -652,12 +714,14 @@ class _SearchPageState extends State<SearchPage>
                 ),
               ),
               const SizedBox(height: 30),
+
+              // Responsive Property Lists
               _buildHorizontalPropertyList("Near your location", properties),
               const SizedBox(height: 20),
               _buildHorizontalPropertyList("Top rated in Galle", properties),
               const SizedBox(height: 20),
               _buildHorizontalPropertyList("More Listings", properties),
-              const SizedBox(height: 100),
+              SizedBox(height: screenHeight * 0.1),
             ],
           ),
         ),
@@ -665,7 +729,63 @@ class _SearchPageState extends State<SearchPage>
     );
   }
 
+  // Helper widget for dropdown fields with gray background and white outline
+  Widget _buildDropdownField(
+    BuildContext context,
+    IconData icon,
+    String text,
+    bool isOpen,
+    VoidCallback onTap,
+  ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: screenWidth < 360 ? 10 : 12,
+          vertical: screenWidth < 360 ? 8 : 10,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200, // Gray background
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white, // White outline
+            width: 2,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: Colors.black, // White icon
+              size: screenWidth < 360 ? 18 : 20,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                text,
+                style: TextStyle(
+                  fontSize: _getResponsiveFontSize(context, 14),
+                  color: Colors.grey.shade700, // White text
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              isOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: Colors.black, // White arrow
+              size: screenWidth < 360 ? 18 : 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHorizontalPropertyList(String title, List<Property> properties) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -673,18 +793,22 @@ class _SearchPageState extends State<SearchPage>
           padding: const EdgeInsets.symmetric(horizontal: 0),
           child: Text(
             title,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: _getResponsiveFontSize(context, 16),
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         SizedBox(
-          height: 210,
+          height: screenWidth < 360 ? 180 : 210,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             itemCount: properties.length,
-            padding: EdgeInsets.zero, // Remove padding
+            padding: EdgeInsets.zero,
             itemBuilder: (context, index) {
               return SizedBox(
-                width: 320, // Tight card width
+                width:
+                    screenWidth < 360 ? 280 : (screenWidth < 480 ? 300 : 320),
                 child: PropertyCard(property: properties[index], onTap: () {}),
               );
             },
