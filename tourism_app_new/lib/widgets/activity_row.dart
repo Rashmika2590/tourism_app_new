@@ -162,6 +162,20 @@ class _ExclusiveAddonsWidgetState extends State<ExclusiveAddonsWidget> {
                                             bottomRight: Radius.circular(0),
                                           )
                                           : BorderRadius.circular(iconSize / 2),
+                                  // Added bottom right shadow
+                                  boxShadow:
+                                      !isExpanded
+                                          ? [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.5,
+                                              ),
+                                              offset: const Offset(3, 4),
+                                              blurRadius: 2,
+                                              //spreadRadius: 2,
+                                            ),
+                                          ]
+                                          : null,
                                 ),
                                 child: Icon(
                                   addOn.icon,

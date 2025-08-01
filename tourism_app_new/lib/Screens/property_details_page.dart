@@ -22,7 +22,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
       duration: Duration(milliseconds: 300),
       vsync: this,
     );
-    _heightAnimation = Tween<double>(begin: 0.3, end: 0.6).animate(
+    _heightAnimation = Tween<double>(begin: 200, end: 400).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
@@ -47,33 +47,46 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: Column(
-              children: [
-                AnimatedBuilder(
-                  animation: _heightAnimation,
-                  builder: (context, child) {
-                    return Container(
-                      height: constraints.maxHeight * _heightAnimation.value,
-                      child: ExpandableMapWidget(
-                        isExpanded: _isExpanded,
-                        onToggle: _toggleMapSize,
-                      ),
-                    );
-                  },
-                ),
-                SizedBox(height: 20),
-                // The rest of the scrollable content
-                MainSearchCard(),
-                ExclusiveAddonsWidget(),
-                ReviewCarousel(),
-              ],
-            ),
-          );
-        },
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              ExpandableMapWidget(
+                isExpanded: _isExpanded,
+                onToggle: _toggleMapSize,
+              ),
+              SizedBox(height: 20),
+              MainSearchCard(),
+              SizedBox(height: 20),
+              ExclusiveAddonsWidget(),
+              ReviewCarousel(),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
+
+// @override
+// Widget build(BuildContext context) {
+//   return Scaffold(
+//     body: SafeArea(
+//       child: SingleChildScrollView(
+//         // <--- Add this
+//         child: Column(
+//           children: [
+//             ExpandableMapWidget(
+//               isExpanded: _isExpanded,
+//               onToggle: _toggleMapSize,
+//             ),
+//             MainSearchCard(),
+//             SizedBox(height: 20),
+//             ExclusiveAddonsWidget(),
+//             ReviewCarousel(),
+//           ],
+//         ),
+//       ),
+//     ),
+//   );
+// }
