@@ -66,6 +66,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isLoading = true);
+
+    final user = await _authService.signInWithGoogle();
+
+    if (user != null) {
+      Navigator.pushReplacementNamed(context, AppRoutes.home);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Google Sign-In failed or was cancelled")),
+      );
+    }
+
+    setState(() => _isLoading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
@@ -218,9 +234,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               width: double.infinity,
                               height: screenHeight * 0.06,
                               child: OutlinedButton.icon(
-                                onPressed: () {
-                                  // TODO: Google Sign-In
-                                },
+                                onPressed:
+                                    _isLoading
+                                        ? null
+                                        : () {
+                                          print("Button tapped!"); // Debug line
+                                          _signInWithGoogle();
+                                        },
                                 icon: Image.asset(
                                   'assets/images/google_icon.png',
                                   height: screenHeight * 0.03,

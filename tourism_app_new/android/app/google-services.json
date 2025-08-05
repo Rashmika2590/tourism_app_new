@@ -31,10 +31,10 @@
               "client_type": 3
             },
             {
-              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_id": "1094004848939-1ka7biqnvcqqhp3l71pp5lsj897ufee7.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.rashmika.tourismApp"
+                "bundle_id": "com.example.tourismAppNew"
               }
             }
           ]
@@ -50,6 +50,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1094004848939-gm13kq0ofbgcquf2vp5lio5tf666hbsp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tourism_app_new",
+            "certificate_hash": "b49fdf64cf300955b68566c9f06bd6f0a779c9a3"
+          }
+        },
+        {
           "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -67,10 +75,10 @@
               "client_type": 3
             },
             {
-              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_id": "1094004848939-1ka7biqnvcqqhp3l71pp5lsj897ufee7.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.rashmika.tourismApp"
+                "bundle_id": "com.example.tourismAppNew"
               }
             }
           ]
@@ -86,6 +94,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1094004848939-24r54n0c6g4ipfudqnq95p0ur09l0sis.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.tourism_host",
+            "certificate_hash": "b49fdf64cf300955b68566c9f06bd6f0a779c9a3"
+          }
+        },
+        {
           "client_id": "1094004848939-b6skja3o7bavopsaddvvthjp6gndoik6.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -103,10 +119,10 @@
               "client_type": 3
             },
             {
-              "client_id": "1094004848939-7h16js024a0ivdc6c75qh9djibo7pnog.apps.googleusercontent.com",
+              "client_id": "1094004848939-1ka7biqnvcqqhp3l71pp5lsj897ufee7.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.rashmika.tourismApp"
+                "bundle_id": "com.example.tourismAppNew"
               }
             }
           ]

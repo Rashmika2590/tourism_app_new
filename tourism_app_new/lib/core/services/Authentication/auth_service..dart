@@ -1,10 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tourism_app_new/core/services/Authentication/trac_registration_status.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   static const String _keepSignedInKey = 'keep_signed_in';
 
@@ -91,10 +93,60 @@ class AuthService {
     }
   }
 
+  Future<User?> signInWithGoogle() async {
+    try {
+      // Trigger the authentication flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        // User canceled the sign-in
+        return null;
+      }
+
+      // Obtain the auth details from the request
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create a new credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase with the Google credential
+      UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      User? user = userCredential.user;
+
+      if (user != null) {
+        await _saveTokenWithExpiry(user);
+
+        // Check if this is a new user (first time signing in with Google)
+        if (userCredential.additionalUserInfo?.isNewUser ?? false) {
+          // New user - enable auto-login
+          await _setKeepSignedIn(true);
+          await UserStateManager.markUserAsRegistered(user.email!);
+          debugPrint("New Google user registered: ${user.email}");
+        } else {
+          // Existing user - respect their previous preference or enable by default
+          await _setKeepSignedIn(true); // You can make this configurable
+          debugPrint("Existing Google user login: ${user.email}");
+        }
+      }
+
+      return user;
+    } catch (e) {
+      debugPrint("Google Sign-In failed: $e");
+      return null;
+    }
+  }
+
   // Enhanced logout with user state management
   Future<void> signOut({bool clearKeepSignedIn = true}) async {
     try {
       await _auth.signOut();
+      await _googleSignIn.signOut();
 
       if (clearKeepSignedIn) {
         await _setKeepSignedIn(false);
