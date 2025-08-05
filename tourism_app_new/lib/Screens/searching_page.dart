@@ -60,26 +60,57 @@ class _SearchPageState extends State<SearchPage>
     }
   }
 
-  Future<List<String>> _getSuggestions(String query) async {
-    final response = await http.get(
-      Uri.parse(
-        'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s',
-      ),
-    );
+  // Extract city name from Google Places API response
+  String _extractCityName(String fullAddress) {
+    // Remove common suffixes and extract main city name
+    String cityName = fullAddress;
 
-    if (response.statusCode == 200) {
-      final Map<String, dynamic> data = json.decode(response.body);
-      if (data['status'] == 'OK') {
-        final predictions = data['predictions'] as List<dynamic>;
-        return predictions
-            .map((prediction) => prediction['description'] as String)
-            .toList();
-      } else {
-        print('Error from API: ${data['status']}');
-        return [];
+    // Split by comma and take the first part
+    List<String> parts = fullAddress.split(',');
+    if (parts.isNotEmpty) {
+      cityName = parts[0].trim();
+    }
+
+    // Remove common prefixes like "City of", "Greater", etc.
+    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
+    for (String prefix in prefixesToRemove) {
+      if (cityName.startsWith(prefix)) {
+        cityName = cityName.substring(prefix.length);
+        break;
       }
-    } else {
-      throw Exception('Failed to load suggestions');
+    }
+
+    return cityName;
+  }
+
+  Future<List<Map<String, String>>> _getSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final predictions = data['predictions'] as List<dynamic>;
+          return predictions.map((prediction) {
+            return {
+              'description': prediction['description'] as String,
+              'place_id': prediction['place_id'] as String,
+            };
+          }).toList();
+        } else {
+          print('Error from API: ${data['status']}');
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load suggestions');
+      }
+    } catch (e) {
+      print('Error getting suggestions: $e');
+      return [];
     }
   }
 
@@ -353,7 +384,7 @@ class _SearchPageState extends State<SearchPage>
               ),
               const SizedBox(height: 20),
 
-              // Location Input with removed underline
+              // Location Input with fixed autocomplete
               Container(
                 height: screenHeight * 0.05,
                 decoration: BoxDecoration(
@@ -361,10 +392,9 @@ class _SearchPageState extends State<SearchPage>
                   borderRadius: BorderRadius.circular(40),
                 ),
                 padding: EdgeInsets.symmetric(
-                  horizontal:
-                      screenWidth < 360 ? 8 : 12, // reduce vertical padding
+                  horizontal: screenWidth < 360 ? 8 : 12,
                 ),
-                child: TypeAheadField<String>(
+                child: TypeAheadField<Map<String, String>>(
                   textFieldConfiguration: TextFieldConfiguration(
                     style: TextStyle(
                       fontSize: _getResponsiveFontSize(context, 15.0),
@@ -374,7 +404,7 @@ class _SearchPageState extends State<SearchPage>
                       prefixIcon: Icon(Icons.search, color: Colors.grey),
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      labelText: '   Where do you want to go?',
+                      hintText: '   Where do you want to go?',
                       labelStyle: TextStyle(
                         fontSize: _getResponsiveFontSize(context, 14.0),
                         fontWeight: FontWeight.w500,
@@ -393,11 +423,30 @@ class _SearchPageState extends State<SearchPage>
                     return await _getSuggestions(pattern);
                   },
                   itemBuilder: (context, suggestion) {
-                    return ListTile(title: Text(suggestion));
+                    return ListTile(
+                      title: Text(suggestion['description']!),
+                      subtitle: Text(
+                        'City: ${_extractCityName(suggestion['description']!)}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    );
                   },
                   onSuggestionSelected: (suggestion) {
-                    _cityController.text = suggestion;
+                    // Extract just the city name for backend compatibility
+                    String cityName = _extractCityName(
+                      suggestion['description']!,
+                    );
+                    _cityController.text = cityName;
+
+                    // Debug print to see what we're sending
+                    print('🏙️ Selected: ${suggestion['description']}');
+                    print('🎯 Extracted City: $cityName');
                   },
+                  noItemsFoundBuilder:
+                      (context) => const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Text('No cities found'),
+                      ),
                 ),
               ),
 

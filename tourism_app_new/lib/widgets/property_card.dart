@@ -195,7 +195,7 @@ class _PropertyCardState extends State<PropertyCard> {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 10),
+                                //const SizedBox(height: 10),
 
                                 // Price
                                 Row(
