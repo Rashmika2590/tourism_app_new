@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
+import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/routs.dart';
 

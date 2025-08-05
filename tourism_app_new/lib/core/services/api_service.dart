@@ -1,31 +1,59 @@
-// api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tourism_app_new/core/utils/shared_preferences.dart';
 import 'package:tourism_app_new/models/property_model.dart';
+import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
 
 class ApiService {
   static const String baseUrl = 'https://uexplus128-001-site1.otempurl.com/api';
+  static final AuthService _authService = AuthService();
+
+  // Enhanced method to get valid token with automatic refresh
+  static Future<String?> _getValidToken() async {
+    return await _authService.getValidToken();
+  }
+
+  // Generic method to make authenticated requests with auto-retry on token expiry
+  static Future<http.Response> _makeAuthenticatedRequest({
+    required Future<http.Response> Function(String token) requestFunction,
+    int maxRetries = 1,
+  }) async {
+    String? token = await _getValidToken();
+    if (token == null) {
+      throw Exception("Authentication failed - no valid token available");
+    }
+
+    http.Response response = await requestFunction(token);
+
+    // If we get 401 (Unauthorized), try to refresh token and retry
+    if (response.statusCode == 401 && maxRetries > 0) {
+      print("Token expired, refreshing and retrying...");
+      token = await _authService.getFreshToken();
+      if (token == null) {
+        throw Exception("Authentication failed - could not refresh token");
+      }
+      response = await requestFunction(token);
+    }
+
+    return response;
+  }
 
   static Future<List<Property>> filterProperties(
     Map<String, dynamic> filters, {
     required String city,
   }) async {
-    final token = await SharedPreferecesUtil.getToken();
-    if (token == null) {
-      throw Exception("Authentication token is missing.");
-    }
-
     // Include city in filters
     filters['city'] = city;
 
-    final response = await http.post(
-      Uri.parse('$baseUrl/Property/filtered-properties'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode(filters),
+    final response = await _makeAuthenticatedRequest(
+      requestFunction:
+          (token) => http.post(
+            Uri.parse('$baseUrl/Property/filtered-properties'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(filters),
+          ),
     );
 
     if (response.statusCode == 200) {
@@ -44,21 +72,16 @@ class ApiService {
     }
   }
 
-  // Function to fetch property details by ID
   static Future<Map<String, dynamic>> fetchPropertyById(
     String propertyId,
   ) async {
     try {
-      // Retrieve token from SharedPreferences
-      final token = await SharedPreferecesUtil.getToken();
-      print(token);
-      if (token == null) {
-        throw Exception("Authentication token is missing.");
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/Property/$propertyId'),
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await _makeAuthenticatedRequest(
+        requestFunction:
+            (token) => http.get(
+              Uri.parse('$baseUrl/Property/$propertyId'),
+              headers: {'Authorization': 'Bearer $token'},
+            ),
       );
 
       if (response.statusCode == 200) {
@@ -76,19 +99,16 @@ class ApiService {
     }
   }
 
-  // Function to fetch package list by property ID
   static Future<List<Map<String, dynamic>>> fetchPackagesByPropertyId(
     String propertyId,
   ) async {
     try {
-      final token = await SharedPreferecesUtil.getToken();
-      if (token == null) {
-        throw Exception("Authentication token is missing.");
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/Package/by-property/$propertyId'),
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await _makeAuthenticatedRequest(
+        requestFunction:
+            (token) => http.get(
+              Uri.parse('$baseUrl/Package/by-property/$propertyId'),
+              headers: {'Authorization': 'Bearer $token'},
+            ),
       );
 
       if (response.statusCode == 200) {
@@ -103,22 +123,18 @@ class ApiService {
     }
   }
 
-  // Function to fetch package details by ID
   static Future<Map<String, dynamic>> fetchPackageById(String packageId) async {
     try {
-      // Retrieve token from SharedPreferences
-      final token = await SharedPreferecesUtil.getToken();
-      if (token == null) {
-        throw Exception("Authentication token is missing.");
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/Package/$packageId'),
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await _makeAuthenticatedRequest(
+        requestFunction:
+            (token) => http.get(
+              Uri.parse('$baseUrl/Package/$packageId'),
+              headers: {'Authorization': 'Bearer $token'},
+            ),
       );
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body); // Return the decoded JSON response
+        return jsonDecode(response.body);
       } else {
         print(
           'Failed to fetch package: ${response.statusCode} - ${response.body}',
@@ -137,22 +153,20 @@ class ApiService {
     required int rating,
     required String comment,
   }) async {
-    final token = await SharedPreferecesUtil.getToken();
-    if (token == null) {
-      throw Exception("Authentication token is missing.");
-    }
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/PropertyRating'),
-      headers: {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        "propertyId": propertyId,
-        "rating": rating,
-        "comment": comment,
-      }),
+    final response = await _makeAuthenticatedRequest(
+      requestFunction:
+          (token) => http.post(
+            Uri.parse('$baseUrl/PropertyRating'),
+            headers: {
+              'Authorization': 'Bearer $token',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode({
+              "propertyId": propertyId,
+              "rating": rating,
+              "comment": comment,
+            }),
+          ),
     );
 
     if (response.statusCode != 200) {
@@ -162,19 +176,16 @@ class ApiService {
     }
   }
 
-  // Function to fetch property ratings by property ID
   static Future<List<Map<String, dynamic>>> fetchPropertyRatings(
     String propertyId,
   ) async {
     try {
-      final token = await SharedPreferecesUtil.getToken();
-      if (token == null) {
-        throw Exception("Authentication token is missing.");
-      }
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/PropertyRating/$propertyId'),
-        headers: {'Authorization': 'Bearer $token'},
+      final response = await _makeAuthenticatedRequest(
+        requestFunction:
+            (token) => http.get(
+              Uri.parse('$baseUrl/PropertyRating/$propertyId'),
+              headers: {'Authorization': 'Bearer $token'},
+            ),
       );
 
       if (response.statusCode == 200) {

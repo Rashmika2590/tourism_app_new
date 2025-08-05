@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:tourism_app_new/constants/colors.dart';
+import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/routs.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
   const ProfileSettingsPage({super.key});
@@ -12,6 +15,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   final _fullNameController = TextEditingController(text: "Amantha Nirmal");
   final _emailController = TextEditingController(text: "amantha@email.com");
   final _phoneController = TextEditingController(text: "+94 77 123 4567");
+  final AuthService _authService = AuthService();
 
   bool pushNotifications = false;
   bool emailAlerts = false;
@@ -75,8 +79,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
             const SizedBox(height: 30),
             _sectionHeader("Security Settings"),
-            _buildTile(Icons.lock_outline, "Change Password"),
-            _buildTile(Icons.history, "Activity log"),
+            _buildTile(Icons.lock_outline, "Change Password", () {
+              // TODO: Navigate to change password
+            }),
+            _buildTile(Icons.history, "Activity log", () {
+              // TODO: Navigate to activity log
+            }),
 
             const SizedBox(height: 30),
             _sectionHeader("Notifications"),
@@ -118,18 +126,56 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
             const SizedBox(height: 30),
             _sectionHeader("Help & Support"),
-            _buildTile(Icons.help_outline, "FAQ"),
-            _buildTile(Icons.support_agent, "Contact Support"),
-            _buildTile(Icons.description_outlined, "Terms & Conditions"),
+            _buildTile(Icons.help_outline, "FAQ", () {
+              // TODO: Navigate to FAQ
+            }),
+            _buildTile(Icons.support_agent, "Contact Support", () {
+              // TODO: Navigate to contact support
+            }),
+            _buildTile(Icons.description_outlined, "Terms & Conditions", () {
+              // TODO: Navigate to terms
+            }),
 
-            const SizedBox(height: 40),
+            // Debug Section - Only visible in development
+            if (kDebugMode) ...[
+              const SizedBox(height: 30),
+              _sectionHeader("Developer Tools"),
+              _buildDebugTile(
+                Icons.bug_report,
+                "Debug User Status",
+                "View authentication state",
+                () {
+                  Navigator.pushNamed(context, AppRoutes.debug);
+                },
+              ),
+              _buildDebugTile(
+                Icons.refresh,
+                "Reset User Data",
+                "Clear all stored data",
+                () => _showResetConfirmation(),
+              ),
+            ],
+
+            const SizedBox(height: 30),
+            _sectionHeader("Account Actions"),
+
+            // Logout Button
+            _buildActionTile(
+              Icons.logout,
+              "Logout",
+              "Sign out of your account",
+              Colors.orange,
+              () => _showLogoutConfirmation(),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Delete Account Button
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // TODO: Add logic
-                },
+                onPressed: () => _showDeleteAccountConfirmation(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   shape: RoundedRectangleBorder(
@@ -142,6 +188,8 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -205,7 +253,7 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
-  Widget _buildTile(IconData icon, String title) {
+  Widget _buildTile(IconData icon, String title, VoidCallback onTap) {
     return Column(
       children: [
         ListTile(
@@ -213,7 +261,70 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           leading: Icon(icon, color: AppColors.textPrimary),
           title: Text(title),
           trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: () {},
+          onTap: onTap,
+        ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+
+  Widget _buildDebugTile(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: Colors.orange),
+          title: Text(title, style: const TextStyle(color: Colors.orange)),
+          subtitle: Text(
+            subtitle,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Text(
+              'DEV',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange,
+              ),
+            ),
+          ),
+          onTap: onTap,
+        ),
+        const Divider(height: 1),
+      ],
+    );
+  }
+
+  Widget _buildActionTile(
+    IconData icon,
+    String title,
+    String subtitle,
+    Color color,
+    VoidCallback onTap,
+  ) {
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: color),
+          title: Text(title, style: TextStyle(color: color)),
+          subtitle: Text(
+            subtitle,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          ),
+          trailing: Icon(Icons.arrow_forward_ios, size: 16, color: color),
+          onTap: onTap,
         ),
         const Divider(height: 1),
       ],
@@ -251,7 +362,6 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             ),
           ],
         ),
-
         const Divider(height: 1),
       ],
     );
@@ -283,5 +393,133 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         const Divider(height: 1),
       ],
     );
+  }
+
+  // Logout confirmation dialog
+  void _showLogoutConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _logout();
+              },
+              child: const Text(
+                'Logout',
+                style: TextStyle(color: Colors.orange),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Reset data confirmation dialog (debug only)
+  void _showResetConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Reset User Data'),
+          content: const Text(
+            'This will clear all stored user data and logout. This action is for debugging purposes only.\n\nAre you sure?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                await _resetUserData();
+              },
+              child: const Text('Reset', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Delete account confirmation dialog
+  void _showDeleteAccountConfirmation() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Account'),
+          content: const Text(
+            'This action cannot be undone. All your data will be permanently deleted.\n\nAre you sure you want to delete your account?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                // TODO: Implement account deletion
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Account deletion feature coming soon'),
+                  ),
+                );
+              },
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Logout functionality
+  Future<void> _logout() async {
+    try {
+      await _authService.signOut(clearKeepSignedIn: true);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
+    }
+  }
+
+  // Reset user data (debug only)
+  Future<void> _resetUserData() async {
+    try {
+      await _authService.signOut(clearKeepSignedIn: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('User data reset successfully'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        AppRoutes.login,
+        (route) => false,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Reset failed: $e')));
+    }
   }
 }

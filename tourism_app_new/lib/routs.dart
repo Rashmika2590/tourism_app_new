@@ -7,6 +7,7 @@ import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/property_details_page.dart';
 import 'package:tourism_app_new/Screens/property_list_page.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
+import 'package:tourism_app_new/core/services/Authentication/debug_user_status.dart';
 import '../Screens/home_page.dart';
 import '../Screens/Auth/login.dart';
 
@@ -24,6 +25,7 @@ class AppRoutes {
   static const String notification = '/notification';
 
   static const String profile_settings = '/Profile_settings';
+  static const String debug = '/debug';
 
   static Map<String, WidgetBuilder> routes = {
     splachscreen: (context) => AnimatedSplashScreen(),
@@ -39,5 +41,6 @@ class AppRoutes {
 
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),
+    AppRoutes.debug: (context) => DebugUserStatusScreen(),
   };
 }

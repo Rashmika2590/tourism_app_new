@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
+import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:tourism_app_new/constants/buttons.dart';
 import 'package:tourism_app_new/routs.dart';
@@ -47,6 +47,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
+  // In your registration screen _register method
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
       setState(() => _isRegistering = true);
@@ -61,7 +62,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       setState(() => _isRegistering = false);
 
       if (user != null) {
-        Navigator.pushNamed(context, AppRoutes.home);
+        // For new users, navigate directly to home
+        // The AuthService automatically sets keepSignedIn to true for new registrations
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
       } else {
         ScaffoldMessenger.of(
           context,

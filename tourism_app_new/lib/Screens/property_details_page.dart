@@ -12,7 +12,6 @@ class PropertyDetailsPage extends StatefulWidget {
 class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
-  late Animation<double> _heightAnimation;
   bool _isExpanded = false;
 
   @override
@@ -21,9 +20,6 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
     _animationController = AnimationController(
       duration: Duration(milliseconds: 300),
       vsync: this,
-    );
-    _heightAnimation = Tween<double>(begin: 200, end: 400).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 

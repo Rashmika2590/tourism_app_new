@@ -1,9 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Screens/Auth/auth_service..dart';
+import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
 import 'package:tourism_app_new/constants/buttons.dart';
 import 'package:tourism_app_new/routs.dart';
-import 'package:tourism_app_new/widgets/auth_backround.dart'; // ✅ import the reusable background
+import 'package:tourism_app_new/widgets/auth_backround.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -48,9 +48,15 @@ class _LoginScreenState extends State<LoginScreen> {
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
 
-      final user = await _authService.loginWithEmailPassword(email, password);
+      // Pass the keepMeSignedIn flag to the auth service
+      final user = await _authService.loginWithEmailPassword(
+        email,
+        password,
+        keepSignedIn: _keepMeSignedIn,
+      );
+
       if (user != null) {
-        Navigator.pushNamed(context, AppRoutes.home);
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
       } else {
         ScaffoldMessenger.of(
           context,
@@ -164,21 +170,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ),
-                            CommonButton(
-                              label: 'Login',
-                              onPressed: _login,
-                              isLoading: _isLoading,
-                              height: screenHeight * 0.065,
-                              fontSize: screenHeight * 0.02,
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
+                            // Keep me signed in checkbox - moved BEFORE login button
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Text(
-                                  "Keep me signed in",
-                                  style: TextStyle(color: Colors.black),
-                                ),
                                 Checkbox(
                                   value: _keepMeSignedIn,
                                   onChanged: (value) {
@@ -188,8 +183,21 @@ class _LoginScreenState extends State<LoginScreen> {
                                   },
                                   activeColor: Colors.orange,
                                 ),
+                                Text(
+                                  "Keep me signed in",
+                                  style: TextStyle(color: Colors.black),
+                                ),
                               ],
                             ),
+                            SizedBox(height: screenHeight * 0.01),
+                            CommonButton(
+                              label: 'Login',
+                              onPressed: _login,
+                              isLoading: _isLoading,
+                              height: screenHeight * 0.065,
+                              fontSize: screenHeight * 0.02,
+                            ),
+                            SizedBox(height: screenHeight * 0.02),
                             Row(
                               children: [
                                 Expanded(child: Divider(color: Colors.black45)),
