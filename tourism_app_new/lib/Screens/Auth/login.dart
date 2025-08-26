@@ -112,157 +112,152 @@ class _LoginScreenState extends State<LoginScreen> {
               Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      margin: EdgeInsets.symmetric(
-                        horizontal: screenWidth * 0.05,
-                      ),
-                      padding: EdgeInsets.all(screenWidth * 0.05),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(height: screenHeight * 0.02),
-                            _buildLabeledField(
-                              label: 'Email Address',
-                              child: TextFormField(
-                                controller: _emailController,
-                                validator: _validateEmail,
-                                keyboardType: TextInputType.emailAddress,
-                                style: TextStyle(color: Colors.black),
-                                decoration: _inputDecoration(
-                                  'Enter your email',
-                                ),
-                              ),
+                  child: Container(
+                    margin: EdgeInsets.symmetric(
+                      horizontal: screenWidth * 0.05,
+                    ),
+                    padding: EdgeInsets.all(screenWidth * 0.05),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: screenHeight * 0.02),
+                          _buildLabeledField(
+                            label: 'Email Address',
+                            child: TextFormField(
+                              controller: _emailController,
+                              validator: _validateEmail,
+                              keyboardType: TextInputType.emailAddress,
+                              style: TextStyle(color: Colors.black),
+                              decoration: _inputDecoration('Enter your email'),
                             ),
-                            SizedBox(height: screenHeight * 0.02),
-                            _buildLabeledField(
-                              label: 'Password',
-                              child: TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                validator: _validatePassword,
-                                style: TextStyle(color: Colors.black),
-                                decoration: _inputDecoration(
-                                  'Enter your password',
-                                ).copyWith(
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                      color: Colors.grey,
-                                    ),
-                                    onPressed:
-                                        () => setState(() {
-                                          _obscurePassword = !_obscurePassword;
-                                        }),
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          _buildLabeledField(
+                            label: 'Password',
+                            child: TextFormField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              validator: _validatePassword,
+                              style: TextStyle(color: Colors.black),
+                              decoration: _inputDecoration(
+                                'Enter your password',
+                              ).copyWith(
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: Colors.grey,
                                   ),
+                                  onPressed:
+                                      () => setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      }),
                                 ),
                               ),
                             ),
-                            SizedBox(height: screenHeight * 0.01),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    AppRoutes.forgotPassword,
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.forgotPassword,
+                                );
+                              },
+                              child: Text(
+                                'Forgot your password?',
+                                style: TextStyle(
+                                  color: Color.fromRGBO(0, 100, 255, 1),
+                                  fontSize: screenHeight * 0.018,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Keep me signed in checkbox - moved BEFORE login button
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Checkbox(
+                                value: _keepMeSignedIn,
+                                onChanged: (value) {
+                                  setState(
+                                    () => _keepMeSignedIn = value ?? false,
                                   );
                                 },
-                                child: Text(
-                                  'Forgot your password?',
-                                  style: TextStyle(
-                                    color: Color.fromRGBO(0, 100, 255, 1),
-                                    fontSize: screenHeight * 0.018,
-                                  ),
-                                ),
+                                activeColor: Colors.orange,
                               ),
-                            ),
-                            // Keep me signed in checkbox - moved BEFORE login button
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Checkbox(
-                                  value: _keepMeSignedIn,
-                                  onChanged: (value) {
-                                    setState(
-                                      () => _keepMeSignedIn = value ?? false,
-                                    );
-                                  },
-                                  activeColor: Colors.orange,
+                              Text(
+                                "Keep me signed in",
+                                style: TextStyle(color: Colors.black),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: screenHeight * 0.01),
+                          CommonButton(
+                            label: 'Login',
+                            onPressed: _login,
+                            isLoading: _isLoading,
+                            height: screenHeight * 0.065,
+                            fontSize: screenHeight * 0.02,
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          Row(
+                            children: [
+                              Expanded(child: Divider(color: Colors.black45)),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
                                 ),
-                                Text(
-                                  "Keep me signed in",
+                                child: Text(
+                                  "OR",
                                   style: TextStyle(color: Colors.black),
                                 ),
-                              ],
-                            ),
-                            SizedBox(height: screenHeight * 0.01),
-                            CommonButton(
-                              label: 'Login',
-                              onPressed: _login,
-                              isLoading: _isLoading,
-                              height: screenHeight * 0.065,
-                              fontSize: screenHeight * 0.02,
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            Row(
-                              children: [
-                                Expanded(child: Divider(color: Colors.black45)),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                  ),
-                                  child: Text(
-                                    "OR",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                ),
-                                Expanded(child: Divider(color: Colors.black45)),
-                              ],
-                            ),
-                            SizedBox(height: screenHeight * 0.02),
-                            SizedBox(
-                              width: double.infinity,
-                              height: screenHeight * 0.06,
-                              child: OutlinedButton.icon(
-                                onPressed:
-                                    _isLoading
-                                        ? null
-                                        : () {
-                                          print("Button tapped!"); // Debug line
-                                          _signInWithGoogle();
-                                        },
-                                icon: Image.asset(
-                                  'assets/images/google_icon.png',
-                                  height: screenHeight * 0.03,
-                                ),
-                                label: Text(
-                                  'Continue with Google',
-                                  style: TextStyle(
-                                    fontSize: screenHeight * 0.018,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  side: BorderSide(color: Colors.black),
-                                  backgroundColor: Colors.white,
+                              ),
+                              Expanded(child: Divider(color: Colors.black45)),
+                            ],
+                          ),
+                          SizedBox(height: screenHeight * 0.02),
+                          SizedBox(
+                            width: double.infinity,
+                            height: screenHeight * 0.06,
+                            child: OutlinedButton.icon(
+                              onPressed:
+                                  _isLoading
+                                      ? null
+                                      : () {
+                                        print("Button tapped!"); // Debug line
+                                        _signInWithGoogle();
+                                      },
+                              icon: Image.asset(
+                                'assets/images/google_icon.png',
+                                height: screenHeight * 0.03,
+                              ),
+                              label: Text(
+                                'Continue with Google',
+                                style: TextStyle(
+                                  fontSize: screenHeight * 0.018,
+                                  color: Colors.black,
                                 ),
                               ),
+                              style: OutlinedButton.styleFrom(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                side: BorderSide(color: Colors.black),
+                                backgroundColor: Colors.white,
+                              ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),

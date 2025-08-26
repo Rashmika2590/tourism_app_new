@@ -108,169 +108,163 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
                 ClipRRect(
                   borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.white,
-                              radius: 30,
-                              child: Icon(Icons.person_outline, size: 36),
-                            ),
-                            const SizedBox(height: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.7),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.white,
+                            radius: 30,
+                            child: Icon(Icons.person_outline, size: 36),
+                          ),
+                          const SizedBox(height: 20),
 
-                            _buildLabeledField(
-                              label: 'Full Name',
-                              hint: 'Enter your full name',
-                              child: TextFormField(
-                                controller: _fullNameController,
-                                decoration: _fieldDecoration(
-                                  'Enter your full name',
-                                ),
-                                validator:
-                                    (value) =>
-                                        value == null || value.isEmpty
-                                            ? 'Enter your name'
-                                            : null,
+                          _buildLabeledField(
+                            label: 'Full Name',
+                            hint: 'Enter your full name',
+                            child: TextFormField(
+                              controller: _fullNameController,
+                              decoration: _fieldDecoration(
+                                'Enter your full name',
                               ),
+                              validator:
+                                  (value) =>
+                                      value == null || value.isEmpty
+                                          ? 'Enter your name'
+                                          : null,
                             ),
-                            const SizedBox(height: 12),
+                          ),
+                          const SizedBox(height: 12),
 
-                            _buildLabeledField(
-                              label: 'Email Address',
-                              hint: 'Enter your email',
-                              child: TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: _fieldDecoration(
-                                  'Enter your email',
-                                ),
-                                validator: _validateEmail,
+                          _buildLabeledField(
+                            label: 'Email Address',
+                            hint: 'Enter your email',
+                            child: TextFormField(
+                              controller: _emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              decoration: _fieldDecoration('Enter your email'),
+                              validator: _validateEmail,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildLabeledField(
+                            label: 'Phone Number',
+                            hint: 'Enter your phone number',
+                            child: IntlPhoneField(
+                              decoration: _fieldDecoration(
+                                'Enter your phone number',
                               ),
+                              initialCountryCode: 'LK',
+                              onChanged:
+                                  (phone) =>
+                                      _phoneNumber.value = phone.completeNumber,
                             ),
-
-                            const SizedBox(height: 12),
-
-                            _buildLabeledField(
-                              label: 'Phone Number',
-                              hint: 'Enter your phone number',
-                              child: IntlPhoneField(
-                                decoration: _fieldDecoration(
-                                  'Enter your phone number',
-                                ),
-                                initialCountryCode: 'LK',
-                                onChanged:
-                                    (phone) =>
-                                        _phoneNumber.value =
-                                            phone.completeNumber,
-                              ),
-                            ),
-                            _buildLabeledField(
-                              label: 'Password',
-                              hint: 'Enter your password',
-                              child: TextFormField(
-                                controller: _passwordController,
-                                obscureText: _obscurePassword,
-                                decoration: _fieldDecoration(
-                                  'Enter your password',
-                                ).copyWith(
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                    ),
-                                    onPressed:
-                                        () => setState(
-                                          () =>
-                                              _obscurePassword =
-                                                  !_obscurePassword,
-                                        ),
+                          ),
+                          _buildLabeledField(
+                            label: 'Password',
+                            hint: 'Enter your password',
+                            child: TextFormField(
+                              controller: _passwordController,
+                              obscureText: _obscurePassword,
+                              decoration: _fieldDecoration(
+                                'Enter your password',
+                              ).copyWith(
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscurePassword
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
                                   ),
-                                ),
-                                validator: _validatePassword,
-                              ),
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            _buildLabeledField(
-                              label: 'Confirm Password',
-                              hint: 'Re-enter your password',
-                              child: TextFormField(
-                                controller: _confirmPasswordController,
-                                obscureText: _obscureConfirmPassword,
-                                decoration: _fieldDecoration(
-                                  'Re-enter your password',
-                                ).copyWith(
-                                  suffixIcon: IconButton(
-                                    icon: Icon(
-                                      _obscureConfirmPassword
-                                          ? Icons.visibility
-                                          : Icons.visibility_off,
-                                    ),
-                                    onPressed:
-                                        () => setState(
-                                          () =>
-                                              _obscureConfirmPassword =
-                                                  !_obscureConfirmPassword,
-                                        ),
-                                  ),
-                                ),
-                                validator: _validateConfirmPassword,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: _agreeToTerms,
-                                  activeColor: Colors.orange,
-                                  onChanged:
-                                      (value) => setState(
-                                        () => _agreeToTerms = value ?? false,
+                                  onPressed:
+                                      () => setState(
+                                        () =>
+                                            _obscurePassword =
+                                                !_obscurePassword,
                                       ),
                                 ),
-                                Expanded(
-                                  child: RichText(
-                                    text: TextSpan(
-                                      text: 'I agree to the ',
-                                      style: TextStyle(color: Colors.black),
-                                      children: [
-                                        TextSpan(
-                                          text: 'Terms',
-                                          style: TextStyle(
-                                            color: Colors.deepOrange,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: ' & ',
-                                          style: TextStyle(color: Colors.black),
-                                        ),
-                                        TextSpan(
-                                          text: 'Privacy Policy',
-                                          style: TextStyle(
-                                            color: Colors.deepOrange,
-                                          ),
-                                        ),
-                                      ],
+                              ),
+                              validator: _validatePassword,
+                            ),
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          _buildLabeledField(
+                            label: 'Confirm Password',
+                            hint: 'Re-enter your password',
+                            child: TextFormField(
+                              controller: _confirmPasswordController,
+                              obscureText: _obscureConfirmPassword,
+                              decoration: _fieldDecoration(
+                                'Re-enter your password',
+                              ).copyWith(
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _obscureConfirmPassword
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                  ),
+                                  onPressed:
+                                      () => setState(
+                                        () =>
+                                            _obscureConfirmPassword =
+                                                !_obscureConfirmPassword,
+                                      ),
+                                ),
+                              ),
+                              validator: _validateConfirmPassword,
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          Row(
+                            children: [
+                              Checkbox(
+                                value: _agreeToTerms,
+                                activeColor: Colors.orange,
+                                onChanged:
+                                    (value) => setState(
+                                      () => _agreeToTerms = value ?? false,
                                     ),
+                              ),
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    text: 'I agree to the ',
+                                    style: TextStyle(color: Colors.black),
+                                    children: [
+                                      TextSpan(
+                                        text: 'Terms',
+                                        style: TextStyle(
+                                          color: Colors.deepOrange,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: ' & ',
+                                        style: TextStyle(color: Colors.black),
+                                      ),
+                                      TextSpan(
+                                        text: 'Privacy Policy',
+                                        style: TextStyle(
+                                          color: Colors.deepOrange,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ],
-                        ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),

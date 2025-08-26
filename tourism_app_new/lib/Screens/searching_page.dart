@@ -49,10 +49,10 @@ class _SearchPageState extends State<SearchPage>
   void _search() {
     final city = _cityController.text.trim();
     if (city.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => PropertyListPage(city: city)),
-      );
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => PropertyListPage(city: city)),
+      // );
     } else {
       ScaffoldMessenger.of(
         context,

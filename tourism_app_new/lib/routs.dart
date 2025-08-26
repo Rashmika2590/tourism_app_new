@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/forgot_password.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_creating.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_list.dart';
 import 'package:tourism_app_new/Screens/notification.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/property_details_page.dart';
@@ -27,6 +29,9 @@ class AppRoutes {
   static const String profile_settings = '/Profile_settings';
   static const String debug = '/debug';
 
+  static const String hotelcretion = '/create_hotels';
+  static const String hotelfilters = '/filter_hotels';
+
   static Map<String, WidgetBuilder> routes = {
     splachscreen: (context) => AnimatedSplashScreen(),
 
@@ -35,12 +40,15 @@ class AppRoutes {
     register: (context) => RegistrationScreen(),
     forgotPassword: (context) => ForgotPasswordPage(),
 
-    propertylist: (context) => PropertyListPage(city: ''),
+    //propertylist: (context) => PropertyListPage(city: ''),
     notification: (context) => NotificationsScreen(),
     property_details: (context) => PropertyDetailsPage(),
 
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),
     AppRoutes.debug: (context) => DebugUserStatusScreen(),
+
+    hotelcretion: (context) => CreateHotelPage(),
+    hotelfilters: (context) => HotelSearchPage(),
   };
 }

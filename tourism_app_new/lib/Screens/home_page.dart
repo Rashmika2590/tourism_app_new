@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:tourism_app_new/Screens/testing/availibility_search_page.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_creating.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_list.dart';
 import 'package:tourism_app_new/Screens/profile/profile_page.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/core/utils/shared_preferences.dart';
@@ -77,12 +80,16 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      _buildUserInfo(),
-      const SearchPage(),
+      //_buildUserInfo(),
+      //const CreateHotelPage(),
+      AvailabilitySearchScreen(),
+      HotelSearchPage(),
+      //const SearchPage(),
       const ProfilePage(),
     ];
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       extendBody: true, // 👈 Required to allow body to extend behind bottom bar
       body: Stack(
         children: [
