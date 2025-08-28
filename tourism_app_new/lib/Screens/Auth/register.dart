@@ -1,8 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:tourism_app_new/constants/buttons.dart';
+import 'package:tourism_app_new/Services/Api%20Services/Authentication/api_service.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/auth_backround.dart';
 
@@ -18,7 +18,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _phoneNumber = ValueNotifier<String>('');
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _authService = AuthService();
 
   bool _isRegistering = false;
   bool _obscurePassword = true;
@@ -47,29 +46,45 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return null;
   }
 
-  // In your registration screen _register method
+  /// Updated _register method using ApiService
   Future<void> _register() async {
     if (_formKey.currentState!.validate() && _agreeToTerms) {
       setState(() => _isRegistering = true);
+
+      final name = _fullNameController.text.trim();
       final email = _emailController.text.trim();
+      final phone = _phoneNumber.value;
       final password = _passwordController.text.trim();
 
-      final user = await _authService.registerWithEmailPassword(
-        email,
-        password,
-      );
+      try {
+        final result = await ApiService.registerUser(
+          name: name,
+          email: email,
+          password: password,
+          phone: phone,
+        );
 
-      setState(() => _isRegistering = false);
+        setState(() => _isRegistering = false);
 
-      if (user != null) {
-        // For new users, navigate directly to home
-        // The AuthService automatically sets keepSignedIn to true for new registrations
-        Navigator.pushReplacementNamed(context, AppRoutes.home);
-      } else {
+        // Registration successful
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Registration failed")));
+        ).showSnackBar(SnackBar(content: Text("Registration successful!")));
+
+        // Navigate to home or login screen
+        Navigator.pushReplacementNamed(context, AppRoutes.home);
+      } catch (e) {
+        setState(() => _isRegistering = false);
+
+        // Show error
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Registration failed: $e")));
       }
+    } else if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please agree to Terms & Privacy Policy")),
+      );
     }
   }
 

@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:tourism_app_new/Screens/testing/availibility_search_page.dart';
-import 'package:tourism_app_new/Screens/testing/hotel_creating.dart';
-import 'package:tourism_app_new/Screens/testing/hotel_list.dart';
-import 'package:tourism_app_new/Screens/profile/profile_page.dart';
-import 'package:tourism_app_new/Screens/searching_page.dart';
-import 'package:tourism_app_new/core/utils/shared_preferences.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
+import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:tourism_app_new/widgets/bottom_navbar.dart';
 
 const double kBottomNavBarHeight = 100;
@@ -80,12 +77,13 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      //_buildUserInfo(),
+      _buildUserInfo(),
       //const CreateHotelPage(),
-      AvailabilitySearchScreen(),
-      HotelSearchPage(),
+      //AvailabilitySearchScreen(),
+      //HotelSearchPage(),
       //const SearchPage(),
-      const ProfilePage(),
+      const HotelSearchScreen(),
+      const HotelCreationScreen(),
     ];
 
     return Scaffold(

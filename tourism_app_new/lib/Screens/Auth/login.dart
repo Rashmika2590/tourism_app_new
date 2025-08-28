@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 import 'package:tourism_app_new/constants/buttons.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/auth_backround.dart';

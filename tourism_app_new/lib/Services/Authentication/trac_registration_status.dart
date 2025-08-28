@@ -1,4 +1,4 @@
-import 'package:tourism_app_new/core/utils/shared_preferences.dart';
+import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 
 class UserStateManager {
   // Keys for storing user state

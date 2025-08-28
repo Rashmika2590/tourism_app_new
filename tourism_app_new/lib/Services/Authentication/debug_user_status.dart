@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/core/services/Authentication/auth_service..dart';
-import 'package:tourism_app_new/core/services/Authentication/trac_registration_status.dart';
+import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/Services/Authentication/trac_registration_status.dart';
 
 class DebugUserStatusScreen extends StatefulWidget {
   @override

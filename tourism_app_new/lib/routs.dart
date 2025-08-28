@@ -1,15 +1,14 @@
-// lib/routes/app_routes.dart
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/forgot_password.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
-import 'package:tourism_app_new/Screens/testing/hotel_creating.dart';
-import 'package:tourism_app_new/Screens/testing/hotel_list.dart';
 import 'package:tourism_app_new/Screens/notification.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/property_details_page.dart';
-import 'package:tourism_app_new/Screens/property_list_page.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
-import 'package:tourism_app_new/core/services/Authentication/debug_user_status.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
+import 'package:tourism_app_new/Services/Authentication/debug_user_status.dart';
 import '../Screens/home_page.dart';
 import '../Screens/Auth/login.dart';
 
@@ -29,8 +28,9 @@ class AppRoutes {
   static const String profile_settings = '/Profile_settings';
   static const String debug = '/debug';
 
-  static const String hotelcretion = '/create_hotels';
-  static const String hotelfilters = '/filter_hotels';
+  static const String hotelcreation = '/create-hotel';
+  static const String hotelsearch = '/hotel-search';
+  static const String hoteldetails = '/hotel_details';
 
   static Map<String, WidgetBuilder> routes = {
     splachscreen: (context) => AnimatedSplashScreen(),
@@ -46,9 +46,10 @@ class AppRoutes {
 
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),
-    AppRoutes.debug: (context) => DebugUserStatusScreen(),
+    debug: (context) => DebugUserStatusScreen(),
 
-    hotelcretion: (context) => CreateHotelPage(),
-    hotelfilters: (context) => HotelSearchPage(),
+    hotelcreation: (context) => HotelCreationScreen(),
+    hotelsearch: (context) => HotelSearchScreen(),
+    hoteldetails: (context) => HotelDetailsScreen(),
   };
 }

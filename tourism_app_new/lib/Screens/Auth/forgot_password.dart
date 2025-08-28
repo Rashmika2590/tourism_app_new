@@ -88,71 +88,68 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                   Center(
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          width: screenWidth * 0.9,
-                          // Set a min height or fixed height to increase size
-                          constraints: BoxConstraints(
-                            minHeight: screenHeight * 0.45, // Increased height
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: screenWidth * 0.05,
-                            vertical: screenHeight * 0.04,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildLabeledField(
-                                  label: 'Email Address',
-                                  child: TextFormField(
-                                    controller: _emailController,
-                                    validator: _validateEmail,
-                                    keyboardType: TextInputType.emailAddress,
-                                    style: const TextStyle(color: Colors.black),
-                                    decoration: _inputDecoration(
-                                      'Enter your email',
-                                    ),
+                      child: Container(
+                        width: screenWidth * 0.9,
+                        // Set a min height or fixed height to increase size
+                        constraints: BoxConstraints(
+                          minHeight: screenHeight * 0.45, // Increased height
+                        ),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: screenWidth * 0.05,
+                          vertical: screenHeight * 0.04,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _buildLabeledField(
+                                label: 'Email Address',
+                                child: TextFormField(
+                                  controller: _emailController,
+                                  validator: _validateEmail,
+                                  keyboardType: TextInputType.emailAddress,
+                                  style: const TextStyle(color: Colors.black),
+                                  decoration: _inputDecoration(
+                                    'Enter your email',
                                   ),
                                 ),
-                                SizedBox(height: screenHeight * 0.05),
-                                CommonButton(
-                                  label: 'Send Reset Link',
-                                  onPressed: _sendResetLink,
-                                  isLoading: _isSending,
-                                  height: screenHeight * 0.06,
-                                  fontSize: screenHeight * 0.02,
-                                ),
-                                SizedBox(height: screenHeight * 0.05),
-                                if (_linkSent) ...[
-                                  SizedBox(height: screenHeight * 0.015),
-                                  Center(
-                                    child: TextButton(
-                                      onPressed:
-                                          _isSending ? null : _sendResetLink,
-                                      child: const Text(
-                                        "Didn't get it? Resend",
-                                        style: TextStyle(color: Colors.orange),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 10),
+                              ),
+                              SizedBox(height: screenHeight * 0.05),
+                              CommonButton(
+                                label: 'Send Reset Link',
+                                onPressed: _sendResetLink,
+                                isLoading: _isSending,
+                                height: screenHeight * 0.06,
+                                fontSize: screenHeight * 0.02,
+                              ),
+                              SizedBox(height: screenHeight * 0.05),
+                              if (_linkSent) ...[
+                                SizedBox(height: screenHeight * 0.015),
                                 Center(
-                                  child: Text(
-                                    "Make sure to check your spam folder.",
-                                    style: TextStyle(color: Colors.black54),
+                                  child: TextButton(
+                                    onPressed:
+                                        _isSending ? null : _sendResetLink,
+                                    child: const Text(
+                                      "Didn't get it? Resend",
+                                      style: TextStyle(color: Colors.orange),
+                                    ),
                                   ),
                                 ),
                               ],
-                            ),
+                              const SizedBox(height: 10),
+                              Center(
+                                child: Text(
+                                  "Make sure to check your spam folder.",
+                                  style: TextStyle(color: Colors.black54),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

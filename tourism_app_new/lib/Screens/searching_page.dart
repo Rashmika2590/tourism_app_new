@@ -7,7 +7,6 @@ import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/property_model.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/property_card.dart';
-import 'property_list_page.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 
 class SearchPage extends StatefulWidget {

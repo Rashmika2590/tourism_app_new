@@ -46,6 +46,11 @@ dependencies:
   shimmer: ^3.0.0
   flutter_typeahead: ^4.0.0
   google_sign_in: ^6.1.6
+  url_launcher: ^6.1.10
+  image_picker: ^1.0.7
+  http_parser: ^4.0.2
+  mime: ^1.0.4
+  path: ^1.8.3
 
 
 dev_dependencies:

@@ -1,14 +1,38 @@
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:tourism_app_new/core/services/Authentication/trac_registration_status.dart';
-import 'package:tourism_app_new/core/utils/shared_preferences.dart';
+import 'package:tourism_app_new/Services/Authentication/trac_registration_status.dart';
+import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   static const String _keepSignedInKey = 'keep_signed_in';
+
+  // Utility: decode and print JWT info
+  void _debugPrintTokenInfo(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        debugPrint('Invalid JWT format');
+        return;
+      }
+
+      final payload = utf8.decode(
+        base64Url.decode(base64Url.normalize(parts[1])),
+      );
+      debugPrint("======= JWT TOKEN =======");
+      debugPrint("Token (length ${token.length}):");
+      debugPrint(token);
+      debugPrint("------- Decoded Payload -------");
+      debugPrint(payload);
+      debugPrint("===============================");
+    } catch (e) {
+      debugPrint("Error decoding token: $e");
+    }
+  }
 
   // Register with email & password
   Future<User?> registerWithEmailPassword(String email, String password) async {
@@ -19,11 +43,8 @@ class AuthService {
 
       if (user != null) {
         await _saveTokenWithExpiry(user);
-
-        // Mark user as registered and set auto-login for first-time users
         await UserStateManager.markUserAsRegistered(email);
-        await _setKeepSignedIn(true); // Auto-login for new users
-
+        await _setKeepSignedIn(true);
         debugPrint("New user registered: $email");
         debugPrint("Auto-login enabled for new user");
       }
@@ -49,20 +70,15 @@ class AuthService {
 
       if (user != null) {
         await _saveTokenWithExpiry(user);
-
-        // Check if this is the same user who registered on this device
         bool isRegisteredUser =
             await UserStateManager.isLoginWithRegisteredEmail(email);
 
+        await _setKeepSignedIn(keepSignedIn);
         if (isRegisteredUser) {
-          // This is a returning user who registered on this device
-          await _setKeepSignedIn(keepSignedIn);
           debugPrint(
             "Returning registered user login: $email, keepSignedIn: $keepSignedIn",
           );
         } else {
-          // This is a user logging in who didn't register on this device
-          await _setKeepSignedIn(keepSignedIn);
           debugPrint(
             "External user login: $email, keepSignedIn: $keepSignedIn",
           );
@@ -83,7 +99,7 @@ class AuthService {
 
       if (user != null) {
         await _saveTokenWithExpiry(user);
-        await _setKeepSignedIn(true); // Anonymous users stay logged in
+        await _setKeepSignedIn(true);
         debugPrint("Anonymous sign in - auto-login enabled");
       }
       return user;
@@ -95,25 +111,17 @@ class AuthService {
 
   Future<User?> signInWithGoogle() async {
     try {
-      // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
 
-      if (googleUser == null) {
-        // User canceled the sign-in
-        return null;
-      }
-
-      // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
 
-      // Create a new credential
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
-      // Sign in to Firebase with the Google credential
       UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
@@ -122,15 +130,12 @@ class AuthService {
       if (user != null) {
         await _saveTokenWithExpiry(user);
 
-        // Check if this is a new user (first time signing in with Google)
         if (userCredential.additionalUserInfo?.isNewUser ?? false) {
-          // New user - enable auto-login
           await _setKeepSignedIn(true);
           await UserStateManager.markUserAsRegistered(user.email!);
           debugPrint("New Google user registered: ${user.email}");
         } else {
-          // Existing user - respect their previous preference or enable by default
-          await _setKeepSignedIn(true); // You can make this configurable
+          await _setKeepSignedIn(true);
           debugPrint("Existing Google user login: ${user.email}");
         }
       }
@@ -142,7 +147,7 @@ class AuthService {
     }
   }
 
-  // Enhanced logout with user state management
+  // Logout
   Future<void> signOut({bool clearKeepSignedIn = true}) async {
     try {
       await _auth.signOut();
@@ -150,8 +155,6 @@ class AuthService {
 
       if (clearKeepSignedIn) {
         await _setKeepSignedIn(false);
-        // Don't clear registration status - user is still registered
-        // Just clear the keep signed in preference
       }
 
       await SharedPreferecesUtil.clearAll();
@@ -161,7 +164,7 @@ class AuthService {
     }
   }
 
-  // Check if user should be automatically logged in
+  // Auto-login check
   Future<bool> shouldAutoLogin() async {
     final keepSignedIn = await _getKeepSignedIn();
     final currentUser = _auth.currentUser;
@@ -174,13 +177,16 @@ class AuthService {
     return keepSignedIn && currentUser != null;
   }
 
-  // Get fresh token - this automatically refreshes if needed
+  // Get fresh token
   Future<String?> getFreshToken() async {
     try {
       final user = _auth.currentUser;
       if (user == null) return null;
 
-      final token = await user.getIdToken(true); // force refresh
+      final token = await user.getIdToken(true);
+      if (token != null) {
+        _debugPrintTokenInfo(token);
+      }
       await _saveTokenWithExpiry(user);
       return token;
     } catch (e) {
@@ -189,7 +195,7 @@ class AuthService {
     }
   }
 
-  // Check if token needs refresh
+  // Check expiry
   Future<bool> isTokenExpired() async {
     final expiryTimeStr = await SharedPreferecesUtil.getTokenExpiry();
     if (expiryTimeStr == null) return true;
@@ -198,11 +204,10 @@ class AuthService {
     if (expiryTime == null) return true;
 
     final now = DateTime.now();
-    final timeUntilExpiry = expiryTime.difference(now);
-    return timeUntilExpiry.inMinutes < 5;
+    return expiryTime.isBefore(now.add(const Duration(minutes: 5)));
   }
 
-  // Auto-refresh token if needed
+  // Ensure valid token
   Future<String?> getValidToken() async {
     final currentToken = SharedPreferecesUtil.getToken();
 
@@ -210,22 +215,24 @@ class AuthService {
       debugPrint("Token expired or missing, refreshing...");
       return await getFreshToken();
     }
-
+    _debugPrintTokenInfo(currentToken);
     return currentToken;
   }
 
-  // Save token with expiry time
+  // Save token + expiry
   Future<void> _saveTokenWithExpiry(User user) async {
     final token = await user.getIdToken(true);
-    await SharedPreferecesUtil.setToken(token!);
+    if (token == null) return;
+    await SharedPreferecesUtil.setToken(token);
 
-    final expiryTime = DateTime.now().add(Duration(hours: 1));
+    final expiryTime = DateTime.now().add(const Duration(hours: 1));
     await SharedPreferecesUtil.setTokenExpiry(expiryTime.toIso8601String());
 
     debugPrint("Token saved with expiry: ${expiryTime.toIso8601String()}");
+    _debugPrintTokenInfo(token);
   }
 
-  // Keep signed in preference methods
+  // Keep signed-in flag
   Future<void> _setKeepSignedIn(bool value) async {
     await SharedPreferecesUtil.setBool(_keepSignedInKey, value);
   }
@@ -234,12 +241,10 @@ class AuthService {
     return SharedPreferecesUtil.getBool(_keepSignedInKey) ?? false;
   }
 
-  // Get currently signed-in user
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
+  // Current user
+  User? getCurrentUser() => _auth.currentUser;
 
-  // Get user registration status for debugging
+  // Debug auth status
   Future<Map<String, dynamic>> getUserAuthStatus() async {
     final userStatus = await UserStateManager.getUserStatus();
     final keepSignedIn = await _getKeepSignedIn();
@@ -253,7 +258,7 @@ class AuthService {
     };
   }
 
-  // Initialize auth state
+  // Init auth state listener
   Future<void> initializeAuth() async {
     _auth.authStateChanges().listen((User? user) {
       if (user == null) {
