@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Models/hotel_model.dart';
+import 'package:tourism_app_new/Screens/testing/Rooms/room_creation.dart';
+import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 
 class HotelDetailsScreen extends StatelessWidget {
   const HotelDetailsScreen({Key? key}) : super(key: key);
@@ -150,6 +152,30 @@ class HotelDetailsScreen extends StatelessWidget {
                           }).toList(),
                     ),
                   ],
+
+                  SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RoomCreationScreen(hotelId: hotel.id),
+                        ),
+                      );
+                    },
+                    child: Text("Add Room"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RoomsListScreen(hotelId: hotel.id),
+                        ),
+                      );
+                    },
+                    child: const Text("Show Room Details"),
+                  ),
                 ],
               ),
             ),

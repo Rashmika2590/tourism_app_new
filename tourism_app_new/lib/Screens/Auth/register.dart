@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:tourism_app_new/constants/buttons.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/Authentication/auth_api_service.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/auth_backround.dart';
 
