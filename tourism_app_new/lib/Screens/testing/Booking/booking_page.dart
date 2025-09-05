@@ -248,20 +248,27 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  // void _handleBookingForSomeoneElse() {
+  //   setState(() {
+  //     _isBookingForSomeoneElse = !_isBookingForSomeoneElse;
+  //     if (!_isBookingForSomeoneElse) {
+  //       // Reset to default user details
+  //       _nameController.text = 'Amantha Nirmal';
+  //       _emailController.text = 'amantha.nirmal@email.com';
+  //       _phoneController.text = '+94 77 123 4567';
+  //     } else {
+  //       // Clear fields for someone else's details
+  //       _nameController.clear();
+  //       _emailController.clear();
+  //       _phoneController.clear();
+  //     }
+  //   });
+  // }
+
+  // Add this method to handle the tap
   void _handleBookingForSomeoneElse() {
     setState(() {
       _isBookingForSomeoneElse = !_isBookingForSomeoneElse;
-      if (!_isBookingForSomeoneElse) {
-        // Reset to default user details
-        _nameController.text = 'Amantha Nirmal';
-        _emailController.text = 'amantha.nirmal@email.com';
-        _phoneController.text = '+94 77 123 4567';
-      } else {
-        // Clear fields for someone else's details
-        _nameController.clear();
-        _emailController.clear();
-        _phoneController.clear();
-      }
     });
   }
 
@@ -285,6 +292,8 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Column(
           children: [
             // Booking details section
+
+            // Updated Container widget
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
@@ -446,17 +455,123 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Booking for someone else
+                  // Booking for someone else toggle
                   GestureDetector(
                     onTap: _handleBookingForSomeoneElse,
-                    child: Text(
-                      _isBookingForSomeoneElse
-                          ? 'Booking for yourself?'
-                          : 'Booking for someone else?',
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.w500,
-                      ),
+                    child: Row(
+                      children: [
+                        Text(
+                          _isBookingForSomeoneElse
+                              ? 'Booking for yourself?'
+                              : 'Booking for someone else?',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          _isBookingForSomeoneElse
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Expandable form fields
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    height: _isBookingForSomeoneElse ? null : 0,
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 300),
+                      opacity: _isBookingForSomeoneElse ? 1.0 : 0.0,
+                      child:
+                          _isBookingForSomeoneElse
+                              ? Column(
+                                children: [
+                                  const SizedBox(height: 16),
+
+                                  // Name field
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: TextField(
+                                      controller: _nameController,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Full Name',
+                                        prefixIcon: Icon(Icons.person_outline),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // Email field
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: TextField(
+                                      controller: _emailController,
+                                      keyboardType: TextInputType.emailAddress,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Email Address',
+                                        prefixIcon: Icon(Icons.email_outlined),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // Phone field
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ),
+                                    child: TextField(
+                                      controller: _phoneController,
+                                      keyboardType: TextInputType.phone,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Phone Number',
+                                        prefixIcon: Icon(Icons.phone_outlined),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : const SizedBox.shrink(),
                     ),
                   ),
                 ],
