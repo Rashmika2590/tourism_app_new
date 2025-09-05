@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:tourism_app_new/Services/Authentication/trac_registration_status.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
+import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -162,6 +163,7 @@ class AuthService {
     } catch (e) {
       debugPrint("Logout failed: $e");
     }
+    await SharedPrefUser.clearUser();
   }
 
   // Auto-login check

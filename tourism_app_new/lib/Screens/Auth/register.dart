@@ -1,8 +1,10 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 import 'package:tourism_app_new/constants/buttons.dart';
 import 'package:tourism_app_new/Services/Api%20Services/Authentication/auth_api_service.dart';
+import 'package:tourism_app_new/models/user_model.dart';
 import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/auth_backround.dart';
 
@@ -55,6 +57,21 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       final email = _emailController.text.trim();
       final phone = _phoneNumber.value;
       final password = _passwordController.text.trim();
+
+      final newUser = User(
+        uid: '',
+        name: _fullNameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+        phone: _phoneNumber.value,
+        role: 'user',
+        //isVerified: user.emailVerified,
+        createdTime: DateTime.now(),
+        updatedTime: DateTime.now(),
+        updatedBy: name,
+      );
+
+      await SharedPrefUser.saveUser(newUser);
 
       try {
         final result = await ApiService.registerUser(

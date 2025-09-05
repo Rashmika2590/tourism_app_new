@@ -21,7 +21,6 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
     Icons.home_rounded,
     Icons.menu_rounded,
     Icons.person_rounded,
-    Icons.settings_rounded,
   ];
 
   static const double navBarHeight = 70;

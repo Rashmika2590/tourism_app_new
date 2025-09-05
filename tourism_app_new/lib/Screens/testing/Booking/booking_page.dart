@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Models/booking_model.dart';
 import 'package:tourism_app_new/Models/room_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/booking_api_service.dart';
+import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
+import 'package:tourism_app_new/constants/colors.dart';
+import 'package:tourism_app_new/models/user_model.dart';
 
 class BookingScreen extends StatefulWidget {
   final Room room;
@@ -37,27 +40,12 @@ class _BookingScreenState extends State<BookingScreen> {
   final _promoCodeController = TextEditingController();
 
   String _selectedPaymentMethod = 'Card Payment';
-  String _selectedCountry = 'Sri Lanka';
   TimeOfDay _estimatedArrival = const TimeOfDay(hour: 8, minute: 0);
   bool _isBooking = false;
   bool _agreeToTerms = false;
   bool _isBookingForSomeoneElse = false;
   double _totalPrice = 0.0;
   double _serviceFee = 5.0;
-
-  final List<String> _paymentMethods = [
-    'Card Payment',
-    'Google Pay',
-    'Crabby Points',
-  ];
-
-  final List<String> _countries = [
-    'Sri Lanka',
-    'India',
-    'Maldives',
-    'Bangladesh',
-    'Pakistan',
-  ];
 
   @override
   void initState() {
@@ -191,6 +179,10 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
+  Future<User?> _loadUser() async {
+    return await SharedPrefUser.getUser(); // This returns your User model
+  }
+
   void _showErrorDialog(String error) {
     showDialog(
       context: context,
@@ -264,7 +256,6 @@ class _BookingScreenState extends State<BookingScreen> {
         _nameController.text = 'Amantha Nirmal';
         _emailController.text = 'amantha.nirmal@email.com';
         _phoneController.text = '+94 77 123 4567';
-        _selectedCountry = 'Sri Lanka';
       } else {
         // Clear fields for someone else's details
         _nameController.clear();
@@ -479,125 +470,38 @@ class _BookingScreenState extends State<BookingScreen> {
             // Guest details form
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: InputDecoration(
-                        labelText: 'Name',
-                        hintText: 'Enter full name',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter name';
-                        }
-                        return null;
-                      },
-                      readOnly: !_isBookingForSomeoneElse,
-                    ),
+              child: FutureBuilder<User?>(
+                future: _loadUser(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snapshot.hasData) {
+                    return const Text("No user data found");
+                  }
 
-                    const SizedBox(height: 12),
-
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'E-mail',
-                        hintText: 'Enter email address',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter email';
-                        }
-                        return null;
-                      },
-                      readOnly: !_isBookingForSomeoneElse,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _phoneController,
-                            decoration: InputDecoration(
-                              labelText: 'Phone',
-                              hintText: 'Enter phone number',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 16,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter phone number';
-                              }
-                              return null;
-                            },
-                            readOnly: !_isBookingForSomeoneElse,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCountry,
-                            decoration: InputDecoration(
-                              labelText: 'Country',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 16,
-                              ),
-                            ),
-                            items:
-                                _countries.map((country) {
-                                  return DropdownMenuItem(
-                                    value: country,
-                                    child: Text(country),
-                                  );
-                                }).toList(),
-                            onChanged:
-                                _isBookingForSomeoneElse
-                                    ? (value) {
-                                      setState(() {
-                                        _selectedCountry = value!;
-                                      });
-                                    }
-                                    : null,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  final user = snapshot.data!;
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildDetailRow("Name", user.name),
+                      const SizedBox(height: 12),
+                      _buildDetailRow("E-mail", user.email),
+                      const SizedBox(height: 12),
+                      _buildDetailRow("Phone", user.phone),
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        "Country",
+                        user.updatedBy,
+                      ), // if you stored country there
+                    ],
+                  );
+                },
               ),
             ),
 
@@ -994,10 +898,22 @@ class _BookingScreenState extends State<BookingScreen> {
         width: double.infinity,
         height: 56,
         margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration:
+            (_isBooking || !_agreeToTerms)
+                ? BoxDecoration(
+                  color: Colors.grey, // disabled state
+                  borderRadius: BorderRadius.circular(28),
+                )
+                : BoxDecoration(
+                  gradient:
+                      AppGradients
+                          .primaryGradient, // <-- your gradient from constants
+                  borderRadius: BorderRadius.circular(28),
+                ),
         child: FloatingActionButton.extended(
           onPressed: (_isBooking || !_agreeToTerms) ? null : _submitBooking,
-          backgroundColor:
-              (_isBooking || !_agreeToTerms) ? Colors.grey : Colors.teal,
+          backgroundColor: Colors.transparent, // make FAB itself transparent
+          elevation: 0, // so gradient shows nicely
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
@@ -1020,7 +936,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       Text('Processing...'),
                     ],
                   )
-                  : Text(
+                  : const Text(
                     'Proceed to Payment',
                     style: TextStyle(
                       fontSize: 16,
@@ -1030,7 +946,25 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
         ),
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(fontSize: 16, color: Colors.black)),
+      ],
     );
   }
 }
