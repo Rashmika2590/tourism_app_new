@@ -1,36 +1,86 @@
+// widgets/search_card_with_data.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
-class MainSearchCard extends StatefulWidget {
+class SearchCardWithData extends StatefulWidget {
+  final String location;
+  final DateTime checkInDate;
+  final String checkInTime;
+  final DateTime checkOutDate;
+  final int adults;
+  final int children;
+  final int rooms;
+  final String duration;
+  final VoidCallback onSearchPressed;
+
+  const SearchCardWithData({
+    super.key,
+    required this.location,
+    required this.checkInDate,
+    required this.checkInTime,
+    required this.checkOutDate,
+    required this.adults,
+    required this.children,
+    required this.rooms,
+    required this.duration,
+    required this.onSearchPressed,
+  });
+
   @override
-  _MainSearchCardState createState() => _MainSearchCardState();
+  _SearchCardWithDataState createState() => _SearchCardWithDataState();
 }
 
-class _MainSearchCardState extends State<MainSearchCard> {
-  DateTime selectedDate = DateTime(2024, 12, 20);
-  TimeOfDay selectedTime = TimeOfDay(hour: 7, minute: 30);
-  String selectedDuration = "7 Hours";
-  int adults = 2;
-  int children = 2;
-  int rooms = 1;
-
+class _SearchCardWithDataState extends State<SearchCardWithData> {
   bool showDatePicker = false;
   bool showDurationDropdown = false;
   bool showGuestSelector = false;
   bool showSearchButton = false;
 
-  final themeColor = Color(0xFF4ECDC4);
+  late DateTime selectedDate;
+  late TimeOfDay selectedTime;
+  late String selectedDuration;
+  late int adults;
+  late int children;
+  late int rooms;
+
+  final themeColor = const Color(0xFF4ECDC4);
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with values from widget
+    selectedDate = widget.checkInDate;
+    selectedDuration = widget.duration;
+    adults = widget.adults;
+    children = widget.children;
+    rooms = widget.rooms;
+
+    // Parse time from string
+    final timeParts = widget.checkInTime
+        .replaceAll('AM', '')
+        .replaceAll('PM', '')
+        .split(':');
+    final hour = int.parse(timeParts[0].trim());
+    final minute = int.parse(timeParts[1].trim());
+    final isPM = widget.checkInTime.toUpperCase().contains('PM');
+
+    selectedTime = TimeOfDay(
+      hour: isPM && hour != 12 ? hour + 12 : hour,
+      minute: minute,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24), // Increased border radius
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -38,7 +88,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
         children: [
           // Main search content
           Container(
-            padding: EdgeInsets.all(15), // Increased padding
+            padding: const EdgeInsets.all(15),
             child: Column(
               children: [
                 Row(
@@ -47,17 +97,17 @@ class _MainSearchCardState extends State<MainSearchCard> {
                       Icons.location_on_outlined,
                       color: Colors.grey[600],
                       size: 24,
-                    ), // Bigger icon
-                    SizedBox(width: 12),
+                    ),
+                    const SizedBox(width: 12),
                     Text(
-                      'Galle',
+                      widget.location,
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 18, // Bigger font
+                        fontSize: 18,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    Spacer(),
+                    const Spacer(),
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -68,33 +118,31 @@ class _MainSearchCardState extends State<MainSearchCard> {
                         });
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: themeColor,
-                          borderRadius: BorderRadius.circular(
-                            20,
-                          ), // More rounded
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0').replaceAll('12', 'DEC')}-${selectedDate.year}',
-                              style: TextStyle(
+                              '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 14, // Bigger font
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Text(
-                              '${selectedTime.format(context)}',
-                              style: TextStyle(
+                              selectedTime.format(context),
+                              style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 14, // Bigger font
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -104,7 +152,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
                     ),
                   ],
                 ),
-                SizedBox(height: 10), // More spacing
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     GestureDetector(
@@ -117,28 +165,25 @@ class _MainSearchCardState extends State<MainSearchCard> {
                         });
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
                           color: themeColor,
-                          borderRadius: BorderRadius.circular(
-                            20,
-                          ), // More rounded
+                          borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           selectedDuration,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 14, // Bigger font
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
                     ),
-                    SizedBox(width: 12),
-                    // Guest container wrapped in grey container
+                    const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -149,15 +194,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
                         });
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(
+                        padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100], // Grey background
-                          borderRadius: BorderRadius.circular(
-                            20,
-                          ), // Rounded corners
+                          color: Colors.grey[100],
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: Colors.grey[300]!),
                         ),
                         child: Row(
@@ -165,32 +208,32 @@ class _MainSearchCardState extends State<MainSearchCard> {
                             Icon(
                               Icons.people_outline,
                               color: Colors.grey[600],
-                              size: 18, // Bigger icon
+                              size: 18,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               '$adults Adults',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 13, // Bigger font
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
                               '$children children',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 13, // Bigger font
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
                               '$rooms Room',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 13, // Bigger font
+                                fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -216,13 +259,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
 
   Widget _buildDurationSection() {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
-        padding: EdgeInsets.all(20), // Increased padding
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24),
             bottomRight: Radius.circular(24),
           ),
@@ -230,7 +273,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 6,
-              offset: Offset(0, -2),
+              offset: const Offset(0, -2),
               spreadRadius: 1,
             ),
           ],
@@ -241,18 +284,18 @@ class _MainSearchCardState extends State<MainSearchCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.access_time, color: Colors.grey[400], size: 22),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Text(
                   'Choose duration',
                   style: TextStyle(
                     color: Colors.grey[600],
-                    fontSize: 16, // Bigger font
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Container(
               height: 200,
               child: SingleChildScrollView(
@@ -264,7 +307,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
                 ),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -273,11 +316,11 @@ class _MainSearchCardState extends State<MainSearchCard> {
                 });
               },
               style: _buttonStyle(),
-              child: Text(
+              child: const Text(
                 'Done',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16, // Bigger font
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -294,24 +337,21 @@ class _MainSearchCardState extends State<MainSearchCard> {
       onTap: () => setState(() => selectedDuration = duration),
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.symmetric(
-          vertical: 16,
-          horizontal: 20,
-        ), // More padding
-        margin: EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
           color: isSelected ? themeColor.withOpacity(0.1) : Colors.grey[50],
           border: Border.all(
             color: isSelected ? themeColor : Colors.grey[300]!,
           ),
-          borderRadius: BorderRadius.circular(16), // More rounded
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           duration,
           style: TextStyle(
             color: isSelected ? themeColor : Colors.grey[700],
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            fontSize: 15, // Bigger font
+            fontSize: 15,
           ),
         ),
       ),
@@ -320,13 +360,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
 
   Widget _buildDatePickerSection() {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
-        padding: EdgeInsets.all(20), // Increased padding
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24),
             bottomRight: Radius.circular(24),
           ),
@@ -334,7 +374,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 6,
-              offset: Offset(0, -2),
+              offset: const Offset(0, -2),
               spreadRadius: 1,
             ),
           ],
@@ -343,27 +383,27 @@ class _MainSearchCardState extends State<MainSearchCard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'DECEMBER',
+              DateFormat('MMMM').format(selectedDate).toUpperCase(),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 18, // Bigger font
+                fontSize: 18,
                 color: Colors.grey[800],
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildCalendar(),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Row(
               children: [
-                Text(
+                const Text(
                   'From',
                   style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 15, // Bigger font
+                    color: Colors.grey,
+                    fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                Spacer(),
+                const Spacer(),
                 GestureDetector(
                   onTap: () async {
                     final TimeOfDay? time = await showTimePicker(
@@ -387,13 +427,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
                     style: TextStyle(
                       color: themeColor,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16, // Bigger font
+                      fontSize: 16,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -402,11 +442,11 @@ class _MainSearchCardState extends State<MainSearchCard> {
                 });
               },
               style: _buttonStyle(),
-              child: Text(
+              child: const Text(
                 'Select Date',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16, // Bigger font
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -419,13 +459,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
 
   Widget _buildGuestSection() {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
-        padding: EdgeInsets.all(20), // Increased padding
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24),
             bottomRight: Radius.circular(24),
           ),
@@ -433,7 +473,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 6,
-              offset: Offset(0, -2),
+              offset: const Offset(0, -2),
               spreadRadius: 1,
             ),
           ],
@@ -444,36 +484,36 @@ class _MainSearchCardState extends State<MainSearchCard> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.people_outline, color: Colors.grey[400], size: 22),
-                SizedBox(width: 10),
-                Text(
+                const SizedBox(width: 10),
+                const Text(
                   'No. of guests',
                   style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16, // Bigger font
+                    color: Colors.grey,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             _buildGuestCounter(
               'Adults',
               adults,
               (value) => setState(() => adults = value),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildGuestCounter(
               'Children',
               children,
               (value) => setState(() => children = value),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             _buildGuestCounter(
               'Rooms',
               rooms,
               (value) => setState(() => rooms = value),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             ElevatedButton(
               onPressed: () {
                 setState(() {
@@ -482,11 +522,11 @@ class _MainSearchCardState extends State<MainSearchCard> {
                 });
               },
               style: _buttonStyle(),
-              child: Text(
+              child: const Text(
                 'Done',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16, // Bigger font
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -504,7 +544,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 16, // Bigger font
+            fontSize: 16,
             fontWeight: FontWeight.w500,
             color: Colors.grey[700],
           ),
@@ -516,12 +556,12 @@ class _MainSearchCardState extends State<MainSearchCard> {
               () => value > 0 ? onChanged(value - 1) : null,
             ),
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Text(
                 '$value',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  fontSize: 18, // Bigger font
+                  fontSize: 18,
                   color: Colors.grey[800],
                 ),
               ),
@@ -537,11 +577,11 @@ class _MainSearchCardState extends State<MainSearchCard> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 36, // Bigger button
+        width: 36,
         height: 36,
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey[400]!),
-          borderRadius: BorderRadius.circular(10), // More rounded
+          borderRadius: BorderRadius.circular(10),
         ),
         child: Icon(icon, size: 20, color: Colors.grey[600]),
       ),
@@ -550,13 +590,13 @@ class _MainSearchCardState extends State<MainSearchCard> {
 
   Widget _buildSearchSection() {
     return AnimatedContainer(
-      duration: Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
-        padding: EdgeInsets.all(10), // Increased padding
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: BorderRadius.only(
+          borderRadius: const BorderRadius.only(
             bottomLeft: Radius.circular(24),
             bottomRight: Radius.circular(24),
           ),
@@ -564,7 +604,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
               blurRadius: 6,
-              offset: Offset(0, -2),
+              offset: const Offset(0, -2),
               spreadRadius: 1,
             ),
           ],
@@ -575,21 +615,20 @@ class _MainSearchCardState extends State<MainSearchCard> {
               alignment: Alignment.topRight,
               child: GestureDetector(
                 onTap: () => setState(() => showSearchButton = false),
-                child: Icon(Icons.close, color: Colors.grey[600], size: 20),
+                child: const Icon(Icons.close, color: Colors.grey, size: 20),
               ),
             ),
             ElevatedButton(
               onPressed: () {
-                print(
-                  'Searching: $selectedDate, $selectedTime, $selectedDuration, $adults adults, $children children, $rooms rooms',
-                );
+                widget.onSearchPressed();
+                setState(() => showSearchButton = false);
               },
               style: _buttonStyle(),
-              child: Text(
+              child: const Text(
                 '            Search              ',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 16, // Bigger font
+                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -613,7 +652,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
                     d,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 14, // Bigger font
+                      fontSize: 14,
                       color: Colors.grey[600],
                       fontWeight: FontWeight.w600,
                     ),
@@ -621,10 +660,10 @@ class _MainSearchCardState extends State<MainSearchCard> {
                 );
               }).toList(),
         ),
-        SizedBox(height: 16),
+        const SizedBox(height: 16),
         ...List.generate(5, (weekIndex) {
           return Padding(
-            padding: EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: List.generate(7, (dayIndex) {
@@ -656,7 +695,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
                       child: Text(
                         '$day',
                         style: TextStyle(
-                          fontSize: 16, // Bigger font
+                          fontSize: 16,
                           color: isSelected ? Colors.white : Colors.black,
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w500,
@@ -675,9 +714,7 @@ class _MainSearchCardState extends State<MainSearchCard> {
 
   ButtonStyle _buttonStyle() => ElevatedButton.styleFrom(
     backgroundColor: themeColor,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(24),
-    ), // More rounded
-    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 10), // More padding
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+    padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
   );
 }

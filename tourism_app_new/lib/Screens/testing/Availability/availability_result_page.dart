@@ -1,12 +1,12 @@
 // room_availability_results.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
-import 'package:tourism_app_new/widgets/expandable_map_widget.dart'; // Import the map widget
+import 'package:tourism_app_new/widgets/expandable_map_widget.dart';
+import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart'; // Import the map widget
 
 class HotelWithRoomDetails {
   final Hotel hotel;
@@ -80,224 +80,9 @@ class _RoomAvailabilityResultsScreenState
     });
   }
 
-  Widget _buildCompactSearchSummary() {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Results header - matches screenshot
-          Text(
-            'Handpicked for you (${widget.availability.getTotalAvailableRooms()} results)',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Search criteria chips - matches screenshot layout
-          Row(
-            children: [
-              // Check-in chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: themeColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${DateFormat('dd-MM-yyyy').format(widget.checkInDate)}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.checkInTime,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Check-out chip (without background)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('dd-MM-yyyy').format(widget.checkOutDate),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          // Second row of chips
-          Row(
-            children: [
-              // Location chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.grey[300]!),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.location_on, size: 14, color: Colors.grey),
-                    const SizedBox(width: 6),
-                    Text(
-                      widget.state,
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Guests chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: themeColor,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${widget.adultsCount} Adults  ${widget.childrenCount} children  ${widget.roomsCount} Room',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Advanced and Sort options - matches screenshot
-          Row(
-            children: [
-              // Advanced
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.tune, size: 16, color: Colors.grey),
-                    SizedBox(width: 6),
-                    Text(
-                      'Advanced',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              // Sort by
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.sort, size: 16, color: Colors.grey),
-                    SizedBox(width: 6),
-                    Text(
-                      'Sort by',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 16,
-                      color: Colors.grey,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  void _onSearchPressed() {
+    // Handle search button press - you can implement new search functionality here
+    print('New search pressed with updated parameters');
   }
 
   Widget _buildEnhancedHotelCard(HotelWithRoomDetails hotelWithRooms) {
@@ -552,8 +337,21 @@ class _RoomAvailabilityResultsScreenState
                       location: widget.state, // Pass the location to the map
                     ),
 
-                    // Compact search summary
-                    _buildCompactSearchSummary(),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: SearchCardWithData(
+                        location: widget.state,
+                        checkInDate: widget.checkInDate,
+                        checkInTime: widget.checkInTime,
+                        checkOutDate: widget.checkOutDate,
+                        adults: widget.adultsCount,
+                        children: widget.childrenCount,
+                        rooms: widget.roomsCount,
+                        duration:
+                            "7 Hours", // You might need to pass this from previous screen
+                        onSearchPressed: _onSearchPressed,
+                      ),
+                    ),
 
                     // Results list
                     if (widget.availability.hasAvailableRooms())
