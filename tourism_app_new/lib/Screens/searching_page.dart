@@ -850,7 +850,7 @@
 //         // SizedBox(
 //         //   height: screenWidth < 360 ? 180 : 210,
 //         //   child: ListView.builder(
-//         //     scrollDirection: Axis.horizontal,
+//             // scrollDirection: Axis.horizontal,
 //         //     itemCount: properties.length,
 //         //     padding: EdgeInsets.zero,
 //         //     itemBuilder: (context, index) {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/room_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 
 class RoomCreationScreen extends StatefulWidget {
   final int hotelId; // pass from HotelDetails page

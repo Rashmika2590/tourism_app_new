@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Models/hotel_model.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/favourites_api_service.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/room_api_service.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
+import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 
 class HotelCard extends StatefulWidget {
@@ -107,7 +107,7 @@ class _HotelCardState extends State<HotelCard> {
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: 180,
+          height: 200,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             gradient: const LinearGradient(
@@ -126,7 +126,7 @@ class _HotelCardState extends State<HotelCard> {
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
                   width: double.infinity,
-                  height: 180,
+                  height: 200,
                   child:
                       widget.hotel.images.isNotEmpty
                           ? Stack(
@@ -134,12 +134,12 @@ class _HotelCardState extends State<HotelCard> {
                               Image.network(
                                 widget.hotel.images.first,
                                 width: double.infinity,
-                                height: 180,
+                                height: 200,
                                 fit: BoxFit.cover,
                               ),
                               Container(
                                 width: double.infinity,
-                                height: 180,
+                                height: 200,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.centerLeft,

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
 import 'package:tourism_app_new/widgets/expandable_map_widget.dart';
-import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
@@ -52,7 +51,7 @@ class _PropertyDetailsPageState extends State<PropertyDetailsPage>
                 onToggle: _toggleMapSize,
               ),
               SizedBox(height: 20),
-              MainSearchCard(),
+              //SearchSummaryCard(),
               SizedBox(height: 20),
               ExclusiveAddonsWidget(),
               ReviewCarousel(),

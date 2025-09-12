@@ -1,14 +1,18 @@
+// expandable_map_widget.dart
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
 
 class ExpandableMapWidget extends StatefulWidget {
   final bool isExpanded;
   final VoidCallback onToggle;
+  final String? location;
 
   const ExpandableMapWidget({
     Key? key,
     required this.isExpanded,
     required this.onToggle,
+    this.location,
   }) : super(key: key);
 
   @override
@@ -17,10 +21,66 @@ class ExpandableMapWidget extends StatefulWidget {
 
 class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
   late GoogleMapController mapController;
-  final LatLng _center = const LatLng(6.9271, 79.8612); // Colombo
+  LatLng _center = const LatLng(6.9271, 79.8612); // Default to Colombo
+  final Set<Marker> _markers = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final coordinates = await LocationService.getLocationCoordinates(
+        widget.location,
+      );
+
+      setState(() {
+        _center = coordinates;
+        _markers.add(
+          Marker(
+            markerId: const MarkerId('property_location'),
+            position: _center,
+            infoWindow: InfoWindow(
+              title: widget.location ?? 'Current Location',
+              snippet: 'Properties in this area',
+            ),
+          ),
+        );
+        _isLoading = false;
+      });
+
+      // Animate camera to the new location
+      mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error loading location: $e');
+    }
+  }
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
+    // If we already have the location, move the camera
+    if (!_isLoading) {
+      controller.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+    }
+  }
+
+  @override
+  void didUpdateWidget(ExpandableMapWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reload location if it changed
+    if (oldWidget.location != widget.location) {
+      _loadLocation();
+    }
   }
 
   @override
@@ -35,8 +95,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
             children: [
               SizedBox(
                 width: double.infinity,
-                height:
-                    widget.isExpanded ? 500 : 250, // <-- Increased height here
+                height: widget.isExpanded ? 500 : 250,
                 child: Stack(
                   children: [
                     // Map container
@@ -62,27 +121,27 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(30),
-                          child: GoogleMap(
-                            onMapCreated: _onMapCreated,
-                            initialCameraPosition: CameraPosition(
-                              target: _center,
-                              zoom: 15.0,
-                            ),
-                            myLocationEnabled: true,
-                            myLocationButtonEnabled: false,
-                            zoomGesturesEnabled: true,
-                            scrollGesturesEnabled: true,
-                            markers: {
-                              Marker(
-                                markerId: MarkerId('property_location'),
-                                position: _center,
-                                infoWindow: InfoWindow(
-                                  title: 'Property Location',
-                                  snippet: 'Luxury Villa in Colombo',
-                                ),
-                              ),
-                            },
-                          ),
+                          child:
+                              _isLoading
+                                  ? Center(
+                                    child: CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Theme.of(context).primaryColor,
+                                      ),
+                                    ),
+                                  )
+                                  : GoogleMap(
+                                    onMapCreated: _onMapCreated,
+                                    initialCameraPosition: CameraPosition(
+                                      target: _center,
+                                      zoom: 15.0,
+                                    ),
+                                    myLocationEnabled: true,
+                                    myLocationButtonEnabled: false,
+                                    zoomGesturesEnabled: true,
+                                    scrollGesturesEnabled: true,
+                                    markers: _markers,
+                                  ),
                         ),
                       ),
                     ),
@@ -105,7 +164,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                               BoxShadow(
                                 color: Colors.black26,
                                 blurRadius: 4,
-                                offset: Offset(2, 2),
+                                offset: const Offset(2, 2),
                               ),
                             ],
                           ),
@@ -115,13 +174,13 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                               Icon(
                                 Icons.map,
                                 size: 17,
-                                color: Color(0xFF00215A),
+                                color: Theme.of(context).primaryColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 widget.isExpanded ? 'Hide map' : 'View map',
-                                style: const TextStyle(
-                                  color: Color(0xFF00215A),
+                                style: TextStyle(
+                                  color: Theme.of(context).primaryColor,
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -130,9 +189,9 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                               AnimatedRotation(
                                 turns: widget.isExpanded ? 0.5 : 0,
                                 duration: const Duration(milliseconds: 300),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.expand_less,
-                                  color: Color(0xFF00215A),
+                                  color: Theme.of(context).primaryColor,
                                   size: 20,
                                 ),
                               ),
@@ -152,7 +211,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                           onPressed: widget.onToggle,
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.blue[600],
-                          child: Icon(Icons.close),
+                          child: const Icon(Icons.close),
                         ),
                       ),
                   ],

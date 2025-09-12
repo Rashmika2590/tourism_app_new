@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'package:tourism_app_new/Models/hotel_model.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 

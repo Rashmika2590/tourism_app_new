@@ -1,7 +1,7 @@
 // Services/Api Services/Authentication/booking_api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tourism_app_new/Models/booking_model.dart';
+import 'package:tourism_app_new/models/booking_model.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 
 class BookingApiService {

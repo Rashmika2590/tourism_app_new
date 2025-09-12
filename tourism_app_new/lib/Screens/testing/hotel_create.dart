@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_verfication_screen.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/hotel_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 
 class HotelCreationScreen extends StatefulWidget {
   const HotelCreationScreen({Key? key}) : super(key: key);

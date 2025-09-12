@@ -1,7 +1,7 @@
 // Screens/booking_screen.dart
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Models/booking_model.dart';
-import 'package:tourism_app_new/Models/room_model.dart';
+import 'package:tourism_app_new/models/booking_model.dart';
+import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/booking_api_service.dart';
 import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 import 'package:tourism_app_new/constants/colors.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/Models/room_model.dart';
+import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/booking_page.dart';
-import 'package:tourism_app_new/Services/Api%20Services/Authentication/room_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 
 class RoomsListScreen extends StatefulWidget {
   final int hotelId;

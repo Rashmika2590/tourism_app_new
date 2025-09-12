@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tourism_app_new/Models/room_model.dart';
+import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 
 class RoomApiService {

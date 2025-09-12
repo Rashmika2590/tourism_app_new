@@ -7,7 +7,7 @@ class AppColors {
   static const Color textPrimary = Color(0xFF333333);
   static const Color buttonColor = Colors.orange;
   static const Color buttonText = Colors.white;
-  static const Color mainGreen = Color(0xFF00C2AE);
+  static const Color mainGreen = Color.fromARGB(255, 5, 230, 208);
 }
 
 class AppGradients {
