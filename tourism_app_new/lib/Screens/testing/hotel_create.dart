@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_verfication_screen.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class HotelCreationScreen extends StatefulWidget {
   const HotelCreationScreen({Key? key}) : super(key: key);
@@ -37,6 +38,22 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
   int? _createdHotelId;
   String _uploadStatus = '';
 
+  // Map variables
+  LatLng _currentPosition = const LatLng(
+    6.9271,
+    79.8612,
+  ); // Default position (Colombo)
+  bool _showMap = false;
+  final Set<Marker> _markers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with default coordinates
+    _latitudeController.text = _currentPosition.latitude.toString();
+    _longitudeController.text = _currentPosition.longitude.toString();
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -50,6 +67,61 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
     _descriptionController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _updateMarker();
+  }
+
+  void _updateMarker() {
+    setState(() {
+      _markers.clear();
+      _markers.add(
+        Marker(
+          markerId: const MarkerId('hotel_location'),
+          position: _currentPosition,
+          infoWindow: const InfoWindow(title: 'Hotel Location'),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    });
+  }
+
+  void _onMapTap(LatLng position) {
+    setState(() {
+      _currentPosition = position;
+      _latitudeController.text = position.latitude.toStringAsFixed(6);
+      _longitudeController.text = position.longitude.toStringAsFixed(6);
+    });
+    _updateMarker();
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    setState(() {
+      _currentPosition = position.target;
+      _latitudeController.text = position.target.latitude.toStringAsFixed(6);
+      _longitudeController.text = position.target.longitude.toStringAsFixed(6);
+    });
+  }
+
+  void _openMapPicker() {
+    setState(() {
+      _showMap = true;
+    });
+  }
+
+  void _closeMapPicker() {
+    setState(() {
+      _showMap = false;
+    });
+  }
+
+  void _confirmLocation() {
+    setState(() {
+      _latitudeController.text = _currentPosition.latitude.toStringAsFixed(6);
+      _longitudeController.text = _currentPosition.longitude.toStringAsFixed(6);
+      _showMap = false;
+    });
   }
 
   Future<void> _createHotel() async {
@@ -76,12 +148,8 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
         description: _descriptionController.text.trim(),
       );
 
-      // PRINT THE WHOLE RESPONSE
       print("Hotel creation response: $response");
-
-      // NOW YOU CAN SEE THE EXACT PATH
       _createdHotelId = response['hotel_id'];
-      // OR response['data']['id'] depending on structure
       print("Created hotel ID: $_createdHotelId");
 
       setState(() {
@@ -172,40 +240,121 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Create Hotel')),
-      body: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildHotelDetailsSection(),
-              const SizedBox(height: 24),
-              _buildLocationSection(),
-              const SizedBox(height: 24),
-              _buildContactSection(),
-              const SizedBox(height: 24),
-              _buildStayOptionsSection(),
-              const SizedBox(height: 24),
-              _buildRulesSection(),
-              const SizedBox(height: 24),
-              _buildDescriptionSection(),
-              const SizedBox(height: 24),
-              _buildCreateButton(),
-              if (_showImageSection) ...[
-                const SizedBox(height: 32),
-                _buildImageUploadSection(),
-                SizedBox(height: 100),
-              ],
-              SizedBox(height: 100),
+      body: _showMap ? _buildMapPicker() : _buildForm(),
+    );
+  }
+
+  Widget _buildForm() {
+    return Form(
+      key: _formKey,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _buildHotelDetailsSection(),
+            const SizedBox(height: 24),
+            _buildLocationSection(),
+            const SizedBox(height: 24),
+            _buildContactSection(),
+            const SizedBox(height: 24),
+            _buildStayOptionsSection(),
+            const SizedBox(height: 24),
+            _buildRulesSection(),
+            const SizedBox(height: 24),
+            _buildDescriptionSection(),
+            const SizedBox(height: 24),
+            _buildCreateButton(),
+            if (_showImageSection) ...[
+              const SizedBox(height: 32),
+              _buildImageUploadSection(),
+              const SizedBox(height: 100),
             ],
-          ),
+            const SizedBox(height: 100),
+          ],
         ),
       ),
     );
   }
 
-  // UI Sections (hotel details, location, contact, stay options, rules, description)
+  Widget _buildMapPicker() {
+    return Column(
+      children: [
+        Expanded(
+          child: Stack(
+            children: [
+              GoogleMap(
+                onMapCreated: _onMapCreated,
+                initialCameraPosition: CameraPosition(
+                  target: _currentPosition,
+                  zoom: 15,
+                ),
+                markers: _markers,
+                onTap: _onMapTap,
+                onCameraMove: _onCameraMove,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: true,
+              ),
+              Positioned(
+                top: 16,
+                left: 16,
+                child: FloatingActionButton(
+                  onPressed: _closeMapPicker,
+                  child: const Icon(Icons.arrow_back),
+                  mini: true,
+                ),
+              ),
+              const Center(
+                child: Icon(Icons.location_pin, color: Colors.red, size: 48),
+              ),
+            ],
+          ),
+        ),
+
+        // 🔹 Card is placed BELOW the map, not overlapping
+        Card(
+          margin: const EdgeInsets.all(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Select Hotel Location',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      'Latitude: ${_currentPosition.latitude.toStringAsFixed(6)}',
+                    ),
+                    Text(
+                      'Longitude: ${_currentPosition.longitude.toStringAsFixed(6)}',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _confirmLocation,
+                        child: const Text('Confirm Location'),
+                      ),
+                    ),
+                    //SizedBox(height: 100),
+                  ],
+                ),
+                SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildHotelDetailsSection() => Card(
     child: Padding(
       padding: const EdgeInsets.all(16),
@@ -268,6 +417,7 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
                     return null;
                   },
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  readOnly: true,
                 ),
               ),
               const SizedBox(width: 16),
@@ -284,9 +434,16 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
                     return null;
                   },
                   keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  readOnly: true,
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: _openMapPicker,
+            icon: const Icon(Icons.map),
+            label: const Text('Select Location on Map'),
           ),
         ],
       ),

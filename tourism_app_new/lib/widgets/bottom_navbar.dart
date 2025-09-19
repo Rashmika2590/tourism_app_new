@@ -19,7 +19,6 @@ class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
   final List<IconData> icons = [
     Icons.access_time_rounded,
     Icons.home_rounded,
-    Icons.menu_rounded,
     Icons.person_rounded,
   ];
 

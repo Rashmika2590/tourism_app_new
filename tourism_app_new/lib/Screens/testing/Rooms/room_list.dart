@@ -215,16 +215,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
     }).toList();
   }
 
-  /*************  ✨ Windsurf Command ⭐  *************/
-  /// Calculates total price of the room based on the difference between
-  /// [widget.checkInDate] and [widget.checkOutDate].
-  ///
-  /// The total price is calculated by multiplying the room price by the
-  /// number of days in the stay duration and adding the service fee.
-  ///
-  /// If the stay duration is 0 days, the total price is set to the room price
-  /// plus the service fee.
-  /*******  d3f7ee51-90e1-4010-8571-8d6431d16d1f  *******/
   double _calculateTotal() {
     if (!_canBookRoom() || _selectedRoom == null) return 0.0;
 

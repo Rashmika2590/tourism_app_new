@@ -1,63 +1,27 @@
-// widgets/post_searching_dropdowns.dart
+// widgets/check_availability_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/Services/Providers/booking_state.dart';
+import 'package:tourism_app_new/models/availability_model.dart';
 
-class SearchParams {
-  final String state;
-  final DateTime checkInDate;
-  final String checkInTime;
-  final int durationHours;
-  final int adults;
-  final int children;
-  final int rooms;
+class CheckAvailabilityCard extends StatefulWidget {
+  final int? hotelId;
+  final String? hotelState;
 
-  SearchParams({
-    required this.state,
-    required this.checkInDate,
-    required this.checkInTime,
-    required this.durationHours,
-    required this.adults,
-    required this.children,
-    required this.rooms,
-  });
-}
-
-class SearchCardWithData extends StatefulWidget {
-  final String? location;
-  final DateTime? checkInDate;
-  final String? checkInTime;
-  final DateTime? checkOutDate;
-  final int? adults;
-  final int? children;
-  final int? rooms;
-  final String? duration;
-  final Function(SearchParams) onSearchPressed;
-
-  const SearchCardWithData({
-    super.key,
-    this.location,
-    this.checkInDate,
-    this.checkInTime,
-    this.checkOutDate,
-    this.adults,
-    this.children,
-    this.rooms,
-    this.duration,
-    required this.onSearchPressed,
-  });
+  const CheckAvailabilityCard({super.key, this.hotelId, this.hotelState});
 
   @override
-  _SearchCardWithDataState createState() => _SearchCardWithDataState();
+  State<CheckAvailabilityCard> createState() => _CheckAvailabilityCardState();
 }
 
-class _SearchCardWithDataState extends State<SearchCardWithData> {
+class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
   bool showDatePicker = false;
   bool showDurationDropdown = false;
   bool showGuestSelector = false;
   bool showSearchButton = false;
-  bool editingLocation = false;
 
-  late TextEditingController locationController;
   late DateTime selectedDate;
   late TimeOfDay selectedTime;
   late int selectedDurationHours;
@@ -68,79 +32,113 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   final themeColor = const Color(0xFF4ECDC4);
   final List<int> durationOptions = [1, 2, 3, 4, 5, 6, 8, 12, 24, 48, 72];
 
+  RoomAvailability? availability;
+  bool _isCheckingAvailability = false;
+
   @override
   void initState() {
     super.initState();
-
-    // ✅ Use defaults if null
-    locationController = TextEditingController(
-      text:
-          (widget.location != null && widget.location!.isNotEmpty)
-              ? widget.location
-              : "",
-    );
-    selectedDate = widget.checkInDate ?? DateTime.now();
-    adults = widget.adults ?? 1;
-    children = widget.children ?? 0;
-    rooms = widget.rooms ?? 1;
-
-    selectedDurationHours =
-        widget.duration != null ? _parseDuration(widget.duration!) : 1;
-
-    // Parse or default to current time
-    if (widget.checkInTime != null) {
-      final parts = widget.checkInTime!.split(':');
-      final hour = int.parse(parts[0].trim());
-      final minute = int.parse(parts[1].trim());
-      selectedTime = TimeOfDay(hour: hour, minute: minute);
-    } else {
-      selectedTime = TimeOfDay.now();
-    }
+    _initializeFromProvider();
   }
 
-  int _parseDuration(String durationString) {
-    final regex = RegExp(r'(\d+)\s*hour');
-    final match = regex.firstMatch(durationString.toLowerCase());
+  void _initializeFromProvider() {
+    final bookingState = Provider.of<BookingState>(context, listen: false);
 
-    if (match != null) {
-      return int.parse(match.group(1)!);
-    }
-    return 1; // default 1 hour
+    // Use data from provider if available
+    selectedDate = bookingState.checkInDate;
+    selectedTime = bookingState.checkInTime;
+    selectedDurationHours = bookingState.duration;
+    adults = bookingState.adults;
+    children = bookingState.children;
+    rooms = 1;
   }
 
   String _formatDuration(int hours) {
     return '$hours hour${hours > 1 ? 's' : ''}';
   }
 
-  void _performSearch() {
-    final checkInTime =
-        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
-
-    final searchParams = SearchParams(
-      state: locationController.text.trim(),
-      checkInDate: selectedDate,
-      checkInTime: checkInTime,
-      durationHours: selectedDurationHours,
-      adults: adults,
-      children: children,
-      rooms: rooms,
-    );
-
-    widget.onSearchPressed(searchParams);
+  Future<void> _performSearch() async {
+    final location = widget.hotelState;
+    if (location == null || location.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Location is required')));
+      return;
+    }
 
     setState(() {
+      _isCheckingAvailability = true;
       showSearchButton = false;
-      showDatePicker = false;
-      showDurationDropdown = false;
-      showGuestSelector = false;
-      editingLocation = false;
     });
+
+    try {
+      final checkInTime =
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+
+      // Calculate checkout date based on duration
+      final checkOutDate = selectedDate.add(
+        Duration(hours: selectedDurationHours),
+      );
+      final checkOutTime =
+          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+
+      // Call the availability API
+      final result = await RoomAvailabilityService.searchAvailability(
+        checkInDate: selectedDate,
+        checkInTime: checkInTime,
+        checkOutDate: checkOutDate,
+        checkOutTime: checkOutTime,
+        state: location,
+        adultCount: adults,
+        childrenCount: children,
+      );
+
+      setState(() {
+        availability = result;
+        _isCheckingAvailability = false;
+      });
+
+      // Update provider with new search parameters
+      final bookingState = Provider.of<BookingState>(context, listen: false);
+      bookingState.setState(location);
+      bookingState.setCheckInDate(selectedDate);
+      bookingState.setCheckInTime(selectedTime);
+      bookingState.setDuration(selectedDurationHours);
+      bookingState.setGuests(adultCount: adults, childrenCount: children);
+
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            availability!.hasAvailableRooms()
+                ? '${availability!.getTotalAvailableRooms()} rooms available!'
+                : 'No rooms available for the selected criteria',
+          ),
+          backgroundColor:
+              availability!.hasAvailableRooms() ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (e) {
+      print("Error checking availability: $e");
+      setState(() {
+        availability = RoomAvailability(available: {});
+        _isCheckingAvailability = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to check availability: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasNullDetails =
-        widget.checkInDate == null || widget.checkOutDate == null;
+    final availableMsg =
+        availability == null
+            ? ""
+            : availability!.hasAvailableRooms()
+            ? "Available ✅ (${availability!.getTotalAvailableRooms()} rooms)"
+            : "Not Available ❌";
 
     return Container(
       decoration: BoxDecoration(
@@ -156,129 +154,64 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
       ),
       child: Column(
         children: [
-          if (hasNullDetails)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(top: 10),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red[200]!),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "If you need to book this, please add details",
-                      style: TextStyle(
-                        color: Colors.red[700],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // --- main content ---
+          // Main content
           Container(
             padding: const EdgeInsets.all(15),
             child: Column(
               children: [
+                // Date and Time Row
                 Row(
                   children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      color: Colors.grey[600],
-                      size: 24,
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
-                      child:
-                          editingLocation
-                              ? TextField(
-                                controller: locationController,
-                                autofocus: true,
-                                decoration: const InputDecoration(
-                                  hintText: "Enter location",
-                                  border: InputBorder.none,
-                                ),
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                onSubmitted: (_) {
-                                  setState(() {
-                                    editingLocation = false;
-                                    showSearchButton = true;
-                                  });
-                                },
-                              )
-                              : GestureDetector(
-                                onTap: () {
-                                  setState(() => editingLocation = true);
-                                },
-                                child: Text(
-                                  locationController.text,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showDatePicker = !showDatePicker;
+                            showDurationDropdown = false;
+                            showGuestSelector = false;
+                            showSearchButton = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showDatePicker = !showDatePicker;
-                          showDurationDropdown = false;
-                          showGuestSelector = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: themeColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
+                              const SizedBox(width: 6),
+                              Text(
+                                selectedTime.format(context),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              selectedTime.format(context),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
+
+                const SizedBox(height: 8),
+
+                // Duration and Guests Row
                 Row(
                   children: [
                     GestureDetector(
@@ -369,16 +302,207 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                     ),
                   ],
                 ),
+
+                // Extended sections
+                if (showDatePicker) _buildDatePickerSection(),
+                if (showDurationDropdown) _buildDurationSection(),
+                if (showGuestSelector) _buildGuestSection(),
+
+                // Show search button after interaction
+                if (showSearchButton) _buildSearchSection(),
+
+                const SizedBox(height: 10),
+
+                // Search Button (always visible)
+                ElevatedButton(
+                  onPressed: _isCheckingAvailability ? null : _performSearch,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 50,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                  ),
+                  child:
+                      _isCheckingAvailability
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                          : const Text(
+                            'Search',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                ),
+
+                // Availability message
+                if (availableMsg.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          availableMsg.contains("Available")
+                              ? Colors.green[50]
+                              : Colors.orange[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color:
+                            availableMsg.contains("Available")
+                                ? Colors.green[200]!
+                                : Colors.orange[200]!,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          availableMsg.contains("Available")
+                              ? Icons.check_circle_outline
+                              : Icons.info_outline,
+                          color:
+                              availableMsg.contains("Available")
+                                  ? Colors.green
+                                  : Colors.orange,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            availableMsg,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  availableMsg.contains("Available")
+                                      ? Colors.green[800]
+                                      : Colors.orange[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
-
-          // extended dropdowns
-          if (showDatePicker) _buildDatePickerSection(),
-          if (showDurationDropdown) _buildDurationSection(),
-          if (showGuestSelector) _buildGuestSection(),
-          if (showSearchButton) _buildSearchSection(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildDatePickerSection() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, -2),
+              spreadRadius: 1,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              DateFormat('MMMM').format(selectedDate).toUpperCase(),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: Colors.grey[800],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildCalendar(),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Text(
+                  'From',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () async {
+                    final TimeOfDay? time = await showTimePicker(
+                      context: context,
+                      initialTime: selectedTime,
+                      builder: (context, child) {
+                        return Theme(
+                          data: ThemeData(
+                            colorScheme: ColorScheme.light(primary: themeColor),
+                          ),
+                          child: child!,
+                        );
+                      },
+                    );
+                    if (time != null) {
+                      setState(() {
+                        selectedTime = time;
+                        showSearchButton = true;
+                      });
+                    }
+                  },
+                  child: Text(
+                    selectedTime.format(context),
+                    style: TextStyle(
+                      color: themeColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  showDatePicker = false;
+                  showSearchButton = true;
+                });
+              },
+              style: _buttonStyle(),
+              child: const Text(
+                'Select Date',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -460,7 +584,11 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   Widget _buildDurationOption(int hours) {
     bool isSelected = selectedDurationHours == hours;
     return GestureDetector(
-      onTap: () => setState(() => selectedDurationHours = hours),
+      onTap:
+          () => setState(() {
+            selectedDurationHours = hours;
+            showSearchButton = true;
+          }),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
@@ -479,105 +607,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
             fontSize: 15,
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDatePickerSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              DateFormat('MMMM').format(selectedDate).toUpperCase(),
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildCalendar(),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Text(
-                  'From',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () async {
-                    final TimeOfDay? time = await showTimePicker(
-                      context: context,
-                      initialTime: selectedTime,
-                      builder: (context, child) {
-                        return Theme(
-                          data: ThemeData(
-                            colorScheme: ColorScheme.light(primary: themeColor),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (time != null) {
-                      setState(() => selectedTime = time);
-                    }
-                  },
-                  child: Text(
-                    selectedTime.format(context),
-                    style: TextStyle(
-                      color: themeColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  showDatePicker = false;
-                  showSearchButton = true;
-                });
-              },
-              style: _buttonStyle(),
-              child: const Text(
-                'Select Date',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -625,19 +654,28 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
             _buildGuestCounter(
               'Adults',
               adults,
-              (value) => setState(() => adults = value),
+              (value) => setState(() {
+                adults = value;
+                showSearchButton = true;
+              }),
             ),
             const SizedBox(height: 16),
             _buildGuestCounter(
               'Children',
               children,
-              (value) => setState(() => children = value),
+              (value) => setState(() {
+                children = value;
+                showSearchButton = true;
+              }),
             ),
             const SizedBox(height: 16),
             _buildGuestCounter(
               'Rooms',
               rooms,
-              (value) => setState(() => rooms = value),
+              (value) => setState(() {
+                rooms = value;
+                showSearchButton = true;
+              }),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -745,10 +783,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
               ),
             ),
             ElevatedButton(
-              onPressed: () {
-                _performSearch();
-                setState(() => showSearchButton = false);
-              },
+              onPressed: _performSearch,
               style: _buttonStyle(),
               child: const Text(
                 '            Search              ',
@@ -799,14 +834,14 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                 bool isSelected = day == selectedDate.day;
                 return GestureDetector(
                   onTap:
-                      () => setState(
-                        () =>
-                            selectedDate = DateTime(
-                              selectedDate.year,
-                              selectedDate.month,
-                              day,
-                            ),
-                      ),
+                      () => setState(() {
+                        selectedDate = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          day,
+                        );
+                        showSearchButton = true;
+                      }),
                   child: Container(
                     width: 36,
                     height: 36,

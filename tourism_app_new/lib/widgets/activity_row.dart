@@ -103,7 +103,7 @@ class _ExclusiveAddonsWidgetState extends State<ExclusiveAddonsWidget> {
     bool isSmallScreen = screenWidth < 600;
 
     double iconSize = isSmallScreen ? 50 : 60;
-    double iconSpacing = isSmallScreen ? 15 : 20;
+    double iconSpacing = isSmallScreen ? 30 : 40;
     double dropdownWidth = isSmallScreen ? 280 : 320;
 
     double dropdownHeight =

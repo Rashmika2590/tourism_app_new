@@ -1,13 +1,16 @@
-// Enhanced room_availability_screen.dart
+// Enhanced room_availability_screen.dart with Provider integration
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:provider/provider.dart'; // Add provider import
 import 'package:tourism_app_new/Screens/testing/Availability/availability_result_page.dart';
+import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
+import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
@@ -30,18 +33,22 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   late TabController _tabController;
   int selectedTabIndex = 0;
 
-  // Date and time variables
-  DateTime? selectedDateTime;
-  DateTime? _checkInDate;
-  DateTime? _checkOutDate;
-  String _checkInTime = '10:00:00';
-  String _checkOutTime = '12:00:00';
+  // Remove local state variables that are now managed by Provider
+  // DateTime? selectedDateTime;
+  // DateTime _checkInDate = DateTime.now();
+  // DateTime _checkOutDate = DateTime.now();
+  // int _durationHours = 1;
+  // int childrenCount = 0;
+  // int adultsCount = 1;
+  // int roomsCount = 1;
+  // String _checkInTime = '10:00:00';
+  // String _checkOutTime = '12:00:00';
 
-  // Guest count variables
+  final List<int> _durationOptions = [1, 2, 3, 4, 5, 6, 8, 12, 24, 48, 72];
+
+  // UI state variables
   bool isGuestDropdownOpen = false;
-  int childrenCount = 0;
-  int adultsCount = 1;
-  int roomsCount = 1;
+  bool isDurationDropdownOpen = false;
 
   // Loading and data states
   bool _isLoading = false;
@@ -50,7 +57,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   String? _errorMessage;
 
   //variables for hotels
-  List<Hotel> _hotels = [];
   List<Hotel> _filteredHotels = [];
   bool _isLoadingHotels = false;
 
@@ -66,6 +72,20 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     _stateController.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Update checkout date based on duration - now uses provider
+  void _updateCheckOutDate(BookingState bookingState) {
+    final checkOutDate = bookingState.checkInDate.add(
+      Duration(hours: bookingState.duration),
+    );
+
+    // Format times for API
+    final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
+    final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
+
+    // If we need to store these in provider, we could add them to BookingState
+    // For now, we'll just use them directly in the API call
   }
 
   // Extract city/state name from Google Places API response
@@ -117,12 +137,12 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     }
   }
 
-  Future<void> _selectDateTime() async {
+  Future<void> _selectDateTime(BookingState bookingState) async {
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(hours: 48)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -169,58 +189,34 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
 
         setState(() {
           selectedTabIndex = 1;
-          selectedDateTime = combined;
         });
+
+        // Update provider state instead of local variables
+        bookingState.setCheckInDate(combined);
+        bookingState.setCheckInTime(TimeOfDay.fromDateTime(combined));
       }
     }
   }
 
-  Future<void> _selectDate(bool isCheckIn) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF00B3A6),
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-            textButtonTheme: TextButtonThemeData(
-              style: TextButton.styleFrom(foregroundColor: Color(0xFF00B3A6)),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        if (isCheckIn) {
-          _checkInDate = picked;
-          if (_checkOutDate != null && _checkOutDate!.isBefore(picked)) {
-            _checkOutDate = null;
-          }
-        } else {
-          _checkOutDate = picked;
-        }
-      });
-    }
-  }
-
-  Future<void> _searchAvailability() async {
+  Future<void> _searchAvailability(BookingState bookingState) async {
     final state = _stateController.text.trim();
 
-    if (_checkInDate == null || _checkOutDate == null) {
-      setState(() {
-        _errorMessage = 'Please select both check-in and check-out dates';
-      });
-      return;
-    }
+    // Calculate check-out date based on duration
+    final checkOutDate = bookingState.checkInDate.add(
+      Duration(hours: bookingState.duration),
+    );
+
+    // Format times for API
+    final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
+    final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
+
+    // Debugging: Print current check-in and check-out times
+    print('🔍 DEBUG: Check-in Date: ${bookingState.checkInDate}');
+    print('🔍 DEBUG: Check-in Time: $checkInTime');
+    print('🔍 DEBUG: Check-out Date: $checkOutDate');
+    print('🔍 DEBUG: Check-out Time: $checkOutTime');
+    print('🔍 DEBUG: Duration: ${bookingState.duration} hours');
+    print('🔍 DEBUG: Current DateTime: ${DateTime.now()}');
 
     setState(() {
       _isLoading = true;
@@ -231,19 +227,25 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
 
     try {
       final availability = await RoomAvailabilityService.searchAvailability(
-        checkInDate: _checkInDate!,
-        checkInTime: _checkInTime,
-        checkOutDate: _checkOutDate!,
-        checkOutTime: _checkOutTime,
+        checkInDate: bookingState.checkInDate,
+        checkInTime: checkInTime,
+        checkOutDate: checkOutDate,
+        checkOutTime: checkOutTime,
         state: state,
-        adultCount: adultsCount,
-        childrenCount: childrenCount,
+        adultCount: bookingState.adults,
+        childrenCount: bookingState.children,
       );
 
       setState(() {
         _availability = availability;
         _isLoading = false;
       });
+
+      if (state.isEmpty) {
+        bookingState.setState('');
+      } else {
+        bookingState.setState(state);
+      }
 
       if (availability.hotelIds.isNotEmpty) {
         await _fetchHotelAndRoomDetails();
@@ -254,14 +256,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
           MaterialPageRoute(
             builder:
                 (context) => RoomAvailabilityResultsScreen(
-                  state: state,
-                  checkInDate: _checkInDate!,
-                  checkOutDate: _checkOutDate!,
-                  checkInTime: _checkInTime,
-                  checkOutTime: _checkOutTime,
-                  adultsCount: adultsCount,
-                  childrenCount: childrenCount,
-                  roomsCount: roomsCount,
                   availability: availability,
                   hotelWithRoomDetails: _hotelWithRoomDetails,
                 ),
@@ -337,7 +331,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     try {
       final hotels = await HotelApiService.getAllHotels();
       setState(() {
-        _hotels = hotels;
         _filteredHotels = hotels;
         _isLoadingHotels = false;
       });
@@ -469,10 +462,17 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     );
   }
 
+  String _formatDuration(int hours) {
+    return '$hours Hour${hours == 1 ? '' : 's'}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
+
+    // Access the BookingState from provider
+    final bookingState = Provider.of<BookingState>(context, listen: true);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -481,6 +481,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
           onTap: () {
             setState(() {
               isGuestDropdownOpen = false;
+              isDurationDropdownOpen = false;
             });
           },
           child: ListView(
@@ -619,6 +620,8 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                       suggestion['description']!,
                     );
                     _stateController.text = stateName;
+                    // Also update the provider state
+                    bookingState.setState(stateName);
                     print('🏛️ Selected: ${suggestion['description']}');
                     print('🎯 Extracted State: $stateName');
                   },
@@ -648,10 +651,11 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             onTap: () {
                               setState(() {
                                 selectedTabIndex = 0;
-                                selectedDateTime = null;
-                                _checkInDate = DateTime.now();
-                                _checkOutDate = DateTime.now().add(
-                                  Duration(days: 1),
+                                // Update provider with current date/time
+                                final now = DateTime.now();
+                                bookingState.setCheckInDate(now);
+                                bookingState.setCheckInTime(
+                                  TimeOfDay.fromDateTime(now),
                                 );
                               });
                             },
@@ -685,7 +689,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                         Expanded(
                           child: GestureDetector(
                             onTap: () async {
-                              await _selectDateTime();
+                              await _selectDateTime(bookingState);
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -693,8 +697,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                               ),
                               decoration: BoxDecoration(
                                 gradient:
-                                    selectedTabIndex == 1 &&
-                                            selectedDateTime != null
+                                    selectedTabIndex == 1
                                         ? AppGradients.buttonGradient
                                         : null,
                                 borderRadius: BorderRadius.circular(25),
@@ -709,15 +712,14 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                               child: FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Text(
-                                  selectedDateTime != null
+                                  selectedTabIndex == 1
                                       ? DateFormat(
                                         'dd MMM, h:mm a',
-                                      ).format(selectedDateTime!)
+                                      ).format(bookingState.checkInDate)
                                       : "Book Later",
                                   style: TextStyle(
                                     color:
-                                        selectedTabIndex == 1 &&
-                                                selectedDateTime != null
+                                        selectedTabIndex == 1
                                             ? Colors.white
                                             : Colors.grey.shade700,
                                     fontWeight: FontWeight.w600,
@@ -735,103 +737,90 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     ),
                     const SizedBox(height: 10),
 
-                    // Date Selection Section
+                    // Date and Duration Selection Section
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        screenWidth < 360
-                            ? Column(
-                              children: [
-                                GestureDetector(
-                                  onTap: () => _selectDate(true),
-                                  child: _buildDropdownField(
-                                    context,
-                                    Icons.calendar_today,
-                                    _checkInDate != null
-                                        ? 'Check-in: ${DateFormat('dd MMM yyyy').format(_checkInDate!)}'
-                                        : 'Select check-in date',
-                                    false,
-                                    () => _selectDate(true),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                GestureDetector(
-                                  onTap: () => _selectDate(false),
-                                  child: _buildDropdownField(
-                                    context,
-                                    Icons.calendar_today,
-                                    _checkOutDate != null
-                                        ? 'Check-out: ${DateFormat('dd MMM yyyy').format(_checkOutDate!)}'
-                                        : 'Select check-out date',
-                                    false,
-                                    () => _selectDate(false),
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                _buildDropdownField(
-                                  context,
-                                  Icons.person_outline,
-                                  '${adultsCount + childrenCount} guests',
-                                  isGuestDropdownOpen,
-                                  () {
-                                    setState(() {
-                                      isGuestDropdownOpen =
-                                          !isGuestDropdownOpen;
-                                    });
-                                  },
-                                ),
-                              ],
-                            )
-                            : Row(
-                              children: [
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _selectDate(true),
-                                    child: _buildDropdownField(
-                                      context,
-                                      Icons.calendar_today,
-                                      _checkInDate != null
-                                          ? 'Check-in: ${DateFormat('dd MMM').format(_checkInDate!)}'
-                                          : 'Check-in date',
-                                      false,
-                                      () => _selectDate(true),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: GestureDetector(
-                                    onTap: () => _selectDate(false),
-                                    child: _buildDropdownField(
-                                      context,
-                                      Icons.calendar_today,
-                                      _checkOutDate != null
-                                          ? 'Check-out: ${DateFormat('dd MMM').format(_checkOutDate!)}'
-                                          : 'Check-out date',
-                                      false,
-                                      () => _selectDate(false),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        // Row for Duration & Guests
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildDropdownField(
+                                context,
+                                Icons.timer,
+                                ' ${_formatDuration(bookingState.duration)}',
+                                isDurationDropdownOpen,
+                                () {
+                                  setState(() {
+                                    isDurationDropdownOpen =
+                                        !isDurationDropdownOpen;
+                                    isGuestDropdownOpen = false;
+                                  });
+                                },
+                              ),
                             ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _buildDropdownField(
+                                context,
+                                Icons.person_outline,
+                                '${bookingState.adults + bookingState.children} guests',
+                                isGuestDropdownOpen,
+                                () {
+                                  setState(() {
+                                    isGuestDropdownOpen = !isGuestDropdownOpen;
+                                    isDurationDropdownOpen = false;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
 
                         const SizedBox(height: 8),
 
-                        // Guest dropdown
-                        _buildDropdownField(
-                          context,
-                          Icons.person_outline,
-                          '${adultsCount + childrenCount} guests',
-                          isGuestDropdownOpen,
-                          () {
-                            setState(() {
-                              isGuestDropdownOpen = !isGuestDropdownOpen;
-                            });
-                          },
-                        ),
+                        // Duration Dropdown - full width
+                        if (isDurationDropdownOpen)
+                          Container(
+                            margin: const EdgeInsets.only(top: 8),
+                            padding: EdgeInsets.all(
+                              screenWidth < 360 ? 12 : 16,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children:
+                                  _durationOptions.map((hours) {
+                                    return ListTile(
+                                      title: Text(_formatDuration(hours)),
+                                      trailing:
+                                          bookingState.duration == hours
+                                              ? const Icon(
+                                                Icons.check,
+                                                color: Colors.green,
+                                              )
+                                              : null,
+                                      onTap: () {
+                                        bookingState.setDuration(hours);
+                                        setState(() {
+                                          isDurationDropdownOpen = false;
+                                        });
+                                      },
+                                    );
+                                  }).toList(),
+                            ),
+                          ),
 
-                        // Guest Dropdown Menu
+                        // Guest Dropdown - full width
                         if (isGuestDropdownOpen)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
@@ -851,18 +840,32 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             ),
                             child: Column(
                               children: [
-                                _buildCounterRow("Children", childrenCount, (
-                                  val,
-                                ) {
-                                  setState(() => childrenCount = val);
-                                }),
+                                _buildCounterRow(
+                                  "Children",
+                                  bookingState.children,
+                                  (val) {
+                                    bookingState.setGuests(
+                                      adultCount: bookingState.adults,
+                                      childrenCount: val,
+                                    );
+                                  },
+                                ),
                                 const SizedBox(height: 12),
-                                _buildCounterRow("Adults", adultsCount, (val) {
-                                  setState(() => adultsCount = val);
-                                }, min: 1),
+                                _buildCounterRow(
+                                  "Adults",
+                                  bookingState.adults,
+                                  (val) {
+                                    bookingState.setGuests(
+                                      adultCount: val,
+                                      childrenCount: bookingState.children,
+                                    );
+                                  },
+                                  min: 1,
+                                ),
                                 const SizedBox(height: 12),
-                                _buildCounterRow("Rooms", roomsCount, (val) {
-                                  setState(() => roomsCount = val);
+                                _buildCounterRow("Rooms", 1, (val) {
+                                  // You might want to add roomsCount to BookingState
+                                  // For now, we'll just keep it local or ignore
                                 }, min: 1),
                               ],
                             ),
@@ -885,7 +888,10 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _searchAvailability,
+                    onPressed:
+                        _isLoading
+                            ? null
+                            : () => _searchAvailability(bookingState),
                     style: ElevatedButton.styleFrom(
                       elevation: 0,
                       backgroundColor: Colors.transparent,
@@ -1000,8 +1006,19 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                         return SizedBox(
                           width: 300,
                           child: HotelCard(
+                            tag: "Popular",
                             hotel: hotel,
-                            onTap: () => _navigateToHotelDetails(hotel),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => EnhancedHotelDetailsScreen(
+                                        hotel: hotel,
+                                      ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
@@ -1037,9 +1054,11 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                         return SizedBox(
                           width: 300,
                           child: HotelCard(
+                            tag: "Featured",
                             hotel: hotel,
                             onTap: () {
                               _stateController.text = hotel.state;
+                              bookingState.setState(hotel.state);
                             },
                           ),
                         );
@@ -1053,9 +1072,5 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         ),
       ),
     );
-  }
-
-  void _navigateToHotelDetails(Hotel hotel) {
-    Navigator.pushNamed(context, '/hotel_details', arguments: hotel);
   }
 }

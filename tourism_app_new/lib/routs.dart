@@ -6,7 +6,6 @@ import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/property_details_page.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
-import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
 import 'package:tourism_app_new/Services/Authentication/debug_user_status.dart';
 import '../Screens/home_page.dart';
@@ -50,6 +49,6 @@ class AppRoutes {
 
     hotelcreation: (context) => HotelCreationScreen(),
     hotelsearch: (context) => HotelSearchScreen(),
-    hoteldetails: (context) => HotelDetailsScreen(),
+    //hoteldetails: (context) => EnhancedHotelDetailsScreen(,),
   };
 }

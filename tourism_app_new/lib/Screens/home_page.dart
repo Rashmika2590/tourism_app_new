@@ -80,12 +80,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      //_buildUserInfo(),
-      //const CreateHotelPage(),
       RoomAvailabilityScreen(),
-      //const SearchPage(),
-      const HotelSearchScreen(),
-      const HotelCreationScreen(),
+      const RoomAvailabilityScreen(),
+      //HotelCreationScreen(), // no const here
       const ProfilePage(),
     ];
 
