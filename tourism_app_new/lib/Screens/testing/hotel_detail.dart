@@ -3,7 +3,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
-import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
