@@ -207,7 +207,7 @@ class _EnhancedHotelDetailsScreenState
           checkInDate: searchParams.checkInDate,
           checkInTime: _formatTimeOfDay(searchParams.checkInTime),
           checkOutDate: checkOutDate,
-          checkOutTime: _formatTimeOfDay(searchParams.checkInTime),
+          checkOutTime: _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
           adultCount: searchParams.adults,
           childrenCount: searchParams.children,
         ),
