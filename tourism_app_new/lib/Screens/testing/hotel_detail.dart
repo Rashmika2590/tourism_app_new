@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
@@ -36,6 +37,7 @@ class _EnhancedHotelDetailsScreenState
   List<FAQ> faqs = [];
   bool isLoadingRooms = true;
   bool isLoadingFAQs = true;
+  bool _isCheckingAvailability = false;
   Room? cheapestRoom;
   Set<String> allAmenities = {};
   final TextEditingController _faqController = TextEditingController();
@@ -194,25 +196,60 @@ class _EnhancedHotelDetailsScreenState
     });
   }
 
-  void _navigateToRoomList(int hotelId, SearchParams searchParams) {
-    final checkOutDate = searchParams.checkInDate.add(
-      Duration(hours: searchParams.durationHours),
-    );
+  Future<void> _navigateToRoomList(int hotelId, SearchParams searchParams) async {
+    setState(() {
+      _isCheckingAvailability = true;
+    });
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RoomsListScreen(
-          hotelId: hotelId,
-          checkInDate: searchParams.checkInDate,
-          checkInTime: _formatTimeOfDay(searchParams.checkInTime),
-          checkOutDate: checkOutDate,
-          checkOutTime: _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
-          adultCount: searchParams.adults,
-          childrenCount: searchParams.children,
+    try {
+      final checkOutDate = searchParams.checkInDate.add(
+        Duration(hours: searchParams.durationHours),
+      );
+      final availability = await RoomAvailabilityService.searchAvailability(
+        checkInDate: searchParams.checkInDate,
+        checkInTime: DateFormat('HH:mm:ss').format(searchParams.checkInDate),
+        checkOutDate: checkOutDate,
+        checkOutTime: DateFormat('HH:mm:ss').format(checkOutDate),
+        state: searchParams.state,
+        adultCount: searchParams.adults,
+        childrenCount: searchParams.children,
+      );
+
+      if (availability.hotelIds.contains(hotelId)) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RoomsListScreen(
+              hotelId: hotelId,
+              checkInDate: searchParams.checkInDate,
+              checkInTime: _formatTimeOfDay(searchParams.checkInTime),
+              checkOutDate: checkOutDate,
+              checkOutTime:
+                  _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
+              adultCount: searchParams.adults,
+              childrenCount: searchParams.children,
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'No available rooms. Please change values or choose another hotel.'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error checking availability: $e'),
         ),
-      ),
-    );
+      );
+    } finally {
+      setState(() {
+        _isCheckingAvailability = false;
+      });
+    }
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -1370,12 +1407,13 @@ class _EnhancedHotelDetailsScreenState
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () => hotelRooms.isNotEmpty
-                          ? _navigateToRoomList(
-                              widget.hotel.id,
-                              _searchParams,
-                            )
-                          : null,
+                      onPressed: () =>
+                          hotelRooms.isNotEmpty && !_isCheckingAvailability
+                              ? _navigateToRoomList(
+                                  widget.hotel.id,
+                                  _searchParams,
+                                )
+                              : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mainGreen,
                         foregroundColor: Colors.white,
@@ -1384,13 +1422,23 @@ class _EnhancedHotelDetailsScreenState
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      child: const Text(
-                        'See More Options',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: _isCheckingAvailability
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'See More Options',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ],

@@ -381,6 +381,21 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              if (!availableRoomIds.contains(_selectedRoom!.id))
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  margin: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red.shade100,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Center(
+                                    child: Text(
+                                      'This room is not available for the selected dates.',
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ),
                               // Room Image Carousel
                               SizedBox(
                                 height: 250,
@@ -831,7 +846,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed: _navigateToBooking,
+                onPressed: availableRoomIds.contains(_selectedRoom?.id)
+                    ? _navigateToBooking
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.teal,
                   foregroundColor: Colors.white,
