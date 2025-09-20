@@ -1,48 +1,15 @@
 // widgets/post_searching_dropdowns.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
-class SearchParams {
-  final String state;
-  final DateTime checkInDate;
-  final String checkInTime;
-  final int durationHours;
-  final int adults;
-  final int children;
-  final int rooms;
-
-  SearchParams({
-    required this.state,
-    required this.checkInDate,
-    required this.checkInTime,
-    required this.durationHours,
-    required this.adults,
-    required this.children,
-    required this.rooms,
-  });
-}
+import 'package:tourism_app_new/models/search_params_model.dart';
 
 class SearchCardWithData extends StatefulWidget {
-  final String? location;
-  final DateTime? checkInDate;
-  final String? checkInTime;
-  final DateTime? checkOutDate;
-  final int? adults;
-  final int? children;
-  final int? rooms;
-  final String? duration;
+  final SearchParams searchParams;
   final Function(SearchParams) onSearchPressed;
 
   const SearchCardWithData({
     super.key,
-    this.location,
-    this.checkInDate,
-    this.checkInTime,
-    this.checkOutDate,
-    this.adults,
-    this.children,
-    this.rooms,
-    this.duration,
+    required this.searchParams,
     required this.onSearchPressed,
   });
 
@@ -72,40 +39,13 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   void initState() {
     super.initState();
 
-    // ✅ Use defaults if null
-    locationController = TextEditingController(
-      text:
-          (widget.location != null && widget.location!.isNotEmpty)
-              ? widget.location
-              : "",
-    );
-    selectedDate = widget.checkInDate ?? DateTime.now();
-    adults = widget.adults ?? 1;
-    children = widget.children ?? 0;
-    rooms = widget.rooms ?? 1;
-
-    selectedDurationHours =
-        widget.duration != null ? _parseDuration(widget.duration!) : 1;
-
-    // Parse or default to current time
-    if (widget.checkInTime != null) {
-      final parts = widget.checkInTime!.split(':');
-      final hour = int.parse(parts[0].trim());
-      final minute = int.parse(parts[1].trim());
-      selectedTime = TimeOfDay(hour: hour, minute: minute);
-    } else {
-      selectedTime = TimeOfDay.now();
-    }
-  }
-
-  int _parseDuration(String durationString) {
-    final regex = RegExp(r'(\d+)\s*hour');
-    final match = regex.firstMatch(durationString.toLowerCase());
-
-    if (match != null) {
-      return int.parse(match.group(1)!);
-    }
-    return 1; // default 1 hour
+    locationController = TextEditingController(text: widget.searchParams.state);
+    selectedDate = widget.searchParams.checkInDate;
+    selectedTime = widget.searchParams.checkInTime;
+    selectedDurationHours = widget.searchParams.durationHours;
+    adults = widget.searchParams.adults;
+    children = widget.searchParams.children;
+    rooms = widget.searchParams.rooms;
   }
 
   String _formatDuration(int hours) {
@@ -113,13 +53,10 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   }
 
   void _performSearch() {
-    final checkInTime =
-        '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
-
     final searchParams = SearchParams(
       state: locationController.text.trim(),
       checkInDate: selectedDate,
-      checkInTime: checkInTime,
+      checkInTime: selectedTime,
       durationHours: selectedDurationHours,
       adults: adults,
       children: children,
@@ -139,8 +76,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
 
   @override
   Widget build(BuildContext context) {
-    final hasNullDetails =
-        widget.checkInDate == null || widget.checkOutDate == null;
+    final hasNullDetails = widget.searchParams.checkInDate == null;
 
     return Container(
       decoration: BoxDecoration(
