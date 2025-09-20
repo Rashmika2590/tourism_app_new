@@ -1,11 +1,13 @@
 // Enhanced room_availability_screen.dart with Provider integration
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:provider/provider.dart'; // Add provider import
 import 'package:tourism_app_new/Screens/testing/Availability/availability_result_page.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
@@ -199,7 +201,27 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   }
 
   Future<void> _searchAvailability(BookingState bookingState) async {
-    final state = _stateController.text.trim();
+    String state = _stateController.text.trim();
+
+    if (state.isEmpty) {
+      try {
+        final position = await LocationService.getCurrentLocation();
+        final placemarks =
+            await placemarkFromCoordinates(position.latitude, position.longitude);
+        if (placemarks.isNotEmpty) {
+          final placemark = placemarks.first;
+          if (placemark.administrativeArea != null) {
+            state = placemark.administrativeArea!;
+            _stateController.text = state;
+          }
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+                'Could not determine your location. Please enter one manually.')));
+        return;
+      }
+    }
 
     // Calculate check-out date based on duration
     final checkOutDate = bookingState.checkInDate.add(

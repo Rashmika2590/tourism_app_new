@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
@@ -15,9 +16,11 @@ import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class EnhancedHotelDetailsScreen extends StatefulWidget {
   final Hotel hotel;
+  final SearchParams? searchParams;
 
-  const EnhancedHotelDetailsScreen({Key? key, required this.hotel})
-    : super(key: key);
+  const EnhancedHotelDetailsScreen(
+      {Key? key, required this.hotel, this.searchParams})
+      : super(key: key);
 
   @override
   State<EnhancedHotelDetailsScreen> createState() =>
@@ -26,6 +29,7 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 
 class _EnhancedHotelDetailsScreenState
     extends State<EnhancedHotelDetailsScreen> {
+  late SearchParams _searchParams;
   bool isFavorite = false;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
@@ -73,6 +77,16 @@ class _EnhancedHotelDetailsScreenState
   @override
   void initState() {
     super.initState();
+    _searchParams = widget.searchParams ??
+        SearchParams(
+          state: widget.hotel.state,
+          checkInDate: DateTime.now(),
+          checkInTime: TimeOfDay.now(),
+          durationHours: 1,
+          adults: 1,
+          children: 0,
+          rooms: 1,
+        );
     _loadHotelRooms();
     _loadFAQs();
   }
@@ -180,20 +194,23 @@ class _EnhancedHotelDetailsScreenState
     });
   }
 
-  void _navigateToRoomList(int hotelId, BookingState bookingState) {
+  void _navigateToRoomList(int hotelId, SearchParams searchParams) {
+    final checkOutDate = searchParams.checkInDate.add(
+      Duration(hours: searchParams.durationHours),
+    );
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder:
-            (_) => RoomsListScreen(
-              hotelId: hotelId,
-              checkInDate: bookingState.checkInDate,
-              checkInTime: _formatTimeOfDay(bookingState.checkInTime),
-              checkOutDate: bookingState.checkOutDate,
-              checkOutTime: _formatTimeOfDay(bookingState.checkInTime),
-              adultCount: bookingState.adults,
-              childrenCount: bookingState.children,
-            ),
+        builder: (_) => RoomsListScreen(
+          hotelId: hotelId,
+          checkInDate: searchParams.checkInDate,
+          checkInTime: _formatTimeOfDay(searchParams.checkInTime),
+          checkOutDate: checkOutDate,
+          checkOutTime: _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
+          adultCount: searchParams.adults,
+          childrenCount: searchParams.children,
+        ),
       ),
     );
   }
@@ -727,16 +744,12 @@ class _EnhancedHotelDetailsScreenState
                     // Booking Details Section
                     const SizedBox(height: 16),
                     SearchCardWithData(
-                      location: bookingState.state,
-                      checkInDate: bookingState.checkInDate,
-                      checkInTime: _formatTimeOfDay(bookingState.checkInTime),
-                      checkOutDate: bookingState.checkOutDate,
-                      adults: bookingState.adults,
-                      children: bookingState.children,
-                      rooms: 1, // You might want to add rooms to BookingState
-                      duration: '2',
-                      onSearchPressed: (searchParams) {
-                        _navigateToRoomList(widget.hotel.id, bookingState);
+                      searchParams: _searchParams,
+                      onSearchPressed: (newParams) {
+                        setState(() {
+                          _searchParams = newParams;
+                        });
+                        _navigateToRoomList(widget.hotel.id, newParams);
                       },
                     ),
                     const SizedBox(height: 24),
@@ -1357,14 +1370,12 @@ class _EnhancedHotelDetailsScreenState
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed:
-                          () =>
-                              hotelRooms.isNotEmpty && hasBookingDetails
-                                  ? _navigateToRoomList(
-                                    widget.hotel.id,
-                                    bookingState,
-                                  )
-                                  : null,
+                      onPressed: () => hotelRooms.isNotEmpty
+                          ? _navigateToRoomList(
+                              widget.hotel.id,
+                              _searchParams,
+                            )
+                          : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mainGreen,
                         foregroundColor: Colors.white,
