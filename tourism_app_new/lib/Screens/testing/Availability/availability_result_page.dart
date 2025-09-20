@@ -1,9 +1,12 @@
 // room_availability_results.dart
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
+import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
@@ -58,6 +61,31 @@ class _RoomAvailabilityResultsScreenState
     // Initialize with widget values
     _currentAvailability = widget.availability;
     _currentHotelWithRoomDetails = widget.hotelWithRoomDetails;
+
+    final bookingState = Provider.of<BookingState>(context, listen: false);
+    if (bookingState.state.isEmpty) {
+      _fetchCurrentLocationAndUpdateState(bookingState);
+    }
+  }
+
+  Future<void> _fetchCurrentLocationAndUpdateState(
+      BookingState bookingState) async {
+    try {
+      final position = await LocationService.getCurrentLocation();
+      final placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        if (placemark.administrativeArea != null) {
+          bookingState.setState(placemark.administrativeArea!);
+        }
+      }
+    } catch (e) {
+      // Handle location error, maybe show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Could not determine your location. Please enter one manually.')));
+    }
   }
 
   // void _navigateToRoomList(int hotelId, BookingState bookingState) {
@@ -418,13 +446,22 @@ class _RoomAvailabilityResultsScreenState
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
+                    final searchParams = SearchParams(
+                      state: bookingState.state,
+                      checkInDate: bookingState.checkInDate,
+                      checkInTime: bookingState.checkInTime,
+                      durationHours: bookingState.duration,
+                      adults: bookingState.adults,
+                      children: bookingState.children,
+                      rooms: 1,
+                    );
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder:
-                            (_) => EnhancedHotelDetailsScreen(
-                              hotel: hotelWithRooms.hotel,
-                            ),
+                        builder: (_) => EnhancedHotelDetailsScreen(
+                          hotel: hotelWithRooms.hotel,
+                          searchParams: searchParams,
+                        ),
                       ),
                     );
                   },
@@ -486,24 +523,20 @@ class _RoomAvailabilityResultsScreenState
                         Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: SearchCardWithData(
-                            location: bookingState.state,
-                            checkInDate: bookingState.checkInDate,
-                            checkInTime: _formatTimeOfDay(
-                              bookingState.checkInTime,
+                            searchParams: SearchParams(
+                              state: bookingState.state,
+                              checkInDate: bookingState.checkInDate,
+                              checkInTime: bookingState.checkInTime,
+                              durationHours: bookingState.duration,
+                              adults: bookingState.adults,
+                              children: bookingState.children,
+                              rooms: 1,
                             ),
-                            checkOutDate: bookingState.checkOutDate,
-                            adults: bookingState.adults,
-                            children: bookingState.children,
-                            rooms:
-                                1, // You might want to add rooms to BookingState
-                            duration: _formatDuration(bookingState.duration),
                             onSearchPressed: (searchParams) {
                               _handleSearch(
                                 state: searchParams.state,
                                 checkInDate: searchParams.checkInDate,
-                                checkInTime: _parseTimeString(
-                                  searchParams.checkInTime,
-                                ),
+                                checkInTime: searchParams.checkInTime,
                                 duration: searchParams.durationHours,
                                 adults: searchParams.adults,
                                 children: searchParams.children,
