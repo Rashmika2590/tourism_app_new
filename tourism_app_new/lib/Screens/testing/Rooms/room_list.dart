@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/booking_page.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 
 class RoomsListScreen extends StatefulWidget {
   final int hotelId;
@@ -29,7 +31,7 @@ class RoomsListScreen extends StatefulWidget {
 
 class _RoomsListScreenState extends State<RoomsListScreen>
     with TickerProviderStateMixin {
-  late Future<List<Room>> _roomsFuture;
+  late Future<List<dynamic>> _dataFuture;
   TabController? _tabController;
   Map<int, Room> _roomDetailsCache = {};
   Room? _selectedRoom;
@@ -105,8 +107,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   @override
   void initState() {
     super.initState();
-    _roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotelId);
-    _roomsFuture.then((rooms) {
+    _dataFuture = _fetchRoomsAndAvailability();
+    _dataFuture.then((data) {
+      final rooms = data[0] as List<Room>;
       if (rooms.isNotEmpty) {
         _tabController = TabController(length: rooms.length, vsync: this);
         _tabController!.addListener(_onTabChanged);
@@ -115,10 +118,25 @@ class _RoomsListScreenState extends State<RoomsListScreen>
     });
   }
 
+  Future<List<dynamic>> _fetchRoomsAndAvailability() async {
+    final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotelId);
+    final availabilityFuture = RoomAvailabilityService.searchAvailability(
+      checkInDate: widget.checkInDate!,
+      checkInTime: widget.checkInTime!,
+      checkOutDate: widget.checkOutDate!,
+      checkOutTime: widget.checkOutTime!,
+      adultCount: widget.adultCount!,
+      childrenCount: widget.childrenCount!,
+      state: '', // Not needed for room list screen
+    );
+    return Future.wait([roomsFuture, availabilityFuture]);
+  }
+
   void _onTabChanged() {
     if (_tabController!.indexIsChanging) return;
     final index = _tabController!.index;
-    _roomsFuture.then((rooms) {
+    _dataFuture.then((data) {
+      final rooms = data[0] as List<Room>;
       _fetchRoomDetails(rooms[index].id);
     });
     // Reset image index when switching tabs
@@ -218,12 +236,14 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   double _calculateTotal() {
     if (!_canBookRoom() || _selectedRoom == null) return 0.0;
 
-    int days = widget.checkOutDate!.difference(widget.checkInDate!).inDays;
+    Duration duration = widget.checkOutDate!.difference(widget.checkInDate!);
+    int hours = duration.inHours;
 
-    // Ensure at least 1 day
-    if (days <= 0) days = 1;
+    // Ensure at least 1 hour
+    if (hours <= 0) hours = 1;
 
-    return _selectedRoom!.price * days + 5;
+    double serviceCharge = _selectedRoom!.price * 0.1; // 10% service charge
+    return _selectedRoom!.price * hours + serviceCharge;
   }
 
   @override
@@ -245,8 +265,8 @@ class _RoomsListScreenState extends State<RoomsListScreen>
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<Room>>(
-        future: _roomsFuture,
+      body: FutureBuilder<List<dynamic>>(
+        future: _dataFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -256,7 +276,18 @@ class _RoomsListScreenState extends State<RoomsListScreen>
             return const Center(child: Text("No rooms available"));
           }
 
-          final rooms = snapshot.data!;
+          final allRooms = snapshot.data![0] as List<Room>;
+          final availability = snapshot.data![1] as RoomAvailability;
+          final availableRoomIds =
+              availability.getRoomIdsForHotel(widget.hotelId);
+
+          final availableRooms = allRooms
+              .where((room) => availableRoomIds.contains(room.id))
+              .toList();
+          final unavailableRooms = allRooms
+              .where((room) => !availableRoomIds.contains(room.id))
+              .toList();
+          final rooms = availableRooms + unavailableRooms;
 
           return Column(
             children: [
@@ -282,53 +313,58 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                       labelPadding: const EdgeInsets.symmetric(horizontal: 5),
                       indicator: const BoxDecoration(),
                       dividerColor: Colors.transparent,
-                      tabs:
-                          rooms.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final room = entry.value;
-                            final isSelected = _tabController?.index == index;
+                      tabs: rooms.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final room = entry.value;
+                        final isSelected = _tabController?.index == index;
+                        final isAvailable = availableRoomIds.contains(room.id);
 
-                            return Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 40, // increased width
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isSelected
-                                            ? Colors.teal
-                                            : Colors.grey[300],
-                                    borderRadius: BorderRadius.circular(50),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    room.type,
-                                    style: TextStyle(
-                                      color:
-                                          isSelected
-                                              ? Colors.white
-                                              : Colors.black,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
+                        return Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 40, // increased width
+                                vertical: 7,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? (isAvailable
+                                        ? Colors.teal
+                                        : Colors.grey)
+                                    : (isAvailable
+                                        ? Colors.grey[300]
+                                        : Colors.grey[200]),
+                                borderRadius: BorderRadius.circular(50),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                room.type,
+                                style: TextStyle(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isAvailable
+                                          ? Colors.black
+                                          : Colors.grey[500]),
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "≈ ${room.price.toInt()} LKR",
-                                  style: TextStyle(
-                                    color:
-                                        isSelected
-                                            ? Colors.teal
-                                            : Colors.grey[700],
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              isAvailable
+                                  ? "≈ ${room.price.toInt()} LKR"
+                                  : "Unavailable",
+                              style: TextStyle(
+                                color: isSelected
+                                    ? (isAvailable ? Colors.teal : Colors.red)
+                                    : Colors.grey[700],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        );
+                      }).toList(),
                     ),
                   ],
                 ),
@@ -725,6 +761,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                           ),
                                           Text(
                                             'Check-out: ${widget.checkOutDate!.day}/${widget.checkOutDate!.month}/${widget.checkOutDate!.year} at ${widget.checkOutTime!.substring(0, 5)}',
+                                          ),
+                                          Text(
+                                            'Duration: ${widget.checkOutDate!.difference(widget.checkInDate!).inHours} hours',
                                           ),
                                           Text(
                                             'Guests: ${widget.adultCount!} adults, ${widget.childrenCount!} children',
