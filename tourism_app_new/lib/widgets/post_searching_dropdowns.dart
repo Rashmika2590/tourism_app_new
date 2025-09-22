@@ -38,7 +38,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   @override
   void initState() {
     super.initState();
-
     locationController =
         TextEditingController(text: widget.searchParams.locationName);
     selectedDate = widget.searchParams.checkInDate;

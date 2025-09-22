@@ -61,6 +61,30 @@ class _RoomAvailabilityResultsScreenState
     // Initialize with widget values
     _currentAvailability = widget.availability;
     _currentHotelWithRoomDetails = widget.hotelWithRoomDetails;
+
+    final bookingState = Provider.of<BookingState>(context, listen: false);
+    if (bookingState.state.isEmpty) {
+      _fetchCurrentLocationAndUpdateState(bookingState);
+    }
+  }
+
+  Future<void> _fetchCurrentLocationAndUpdateState(
+      BookingState bookingState) async {
+    try {
+      final position = await LocationService.getCurrentLocation();
+      final placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        bookingState.setLocation(placemark.locality ?? 'Current Location',
+            position.latitude, position.longitude);
+      }
+    } catch (e) {
+      // Handle location error, maybe show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Could not determine your location. Please enter one manually.')));
+    }
   }
 
   Future<void> _fetchCurrentLocationAndUpdateState(
