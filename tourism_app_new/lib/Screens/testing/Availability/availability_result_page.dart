@@ -536,7 +536,6 @@ class _RoomAvailabilityResultsScreenState
                               rooms: 1,
                             ),
                             onSearchPressed: (searchParams) {
-                              _handleSearch(
                                 searchParams: searchParams,
                                 bookingState: bookingState,
                               );
