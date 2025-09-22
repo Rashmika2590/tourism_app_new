@@ -625,14 +625,15 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     );
                   },
                   onSuggestionSelected: (suggestion) {
+                    final bookingState =
+                        Provider.of<BookingState>(context, listen: false);
                     String stateName = _extractCityName(
                       suggestion['description']!,
                     );
                     _stateController.text = stateName;
-                    // Also update the provider state
                     bookingState.setState(stateName);
-                    print('🏛️ Selected: ${suggestion['description']}');
-                    print('🎯 Extracted State: $stateName');
+                    // Automatically trigger the search
+                    _searchAvailability(bookingState);
                   },
                   noItemsFoundBuilder:
                       (context) => const Padding(

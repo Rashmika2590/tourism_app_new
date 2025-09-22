@@ -70,7 +70,6 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
         );
         _isLoading = false;
       });
-
       // Animate camera to the new location if the controller is ready
       if (mapController != null) {
         mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));

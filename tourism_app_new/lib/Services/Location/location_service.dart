@@ -53,7 +53,7 @@ class LocationService {
   /// Throws an exception if location services are disabled or permissions are denied.
   static Future<Position> getCurrentPosition() async {
     final hasPermission = await handleLocationPermission();
-
+    
     if (!hasPermission) {
       throw Exception('Location permissions are denied.');
     }
