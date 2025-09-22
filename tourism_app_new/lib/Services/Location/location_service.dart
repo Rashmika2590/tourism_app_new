@@ -1,7 +1,6 @@
 // services/location_service.dart
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// A service class for handling location-related functionalities.
 class LocationService {
@@ -49,7 +48,6 @@ class LocationService {
 
     return true;
   }
-
   /// Fetches the current geographical position of the device.
   ///
   /// Throws an exception if location services are disabled or permissions are denied.
