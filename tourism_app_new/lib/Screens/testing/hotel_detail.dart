@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:tourism_app_new/models/search_params_model.dart';
+import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
@@ -15,9 +18,11 @@ import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class EnhancedHotelDetailsScreen extends StatefulWidget {
   final Hotel hotel;
+  final SearchParams? searchParams;
 
-  const EnhancedHotelDetailsScreen({Key? key, required this.hotel})
-    : super(key: key);
+  const EnhancedHotelDetailsScreen(
+      {Key? key, required this.hotel, this.searchParams})
+      : super(key: key);
 
   @override
   State<EnhancedHotelDetailsScreen> createState() =>
@@ -26,12 +31,14 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 
 class _EnhancedHotelDetailsScreenState
     extends State<EnhancedHotelDetailsScreen> {
+  late SearchParams _searchParams;
   bool isFavorite = false;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
   List<FAQ> faqs = [];
   bool isLoadingRooms = true;
   bool isLoadingFAQs = true;
+  bool _isCheckingAvailability = false;
   Room? cheapestRoom;
   Set<String> allAmenities = {};
   final TextEditingController _faqController = TextEditingController();
@@ -73,6 +80,18 @@ class _EnhancedHotelDetailsScreenState
   @override
   void initState() {
     super.initState();
+    _searchParams = widget.searchParams ??
+        SearchParams(
+          locationName: widget.hotel.state,
+          latitude: widget.hotel.latitude,
+          longitude: widget.hotel.longitude,
+          checkInDate: DateTime.now(),
+          checkInTime: TimeOfDay.now(),
+          durationHours: 1,
+          adults: 1,
+          children: 0,
+          rooms: 1,
+        );
     _loadHotelRooms();
     _loadFAQs();
   }
@@ -180,22 +199,56 @@ class _EnhancedHotelDetailsScreenState
     });
   }
 
-  void _navigateToRoomList(int hotelId, BookingState bookingState) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder:
-            (_) => RoomsListScreen(
+  Future<void> _navigateToRoomList(int hotelId, SearchParams searchParams) async {
+    setState(() {
+      _isCheckingAvailability = true;
+    });
+
+    try {
+      final checkOutDate = searchParams.checkInDate.add(
+        Duration(hours: searchParams.durationHours),
+      );
+      final availability = await RoomAvailabilityService.searchAvailability(
+        checkInDate: searchParams.checkInDate,
+        checkInTime: DateFormat('HH:mm:ss').format(searchParams.checkInDate),
+        checkOutDate: checkOutDate,
+        checkOutTime: DateFormat('HH:mm:ss').format(checkOutDate),
+        latitude: searchParams.latitude,
+        longitude: searchParams.longitude,
+        maxDistanceKm: searchParams.radius,
+        adultCount: searchParams.adults,
+        childrenCount: searchParams.children,
+      );
+
+      if (availability.hotelIds.contains(hotelId)) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RoomsListScreen(
               hotelId: hotelId,
-              checkInDate: bookingState.checkInDate,
-              checkInTime: _formatTimeOfDay(bookingState.checkInTime),
-              checkOutDate: bookingState.checkOutDate,
-              checkOutTime: _formatTimeOfDay(bookingState.checkInTime),
-              adultCount: bookingState.adults,
-              childrenCount: bookingState.children,
+              searchParams: searchParams,
             ),
-      ),
-    );
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'No available rooms. Please change values or choose another hotel.'),
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error checking availability: $e'),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isCheckingAvailability = false;
+      });
+    }
   }
 
   String _formatTimeOfDay(TimeOfDay time) {
@@ -458,11 +511,6 @@ class _EnhancedHotelDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final bookingState = Provider.of<BookingState>(context, listen: true);
-    final hasBookingDetails =
-        bookingState.state.isNotEmpty &&
-        bookingState.checkInDate != DateTime.now();
-
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -727,16 +775,12 @@ class _EnhancedHotelDetailsScreenState
                     // Booking Details Section
                     const SizedBox(height: 16),
                     SearchCardWithData(
-                      location: bookingState.state,
-                      checkInDate: bookingState.checkInDate,
-                      checkInTime: _formatTimeOfDay(bookingState.checkInTime),
-                      checkOutDate: bookingState.checkOutDate,
-                      adults: bookingState.adults,
-                      children: bookingState.children,
-                      rooms: 1, // You might want to add rooms to BookingState
-                      duration: '2',
-                      onSearchPressed: (searchParams) {
-                        _navigateToRoomList(widget.hotel.id, bookingState);
+                      searchParams: _searchParams,
+                      onSearchPressed: (newParams) {
+                        setState(() {
+                          _searchParams = newParams;
+                        });
+                        _navigateToRoomList(widget.hotel.id, newParams);
                       },
                     ),
                     const SizedBox(height: 24),
@@ -1357,14 +1401,13 @@ class _EnhancedHotelDetailsScreenState
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed:
-                          () =>
-                              hotelRooms.isNotEmpty && hasBookingDetails
-                                  ? _navigateToRoomList(
-                                    widget.hotel.id,
-                                    bookingState,
-                                  )
-                                  : null,
+                      onPressed: () =>
+                          hotelRooms.isNotEmpty && !_isCheckingAvailability
+                              ? _navigateToRoomList(
+                                  widget.hotel.id,
+                                  _searchParams,
+                                )
+                              : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mainGreen,
                         foregroundColor: Colors.white,
@@ -1373,13 +1416,23 @@ class _EnhancedHotelDetailsScreenState
                           borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      child: const Text(
-                        'See More Options',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: _isCheckingAvailability
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'See More Options',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                 ],

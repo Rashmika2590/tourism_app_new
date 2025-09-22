@@ -70,8 +70,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   void _calculateTotalPrice() {
     final duration = widget.checkOutDate.difference(widget.checkInDate);
-    final days = duration.inDays;
-    final roomPrice = widget.room.price * (days > 0 ? days : 1);
+    final hours = duration.inHours > 0 ? duration.inHours : 1;
+    final roomPrice = widget.room.price * hours;
+    _serviceFee = roomPrice * 0.1; // 10% service charge
     _totalPrice = roomPrice + _serviceFee;
   }
 
@@ -85,20 +86,14 @@ class _BookingScreenState extends State<BookingScreen> {
 
   String _getDurationText() {
     final duration = widget.checkOutDate.difference(widget.checkInDate);
-    final days = duration.inDays;
-    final hours = duration.inHours;
-
-    if (days > 0) {
-      return '$days ${days == 1 ? 'day' : 'days'}';
-    } else {
-      return '$hours ${hours == 1 ? 'hour' : 'hours'}';
-    }
+    final hours = duration.inHours > 0 ? duration.inHours : 1;
+    return '$hours ${hours == 1 ? 'hour' : 'hours'}';
   }
 
   double _getRoomPrice() {
     final duration = widget.checkOutDate.difference(widget.checkInDate);
-    final days = duration.inDays;
-    return widget.room.price * (days > 0 ? days : 1);
+    final hours = duration.inHours > 0 ? duration.inHours : 1;
+    return widget.room.price * hours;
   }
 
   Future<void> _submitBooking() async {
