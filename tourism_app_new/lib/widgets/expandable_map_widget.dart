@@ -1,4 +1,5 @@
 // expandable_map_widget.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -20,7 +21,7 @@ class ExpandableMapWidget extends StatefulWidget {
 }
 
 class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
-  late GoogleMapController mapController;
+  final Completer<GoogleMapController> _controllerCompleter = Completer();
   LatLng _center = const LatLng(6.9271, 79.8612); // Default to Colombo
   final Set<Marker> _markers = {};
   bool _isLoading = true;
@@ -37,40 +38,57 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
     });
 
     try {
-      final coordinates = await LocationService.getLocationCoordinates(
-        widget.location,
-      );
+      LatLng coordinates;
+      String locationName;
+
+      if (widget.location != null && widget.location!.isNotEmpty) {
+        coordinates = await LocationService.getCoordinatesFromLocationName(
+          widget.location!,
+        );
+        locationName = widget.location!;
+      } else {
+        final position = await LocationService.getCurrentPosition();
+        coordinates = LatLng(position.latitude, position.longitude);
+        final placemark = await LocationService.getPlacemarkFromPosition(position);
+        locationName = placemark.locality ?? placemark.administrativeArea ?? 'Current Location';
+      }
 
       setState(() {
         _center = coordinates;
+        _markers.clear();
         _markers.add(
           Marker(
             markerId: const MarkerId('property_location'),
             position: _center,
             infoWindow: InfoWindow(
-              title: widget.location ?? 'Current Location',
-              snippet: 'Properties in this area',
+              title: locationName,
+              snippet: 'Property is located here',
             ),
           ),
         );
         _isLoading = false;
       });
 
-      // Animate camera to the new location
-      mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+      // Wait for the controller to be ready, then animate the camera.
+      final GoogleMapController controller = await _controllerCompleter.future;
+      controller.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading map: ${e.toString()}')),
+        );
+      }
       print('Error loading location: $e');
     }
   }
 
   void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-    // If we already have the location, move the camera
-    if (!_isLoading) {
-      controller.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+    if (!_controllerCompleter.isCompleted) {
+      _controllerCompleter.complete(controller);
     }
   }
 

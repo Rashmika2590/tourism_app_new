@@ -201,45 +201,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   }
 
   Future<void> _searchAvailability(BookingState bookingState) async {
-    String state = _stateController.text.trim();
-
-    if (state.isEmpty) {
-      try {
-        final position = await LocationService.getCurrentLocation();
-        final placemarks =
-            await placemarkFromCoordinates(position.latitude, position.longitude);
-        if (placemarks.isNotEmpty) {
-          final placemark = placemarks.first;
-          if (placemark.administrativeArea != null) {
-            state = placemark.administrativeArea!;
-            _stateController.text = state;
-          }
-        }
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'Could not determine your location. Please enter one manually.')));
-        return;
-      }
-    }
-
-    // Calculate check-out date based on duration
-    final checkOutDate = bookingState.checkInDate.add(
-      Duration(hours: bookingState.duration),
-    );
-
-    // Format times for API
-    final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
-    final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
-
-    // Debugging: Print current check-in and check-out times
-    print('🔍 DEBUG: Check-in Date: ${bookingState.checkInDate}');
-    print('🔍 DEBUG: Check-in Time: $checkInTime');
-    print('🔍 DEBUG: Check-out Date: $checkOutDate');
-    print('🔍 DEBUG: Check-out Time: $checkOutTime');
-    print('🔍 DEBUG: Duration: ${bookingState.duration} hours');
-    print('🔍 DEBUG: Current DateTime: ${DateTime.now()}');
-
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -248,12 +209,42 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     });
 
     try {
+      double? latitude;
+      double? longitude;
+      String? state = _stateController.text.trim();
+
+      // If no location is typed, use the device's current location
+      if (state.isEmpty) {
+        final position = await LocationService.getCurrentPosition();
+        latitude = position.latitude;
+        longitude = position.longitude;
+
+        // For display purposes, update the text field with the location name
+        final placemark = await LocationService.getPlacemarkFromPosition(position);
+        state = placemark.locality ?? placemark.administrativeArea;
+        if (state != null) {
+          _stateController.text = state;
+        }
+      }
+
+      // Calculate check-out date based on duration
+      final checkOutDate = bookingState.checkInDate.add(
+        Duration(hours: bookingState.duration),
+      );
+
+      // Format times for API
+      final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
+      final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
+
       final availability = await RoomAvailabilityService.searchAvailability(
         checkInDate: bookingState.checkInDate,
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        state: state,
+        state: state.isNotEmpty ? state : null,
+        latitude: latitude,
+        longitude: longitude,
+        maxDistanceKm: 10, // Default radius of 10km
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
@@ -263,37 +254,33 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         _isLoading = false;
       });
 
-      if (state.isEmpty) {
-        bookingState.setState('');
-      } else {
-        bookingState.setState(state);
-      }
+      bookingState.setState(state ?? '');
 
       if (availability.hotelIds.isNotEmpty) {
         await _fetchHotelAndRoomDetails();
-
-        // Navigate to results page
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => RoomAvailabilityResultsScreen(
-                  availability: availability,
-                  hotelWithRoomDetails: _hotelWithRoomDetails,
-                ),
+            builder: (context) => RoomAvailabilityResultsScreen(
+              availability: availability,
+              hotelWithRoomDetails: _hotelWithRoomDetails,
+            ),
           ),
         );
       } else {
-        // Show no results message on current page
-        setState(() {
-          _isLoading = false;
-        });
+        // Show a message if no results are found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No hotels found for the selected criteria.')),
+        );
       }
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = "Search failed: $e";
         _isLoading = false;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_errorMessage!)),
+      );
     }
   }
 
@@ -638,14 +625,15 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     );
                   },
                   onSuggestionSelected: (suggestion) {
+                    final bookingState =
+                        Provider.of<BookingState>(context, listen: false);
                     String stateName = _extractCityName(
                       suggestion['description']!,
                     );
                     _stateController.text = stateName;
-                    // Also update the provider state
                     bookingState.setState(stateName);
-                    print('🏛️ Selected: ${suggestion['description']}');
-                    print('🎯 Extracted State: $stateName');
+                    // Automatically trigger the search
+                    _searchAvailability(bookingState);
                   },
                   noItemsFoundBuilder:
                       (context) => const Padding(
