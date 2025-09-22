@@ -226,13 +226,7 @@ class _EnhancedHotelDetailsScreenState
           MaterialPageRoute(
             builder: (_) => RoomsListScreen(
               hotelId: hotelId,
-              checkInDate: searchParams.checkInDate,
-              checkInTime: _formatTimeOfDay(searchParams.checkInTime),
-              checkOutDate: checkOutDate,
-              checkOutTime:
-                  _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
-              adultCount: searchParams.adults,
-              childrenCount: searchParams.children,
+              searchParams: searchParams,
             ),
           ),
         );
@@ -517,11 +511,6 @@ class _EnhancedHotelDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final bookingState = Provider.of<BookingState>(context, listen: true);
-    final hasBookingDetails =
-        bookingState.state.isNotEmpty &&
-        bookingState.checkInDate != DateTime.now();
-
     return Scaffold(
       body: CustomScrollView(
         slivers: [

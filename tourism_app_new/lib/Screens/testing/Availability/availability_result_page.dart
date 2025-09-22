@@ -87,6 +87,25 @@ class _RoomAvailabilityResultsScreenState
     }
   }
 
+  Future<void> _fetchCurrentLocationAndUpdateState(
+      BookingState bookingState) async {
+    try {
+      final position = await LocationService.getCurrentLocation();
+      final placemarks =
+          await placemarkFromCoordinates(position.latitude, position.longitude);
+      if (placemarks.isNotEmpty) {
+        final placemark = placemarks.first;
+        bookingState.setLocation(placemark.locality ?? 'Current Location',
+            position.latitude, position.longitude);
+      }
+    } catch (e) {
+      // Handle location error, maybe show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text(
+              'Could not determine your location. Please enter one manually.')));
+    }
+  }
+
   // void _navigateToRoomList(int hotelId, BookingState bookingState) {
   //   Navigator.push(
   //     context,
@@ -536,6 +555,7 @@ class _RoomAvailabilityResultsScreenState
                               rooms: 1,
                             ),
                             onSearchPressed: (searchParams) {
+                              _handleSearch(
                                 searchParams: searchParams,
                                 bookingState: bookingState,
                               );

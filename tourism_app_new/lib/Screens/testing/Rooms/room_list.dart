@@ -1,28 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
+import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/booking_page.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 
 class RoomsListScreen extends StatefulWidget {
   final int hotelId;
-  final DateTime? checkInDate;
-  final String? checkInTime;
-  final DateTime? checkOutDate;
-  final String? checkOutTime;
-  final int? adultCount;
-  final int? childrenCount;
+  final SearchParams searchParams;
 
   const RoomsListScreen({
     Key? key,
     required this.hotelId,
-    this.checkInDate,
-    this.checkInTime,
-    this.checkOutDate,
-    this.checkOutTime,
-    this.adultCount,
-    this.childrenCount,
+    required this.searchParams,
   }) : super(key: key);
 
   @override
@@ -121,13 +112,18 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   Future<List<dynamic>> _fetchRoomsAndAvailability() async {
     final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotelId);
     final availabilityFuture = RoomAvailabilityService.searchAvailability(
-      checkInDate: widget.checkInDate!,
-      checkInTime: widget.checkInTime!,
-      checkOutDate: widget.checkOutDate!,
-      checkOutTime: widget.checkOutTime!,
-      adultCount: widget.adultCount!,
-      childrenCount: widget.childrenCount!,
-      state: '', // Not needed for room list screen
+      checkInDate: widget.searchParams.checkInDate,
+      checkInTime:
+          '${widget.searchParams.checkInTime.hour.toString().padLeft(2, '0')}:${widget.searchParams.checkInTime.minute.toString().padLeft(2, '0')}:00',
+      checkOutDate: widget.searchParams.checkInDate
+          .add(Duration(hours: widget.searchParams.durationHours)),
+      checkOutTime:
+          '${widget.searchParams.checkInTime.hour.toString().padLeft(2, '0')}:${widget.searchParams.checkInTime.minute.toString().padLeft(2, '0')}:00',
+      latitude: widget.searchParams.latitude,
+      longitude: widget.searchParams.longitude,
+      maxDistanceKm: widget.searchParams.radius,
+      adultCount: widget.searchParams.adults,
+      childrenCount: widget.searchParams.children,
     );
     return Future.wait([roomsFuture, availabilityFuture]);
   }

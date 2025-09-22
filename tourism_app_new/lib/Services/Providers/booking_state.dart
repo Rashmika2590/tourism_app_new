@@ -9,7 +9,9 @@ class BookingState extends ChangeNotifier {
   int duration = 1; // in hours
   int adults = 1;
   int children = 0;
-  String state = '';
+  String locationName = '';
+  double? latitude;
+  double? longitude;
   String specialRequest = '';
   double price = 0.0;
   String paymentMethod = 'Card'; // default payment method
@@ -53,8 +55,15 @@ class BookingState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setState(String s) {
-    state = s;
+  void setLocation(String name, double? lat, double? lng) {
+    locationName = name;
+    latitude = lat;
+    longitude = lng;
+    notifyListeners();
+  }
+
+  void setLocationName(String name) {
+    locationName = name;
     notifyListeners();
   }
 
@@ -81,7 +90,9 @@ class BookingState extends ChangeNotifier {
     duration = 1;
     adults = 1;
     children = 0;
-    state = '';
+    locationName = '';
+    latitude = null;
+    longitude = null;
     specialRequest = '';
     price = 0.0;
     paymentMethod = 'Card';

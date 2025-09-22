@@ -92,29 +92,14 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     // For now, we'll just use them directly in the API call
   }
 
-  // Extract city/state name from Google Places API response
-  String _extractCityName(String fullAddress) {
-    String cityName = fullAddress;
-    List<String> parts = fullAddress.split(',');
-    if (parts.isNotEmpty) {
-      cityName = parts[0].trim();
-    }
-
-    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
-    for (String prefix in prefixesToRemove) {
-      if (cityName.startsWith(prefix)) {
-        cityName = cityName.substring(prefix.length);
-        break;
-      }
-    }
-    return cityName;
-  }
 
   Future<List<Map<String, dynamic>>> _getSuggestions(String query) async {
+    // TODO: Replace with your Google Maps API Key
+    const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
     try {
       final response = await http.get(
         Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=$apiKey&types=(cities)',
         ),
       );
 
@@ -142,10 +127,12 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   }
 
   Future<Map<String, double?>> _getPlaceDetails(String placeId) async {
+    // TODO: Replace with your Google Maps API Key
+    const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
     try {
       final response = await http.get(
         Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&fields=geometry',
+          'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$apiKey&fields=geometry',
         ),
       );
 
@@ -1120,8 +1107,11 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             tag: "Featured",
                             hotel: hotel,
                             onTap: () {
-                              _stateController.text = hotel.state;
-                              bookingState.setState(hotel.state);
+                              setState(() {
+                                _stateController.text = hotel.name;
+                                _selectedLatitude = hotel.latitude;
+                                _selectedLongitude = hotel.longitude;
+                              });
                             },
                           ),
                         );
