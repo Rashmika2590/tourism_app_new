@@ -48,16 +48,17 @@ class LocationService {
 
     return true;
   }
+
+
   /// Fetches the current geographical position of the device.
   ///
   /// Throws an exception if location services are disabled or permissions are denied.
   static Future<Position> getCurrentPosition() async {
     final hasPermission = await handleLocationPermission();
-    
+
     if (!hasPermission) {
       throw Exception('Location permissions are denied.');
     }
-
     try {
       return await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,

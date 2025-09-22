@@ -62,7 +62,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     }
     final response = await http.get(
       Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=YOUR_API_KEY&types=(cities)'),
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)'),
     );
 
     if (response.statusCode == 200) {
