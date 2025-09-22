@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
+import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
@@ -81,7 +82,9 @@ class _EnhancedHotelDetailsScreenState
     super.initState();
     _searchParams = widget.searchParams ??
         SearchParams(
-          state: widget.hotel.state,
+          locationName: widget.hotel.state,
+          latitude: widget.hotel.latitude,
+          longitude: widget.hotel.longitude,
           checkInDate: DateTime.now(),
           checkInTime: TimeOfDay.now(),
           durationHours: 1,
@@ -210,7 +213,9 @@ class _EnhancedHotelDetailsScreenState
         checkInTime: DateFormat('HH:mm:ss').format(searchParams.checkInDate),
         checkOutDate: checkOutDate,
         checkOutTime: DateFormat('HH:mm:ss').format(checkOutDate),
-        state: searchParams.state,
+        latitude: searchParams.latitude,
+        longitude: searchParams.longitude,
+        maxDistanceKm: searchParams.radius,
         adultCount: searchParams.adults,
         childrenCount: searchParams.children,
       );

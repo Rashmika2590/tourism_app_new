@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 class SearchParams {
-  final String state;
+  final double? latitude;
+  final double? longitude;
+  final double radius;
+  final String locationName;
   final DateTime checkInDate;
   final TimeOfDay checkInTime;
   final int durationHours;
@@ -10,7 +13,10 @@ class SearchParams {
   final int rooms;
 
   SearchParams({
-    required this.state,
+    this.latitude,
+    this.longitude,
+    this.radius = 10.0, // Default radius of 10km
+    required this.locationName,
     required this.checkInDate,
     required this.checkInTime,
     required this.durationHours,

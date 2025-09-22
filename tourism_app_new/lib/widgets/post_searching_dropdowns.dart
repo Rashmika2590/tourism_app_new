@@ -39,7 +39,9 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   void initState() {
     super.initState();
 
-    locationController = TextEditingController(text: widget.searchParams.state);
+
+    locationController =
+        TextEditingController(text: widget.searchParams.locationName);
     selectedDate = widget.searchParams.checkInDate;
     selectedTime = widget.searchParams.checkInTime;
     selectedDurationHours = widget.searchParams.durationHours;
@@ -54,7 +56,9 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
 
   void _performSearch() {
     final searchParams = SearchParams(
-      state: locationController.text.trim(),
+      locationName: locationController.text.trim(),
+      latitude: widget.searchParams.latitude,
+      longitude: widget.searchParams.longitude,
       checkInDate: selectedDate,
       checkInTime: selectedTime,
       durationHours: selectedDurationHours,
