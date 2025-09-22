@@ -69,11 +69,14 @@ class _RoomAvailabilityResultsScreenState
   }
 
   Future<void> _fetchCurrentLocationAndUpdateState(
-      BookingState bookingState) async {
+    BookingState bookingState,
+  ) async {
     try {
-      final position = await LocationService.getCurrentLocation();
-      final placemarks =
-          await placemarkFromCoordinates(position.latitude, position.longitude);
+      final position = await LocationService.getCurrentPosition();
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
       if (placemarks.isNotEmpty) {
         final placemark = placemarks.first;
         if (placemark.administrativeArea != null) {
@@ -82,9 +85,13 @@ class _RoomAvailabilityResultsScreenState
       }
     } catch (e) {
       // Handle location error, maybe show a snackbar
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
           content: Text(
-              'Could not determine your location. Please enter one manually.')));
+            'Could not determine your location. Please enter one manually.',
+          ),
+        ),
+      );
     }
   }
 
@@ -458,10 +465,11 @@ class _RoomAvailabilityResultsScreenState
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => EnhancedHotelDetailsScreen(
-                          hotel: hotelWithRooms.hotel,
-                          searchParams: searchParams,
-                        ),
+                        builder:
+                            (_) => EnhancedHotelDetailsScreen(
+                              hotel: hotelWithRooms.hotel,
+                              searchParams: searchParams,
+                            ),
                       ),
                     );
                   },

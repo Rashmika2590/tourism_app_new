@@ -1,5 +1,9 @@
 // widgets/post_searching_dropdowns.dart
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 
@@ -74,8 +78,57 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     });
   }
 
+  Future<List<Map<String, String>>> _getSuggestions(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final predictions = data['predictions'] as List<dynamic>;
+          return predictions.map((prediction) {
+            return {
+              'description': prediction['description'] as String,
+              'place_id': prediction['place_id'] as String,
+            };
+          }).toList();
+        } else {
+          print('Error from API: ${data['status']}');
+          return [];
+        }
+      } else {
+        throw Exception('Failed to load suggestions');
+      }
+    } catch (e) {
+      print('Error getting suggestions: $e');
+      return [];
+    }
+  }
+
+  String _extractCityName(String fullAddress) {
+    String cityName = fullAddress;
+    List<String> parts = fullAddress.split(',');
+    if (parts.isNotEmpty) {
+      cityName = parts[0].trim();
+    }
+
+    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
+    for (String prefix in prefixesToRemove) {
+      if (cityName.startsWith(prefix)) {
+        cityName = cityName.substring(prefix.length);
+        break;
+      }
+    }
+    return cityName;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // ignore: unnecessary_null_comparison
     final hasNullDetails = widget.searchParams.checkInDate == null;
 
     return Container(
@@ -126,50 +179,142 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
               children: [
                 Row(
                   children: [
-                    Icon(
-                      Icons.location_on_outlined,
-                      color: Colors.grey[600],
-                      size: 24,
+                    // Grey container wrapping only the location icon and text
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              color: Colors.grey[600],
+                              size: 18,
+                            ),
+                            SizedBox(width: 8),
+                            Container(
+                              width:
+                                  MediaQuery.of(context).size.width *
+                                  0.2, // Adjust width as needed
+                              child:
+                                  editingLocation
+                                      ? TextField(
+                                        controller: locationController,
+                                        autofocus: true,
+                                        decoration: const InputDecoration(
+                                          hintText: "Enter location",
+                                          border: InputBorder.none,
+                                        ),
+                                        style: TextStyle(
+                                          color: Colors.grey[800],
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        onSubmitted: (_) {
+                                          setState(() {
+                                            editingLocation = false;
+                                            showSearchButton = true;
+                                          });
+                                        },
+                                      )
+                                      : GestureDetector(
+                                        onTap: () {
+                                          setState(
+                                            () => editingLocation = true,
+                                          );
+                                        },
+                                        child: Container(
+                                          child: TypeAheadField<
+                                            Map<String, String>
+                                          >(
+                                            textFieldConfiguration:
+                                                TextFieldConfiguration(
+                                                  style: TextStyle(
+                                                    fontSize: 13,
+                                                  ),
+                                                  controller:
+                                                      locationController,
+                                                  decoration: InputDecoration(
+                                                    isDense: true,
+                                                    contentPadding:
+                                                        EdgeInsets.symmetric(
+                                                          vertical: 12,
+                                                        ),
+                                                    hintText:
+                                                        'Where do you want to stay?',
+                                                    labelStyle: TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: Colors.grey,
+                                                    ),
+                                                    border: InputBorder.none,
+                                                  ),
+                                                ),
+                                            suggestionsBoxDecoration:
+                                                SuggestionsBoxDecoration(
+                                                  constraints:
+                                                      BoxConstraints.expand(
+                                                        width:
+                                                            MediaQuery.of(
+                                                              context,
+                                                            ).size.width -
+                                                            60,
+                                                      ),
+                                                ),
+                                            suggestionsCallback: (
+                                              pattern,
+                                            ) async {
+                                              if (pattern.isEmpty) return [];
+                                              return await _getSuggestions(
+                                                pattern,
+                                              );
+                                            },
+                                            itemBuilder: (context, suggestion) {
+                                              return ListTile(
+                                                title: Text(
+                                                  suggestion['description']!,
+                                                ),
+                                                subtitle: Text(
+                                                  'State: ${_extractCityName(suggestion['description']!)}',
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            onSuggestionSelected: (suggestion) {
+                                              String stateName =
+                                                  _extractCityName(
+                                                    suggestion['description']!,
+                                                  );
+                                              locationController.text =
+                                                  stateName;
+                                              setState(
+                                                () => editingLocation = false,
+                                              );
+                                            },
+                                            noItemsFoundBuilder:
+                                                (context) => const Padding(
+                                                  padding: EdgeInsets.all(8.0),
+                                                  child: Text(
+                                                    'No locations found',
+                                                  ),
+                                                ),
+                                          ),
+                                        ),
+                                      ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child:
-                          editingLocation
-                              ? TextField(
-                                controller: locationController,
-                                autofocus: true,
-                                decoration: const InputDecoration(
-                                  hintText: "Enter location",
-                                  border: InputBorder.none,
-                                ),
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                onSubmitted: (_) {
-                                  setState(() {
-                                    editingLocation = false;
-                                    showSearchButton = true;
-                                  });
-                                },
-                              )
-                              : GestureDetector(
-                                onTap: () {
-                                  setState(() => editingLocation = true);
-                                },
-                                child: Text(
-                                  locationController.text,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                    ),
-                    const SizedBox(width: 12),
+                    // Date button (outside the grey container)
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -180,6 +325,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                         });
                       },
                       child: Container(
+                        width: MediaQuery.of(context).size.width * 0.515,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
@@ -191,15 +337,21 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            const Icon(
+                              Icons.calendar_month,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
                             Text(
                               '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 14,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 15),
                             Text(
                               selectedTime.format(context),
                               style: const TextStyle(
@@ -256,27 +408,22 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                         });
                       },
                       child: Container(
+                        width: MediaQuery.of(context).size.width * 0.64,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16,
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.grey[100],
+                          color: Colors.grey[200],
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey[300]!),
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.people_outline,
-                              color: Colors.grey[600],
-                              size: 18,
-                            ),
+                            Icon(Icons.people_outline, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               '$adults Adults',
                               style: TextStyle(
-                                color: Colors.grey[600],
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -285,7 +432,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                             Text(
                               '$children Children',
                               style: TextStyle(
-                                color: Colors.grey[600],
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -294,7 +440,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                             Text(
                               '$rooms Room',
                               style: TextStyle(
-                                color: Colors.grey[600],
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
                               ),

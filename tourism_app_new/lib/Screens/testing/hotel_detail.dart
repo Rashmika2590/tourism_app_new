@@ -18,9 +18,11 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
   final Hotel hotel;
   final SearchParams? searchParams;
 
-  const EnhancedHotelDetailsScreen(
-      {Key? key, required this.hotel, this.searchParams})
-      : super(key: key);
+  const EnhancedHotelDetailsScreen({
+    Key? key,
+    required this.hotel,
+    this.searchParams,
+  }) : super(key: key);
 
   @override
   State<EnhancedHotelDetailsScreen> createState() =>
@@ -77,7 +79,8 @@ class _EnhancedHotelDetailsScreenState
   @override
   void initState() {
     super.initState();
-    _searchParams = widget.searchParams ??
+    _searchParams =
+        widget.searchParams ??
         SearchParams(
           state: widget.hotel.state,
           checkInDate: DateTime.now(),
@@ -202,15 +205,18 @@ class _EnhancedHotelDetailsScreenState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => RoomsListScreen(
-          hotelId: hotelId,
-          checkInDate: searchParams.checkInDate,
-          checkInTime: _formatTimeOfDay(searchParams.checkInTime),
-          checkOutDate: checkOutDate,
-          checkOutTime: _formatTimeOfDay(TimeOfDay.fromDateTime(checkOutDate)),
-          adultCount: searchParams.adults,
-          childrenCount: searchParams.children,
-        ),
+        builder:
+            (_) => RoomsListScreen(
+              hotelId: hotelId,
+              checkInDate: searchParams.checkInDate,
+              checkInTime: _formatTimeOfDay(searchParams.checkInTime),
+              checkOutDate: checkOutDate,
+              checkOutTime: _formatTimeOfDay(
+                TimeOfDay.fromDateTime(checkOutDate),
+              ),
+              adultCount: searchParams.adults,
+              childrenCount: searchParams.children,
+            ),
       ),
     );
   }
@@ -668,7 +674,7 @@ class _EnhancedHotelDetailsScreenState
                 ),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(15),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -771,7 +777,7 @@ class _EnhancedHotelDetailsScreenState
 
                     //const SizedBox(height: 16),
                     Container(
-                      padding: const EdgeInsets.all(25),
+                      padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: Colors.grey[200],
                         borderRadius: BorderRadius.circular(12),
@@ -1370,12 +1376,14 @@ class _EnhancedHotelDetailsScreenState
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: () => hotelRooms.isNotEmpty
-                          ? _navigateToRoomList(
-                              widget.hotel.id,
-                              _searchParams,
-                            )
-                          : null,
+                      onPressed:
+                          () =>
+                              hotelRooms.isNotEmpty
+                                  ? _navigateToRoomList(
+                                    widget.hotel.id,
+                                    _searchParams,
+                                  )
+                                  : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mainGreen,
                         foregroundColor: Colors.white,

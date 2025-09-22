@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -57,8 +56,13 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
     setState(() => _isLoading = true);
     try {
       final position = await LocationService.getCurrentPosition();
-      final placemark = await LocationService.getPlacemarkFromPosition(position);
-      final locationName = placemark.locality ?? placemark.administrativeArea ?? 'Current Location';
+      final placemark = await LocationService.getPlacemarkFromPosition(
+        position,
+      );
+      final locationName =
+          placemark.locality ??
+          placemark.administrativeArea ??
+          'Current Location';
 
       final radius = double.tryParse(_radiusController.text.trim()) ?? 10.0;
 
@@ -87,10 +91,14 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
     setState(() => _isLoading = true);
     try {
       final hotels = await HotelApiService.searchHotels(
-        state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
-        radiusKm: _radiusController.text.trim().isEmpty
-            ? null
-            : double.tryParse(_radiusController.text.trim()),
+        state:
+            _stateController.text.trim().isEmpty
+                ? null
+                : _stateController.text.trim(),
+        radiusKm:
+            _radiusController.text.trim().isEmpty
+                ? null
+                : double.tryParse(_radiusController.text.trim()),
       );
 
       setState(() {
@@ -122,21 +130,19 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
       if (query.isEmpty) {
         _filteredHotels = _hotels;
       } else {
-        _filteredHotels = _hotels.where((hotel) {
-          return hotel.name.toLowerCase().contains(query.toLowerCase()) ||
-              hotel.address.toLowerCase().contains(query.toLowerCase()) ||
-              hotel.state.toLowerCase().contains(query.toLowerCase());
-        }).toList();
+        _filteredHotels =
+            _hotels.where((hotel) {
+              return hotel.name.toLowerCase().contains(query.toLowerCase()) ||
+                  hotel.address.toLowerCase().contains(query.toLowerCase()) ||
+                  hotel.state.toLowerCase().contains(query.toLowerCase());
+            }).toList();
       }
     });
   }
 
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
@@ -211,15 +217,16 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
         decoration: InputDecoration(
           hintText: 'Search hotels by name, address, or state...',
           prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  onPressed: () {
-                    _filterHotelsByName('');
-                    FocusScope.of(context).unfocus();
-                  },
-                  icon: const Icon(Icons.clear),
-                )
-              : null,
+          suffixIcon:
+              _searchQuery.isNotEmpty
+                  ? IconButton(
+                    onPressed: () {
+                      _filterHotelsByName('');
+                      FocusScope.of(context).unfocus();
+                    },
+                    icon: const Icon(Icons.clear),
+                  )
+                  : null,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(

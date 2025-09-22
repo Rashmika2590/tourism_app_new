@@ -220,7 +220,9 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         longitude = position.longitude;
 
         // For display purposes, update the text field with the location name
-        final placemark = await LocationService.getPlacemarkFromPosition(position);
+        final placemark = await LocationService.getPlacemarkFromPosition(
+          position,
+        );
         state = placemark.locality ?? placemark.administrativeArea;
         if (state != null) {
           _stateController.text = state;
@@ -233,7 +235,9 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       );
 
       // Format times for API
-      final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
+      final checkInTime = DateFormat(
+        'HH:mm:ss',
+      ).format(bookingState.checkInDate);
       final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
 
       final availability = await RoomAvailabilityService.searchAvailability(
@@ -241,7 +245,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        state: state.isNotEmpty ? state : null,
+        //state: state != '' ? state : null,
         latitude: latitude,
         longitude: longitude,
         maxDistanceKm: 10, // Default radius of 10km
@@ -261,16 +265,19 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => RoomAvailabilityResultsScreen(
-              availability: availability,
-              hotelWithRoomDetails: _hotelWithRoomDetails,
-            ),
+            builder:
+                (context) => RoomAvailabilityResultsScreen(
+                  availability: availability,
+                  hotelWithRoomDetails: _hotelWithRoomDetails,
+                ),
           ),
         );
       } else {
         // Show a message if no results are found
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No hotels found for the selected criteria.')),
+          const SnackBar(
+            content: Text('No hotels found for the selected criteria.'),
+          ),
         );
       }
     } catch (e) {
@@ -278,9 +285,9 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         _errorMessage = "Search failed: $e";
         _isLoading = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_errorMessage!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
     }
   }
 
