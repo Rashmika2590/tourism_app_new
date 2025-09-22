@@ -37,31 +37,52 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
     });
 
     try {
-      final coordinates = await LocationService.getLocationCoordinates(
-        widget.location,
-      );
+      LatLng coordinates;
+      String locationName;
+
+      if (widget.location != null && widget.location!.isNotEmpty) {
+        // If a location name is provided, geocode it
+        coordinates = await LocationService.getCoordinatesFromLocationName(
+          widget.location!,
+        );
+        locationName = widget.location!;
+      } else {
+        // Otherwise, get the user's current location
+        final position = await LocationService.getCurrentPosition();
+        coordinates = LatLng(position.latitude, position.longitude);
+        // Get a user-friendly name for the current location
+        final placemark = await LocationService.getPlacemarkFromPosition(position);
+        locationName = placemark.locality ?? placemark.administrativeArea ?? 'Current Location';
+      }
 
       setState(() {
         _center = coordinates;
+        _markers.clear(); // Clear old markers
         _markers.add(
           Marker(
             markerId: const MarkerId('property_location'),
             position: _center,
             infoWindow: InfoWindow(
-              title: widget.location ?? 'Current Location',
-              snippet: 'Properties in this area',
+              title: locationName,
+              snippet: 'Property is located here',
             ),
           ),
         );
         _isLoading = false;
       });
 
-      // Animate camera to the new location
-      mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+      // Animate camera to the new location if the controller is ready
+      if (mapController != null) {
+        mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
+      // Optionally, show a snackbar or a message on the map
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading map: $e')),
+      );
       print('Error loading location: $e');
     }
   }

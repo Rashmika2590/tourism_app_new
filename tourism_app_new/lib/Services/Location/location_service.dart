@@ -4,6 +4,24 @@ import 'package:geolocator/geolocator.dart';
 
 /// A service class for handling location-related functionalities.
 class LocationService {
+  /// Converts a location name (e.g., "Colombo") into geographical coordinates.
+  ///
+  /// Throws an exception if the location cannot be found.
+  static Future<LatLng> getCoordinatesFromLocationName(
+      String locationName) async {
+    try {
+      final locations = await locationFromAddress(locationName);
+      if (locations.isNotEmpty) {
+        final location = locations.first;
+        return LatLng(location.latitude, location.longitude);
+      } else {
+        throw Exception('Location not found.');
+      }
+    } catch (e) {
+      throw Exception('Failed to get coordinates from location name: $e');
+    }
+  }
+
   /// Checks and requests location permissions.
   ///
   /// Returns `true` if permissions are granted, otherwise `false`.
@@ -30,7 +48,6 @@ class LocationService {
 
     return true;
   }
-
   /// Fetches the current geographical position of the device.
   ///
   /// Throws an exception if location services are disabled or permissions are denied.
