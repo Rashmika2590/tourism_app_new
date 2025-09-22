@@ -70,9 +70,10 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
         );
         _isLoading = false;
       });
-
-      // The camera animation is now handled in the _onMapCreated callback
-      // to ensure the controller is initialized before being used.
+      // Animate camera to the new location if the controller is ready
+      if (mapController != null) {
+        mapController.animateCamera(CameraUpdate.newLatLngZoom(_center, 15.0));
+      }
     } catch (e) {
       setState(() {
         _isLoading = false;
