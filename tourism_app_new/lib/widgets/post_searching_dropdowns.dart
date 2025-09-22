@@ -1,5 +1,8 @@
 // widgets/post_searching_dropdowns.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_typeahead/flutter_typeahead.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 
@@ -51,6 +54,35 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   String _formatDuration(int hours) {
     return '$hours hour${hours > 1 ? 's' : ''}';
   }
+
+  // ====== Location Suggestion Methods ======
+  Future<List<Map<String, String>>> _getSuggestions(String query) async {
+    if (query.isEmpty) {
+      return [];
+    }
+    final response = await http.get(
+      Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=YOUR_API_KEY&types=(cities)'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      if (data['status'] == 'OK') {
+        return (data['predictions'] as List)
+            .map((p) => {
+                  'description': p['description'] as String,
+                  'place_id': p['place_id'] as String,
+                })
+            .toList();
+      }
+    }
+    return [];
+  }
+
+  String _extractCityName(String fullAddress) {
+    return fullAddress.split(',').first.trim();
+  }
+  // =======================================
 
   void _performSearch() {
     final searchParams = SearchParams(
@@ -133,41 +165,33 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                     ),
                     const SizedBox(width: 12),
                     Expanded(
-                      child:
-                          editingLocation
-                              ? TextField(
-                                controller: locationController,
-                                autofocus: true,
-                                decoration: const InputDecoration(
-                                  hintText: "Enter location",
-                                  border: InputBorder.none,
-                                ),
-                                style: TextStyle(
-                                  color: Colors.grey[800],
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                onSubmitted: (_) {
-                                  setState(() {
-                                    editingLocation = false;
-                                    showSearchButton = true;
-                                  });
-                                },
-                              )
-                              : GestureDetector(
-                                onTap: () {
-                                  setState(() => editingLocation = true);
-                                },
-                                child: Text(
-                                  locationController.text,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
+                      child: TypeAheadField<Map<String, String>>(
+                        textFieldConfiguration: TextFieldConfiguration(
+                          controller: locationController,
+                          style: TextStyle(
+                            color: Colors.grey[800],
+                            fontSize: 18,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          decoration: const InputDecoration(
+                            hintText: "Enter location",
+                            border: InputBorder.none,
+                          ),
+                        ),
+                        suggestionsCallback: (pattern) async {
+                          return await _getSuggestions(pattern);
+                        },
+                        itemBuilder: (context, suggestion) {
+                          return ListTile(
+                            title: Text(suggestion['description']!),
+                          );
+                        },
+                        onSuggestionSelected: (suggestion) {
+                          locationController.text =
+                              _extractCityName(suggestion['description']!);
+                          _performSearch();
+                        },
+                      ),
                     ),
                     const SizedBox(width: 12),
                     GestureDetector(
