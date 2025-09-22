@@ -1,11 +1,13 @@
 // Enhanced room_availability_screen.dart with Provider integration
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:provider/provider.dart'; // Add provider import
 import 'package:tourism_app_new/Screens/testing/Availability/availability_result_page.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
@@ -32,6 +34,8 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   final TextEditingController _stateController = TextEditingController();
   late TabController _tabController;
   int selectedTabIndex = 0;
+  double? _selectedLatitude;
+  double? _selectedLongitude;
 
   // Remove local state variables that are now managed by Provider
   // DateTime? selectedDateTime;
@@ -88,29 +92,14 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     // For now, we'll just use them directly in the API call
   }
 
-  // Extract city/state name from Google Places API response
-  String _extractCityName(String fullAddress) {
-    String cityName = fullAddress;
-    List<String> parts = fullAddress.split(',');
-    if (parts.isNotEmpty) {
-      cityName = parts[0].trim();
-    }
 
-    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
-    for (String prefix in prefixesToRemove) {
-      if (cityName.startsWith(prefix)) {
-        cityName = cityName.substring(prefix.length);
-        break;
-      }
-    }
-    return cityName;
-  }
-
-  Future<List<Map<String, String>>> _getSuggestions(String query) async {
+  Future<List<Map<String, dynamic>>> _getSuggestions(String query) async {
+    // TODO: Replace with your Google Maps API Key
+    const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
     try {
       final response = await http.get(
         Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
+          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=$apiKey&types=(cities)',
         ),
       );
 
@@ -134,6 +123,33 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     } catch (e) {
       print('Error getting suggestions: $e');
       return [];
+    }
+  }
+
+  Future<Map<String, double?>> _getPlaceDetails(String placeId) async {
+    // TODO: Replace with your Google Maps API Key
+    const apiKey = 'YOUR_GOOGLE_MAPS_API_KEY';
+    try {
+      final response = await http.get(
+        Uri.parse(
+          'https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$apiKey&fields=geometry',
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        if (data['status'] == 'OK') {
+          final location = data['result']['geometry']['location'];
+          return {
+            'lat': location['lat'] as double,
+            'lng': location['lng'] as double,
+          };
+        }
+      }
+      return {'lat': null, 'lng': null};
+    } catch (e) {
+      print('Error getting place details: $e');
+      return {'lat': null, 'lng': null};
     }
   }
 
@@ -199,7 +215,46 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   }
 
   Future<void> _searchAvailability(BookingState bookingState) async {
-    final state = _stateController.text.trim();
+    double? lat = _selectedLatitude;
+    double? lng = _selectedLongitude;
+    String locationNameToSearch = _stateController.text.trim();
+
+    if (lat == null || lng == null) {
+      if (locationNameToSearch.isNotEmpty) {
+        try {
+          List<Location> locations =
+              await locationFromAddress(locationNameToSearch);
+          if (locations.isNotEmpty) {
+            lat = locations.first.latitude;
+            lng = locations.first.longitude;
+          }
+        } catch (e) {
+          print('Could not geocode the entered address: $e');
+        }
+      } else {
+        try {
+          final position = await LocationService.getCurrentLocation();
+          lat = position.latitude;
+          lng = position.longitude;
+          final placemarks = await placemarkFromCoordinates(lat, lng);
+          if (placemarks.isNotEmpty) {
+            locationNameToSearch = placemarks.first.locality ?? 'Current Location';
+            _stateController.text = locationNameToSearch;
+          }
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'Could not determine your location. Please enter one manually.')));
+          return;
+        }
+      }
+    }
+
+    if (lat == null || lng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Could not find the location. Please be more specific.')));
+      return;
+    }
 
     // Calculate check-out date based on duration
     final checkOutDate = bookingState.checkInDate.add(
@@ -231,7 +286,9 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        state: state,
+        latitude: lat,
+        longitude: lng,
+        maxDistanceKm: 10.0, // Default radius
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
@@ -241,11 +298,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         _isLoading = false;
       });
 
-      if (state.isEmpty) {
-        bookingState.setState('');
-      } else {
-        bookingState.setState(state);
-      }
+      bookingState.setLocation(locationNameToSearch, lat, lng);
 
       if (availability.hotelIds.isNotEmpty) {
         await _fetchHotelAndRoomDetails();
@@ -578,7 +631,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth < 360 ? 8 : 12,
                 ),
-                child: TypeAheadField<Map<String, String>>(
+                child: TypeAheadField<Map<String, dynamic>>(
                   textFieldConfiguration: TextFieldConfiguration(
                     style: TextStyle(
                       fontSize: _getResponsiveFontSize(context, 15.0),
@@ -609,21 +662,18 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                   itemBuilder: (context, suggestion) {
                     return ListTile(
                       title: Text(suggestion['description']!),
-                      subtitle: Text(
-                        'State: ${_extractCityName(suggestion['description']!)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
                     );
                   },
-                  onSuggestionSelected: (suggestion) {
-                    String stateName = _extractCityName(
-                      suggestion['description']!,
-                    );
-                    _stateController.text = stateName;
-                    // Also update the provider state
-                    bookingState.setState(stateName);
-                    print('🏛️ Selected: ${suggestion['description']}');
-                    print('🎯 Extracted State: $stateName');
+                  onSuggestionSelected: (suggestion) async {
+                    final placeId = suggestion['place_id'];
+                    final coords = await _getPlaceDetails(placeId);
+                    setState(() {
+                      _selectedLatitude = coords['lat'];
+                      _selectedLongitude = coords['lng'];
+                      _stateController.text = suggestion['description']!;
+                    });
+                    bookingState.setLocation(
+                        suggestion['description']!, coords['lat'], coords['lng']);
                   },
                   noItemsFoundBuilder:
                       (context) => const Padding(
@@ -1057,8 +1107,11 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             tag: "Featured",
                             hotel: hotel,
                             onTap: () {
-                              _stateController.text = hotel.state;
-                              bookingState.setState(hotel.state);
+                              setState(() {
+                                _stateController.text = hotel.name;
+                                _selectedLatitude = hotel.latitude;
+                                _selectedLongitude = hotel.longitude;
+                              });
                             },
                           ),
                         );
