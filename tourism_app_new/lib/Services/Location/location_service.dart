@@ -1,57 +1,73 @@
 // services/location_service.dart
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+/// A service class for handling location-related functionalities.
 class LocationService {
-  // Convert location name to coordinates
-  static Future<LatLng> getCoordinatesFromLocation(String locationName) async {
-    try {
-      List<Location> locations = await locationFromAddress(locationName);
-      if (locations.isNotEmpty) {
-        return LatLng(locations[0].latitude, locations[0].longitude);
-      }
-      throw Exception('Location not found');
-    } catch (e) {
-      // Fallback to current location if location name conversion fails
-      return await getCurrentLocation();
+  /// Checks and requests location permissions.
+  ///
+  /// Returns `true` if permissions are granted, otherwise `false`.
+  static Future<bool> handleLocationPermission() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled, don't request permission.
+      return false;
     }
-  }
 
-  // Get current device location
-  static Future<LatLng> getCurrentLocation() async {
-    try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        throw Exception('Location services are disabled');
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          throw Exception('Location permissions are denied');
-        }
+        // Permissions are denied.
+        return false;
       }
+    }
 
-      if (permission == LocationPermission.deniedForever) {
-        throw Exception('Location permissions are permanently denied');
-      }
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are permanently denied.
+      return false;
+    }
 
-      Position position = await Geolocator.getCurrentPosition();
-      return LatLng(position.latitude, position.longitude);
+    return true;
+  }
+
+  /// Fetches the current geographical position of the device.
+  ///
+  /// Throws an exception if location services are disabled or permissions are denied.
+  static Future<Position> getCurrentPosition() async {
+    final hasPermission = await handleLocationPermission();
+
+    if (!hasPermission) {
+      throw Exception('Location permissions are denied.');
+    }
+
+    try {
+      return await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
     } catch (e) {
-      // Fallback to a default location (Colombo)
-      return const LatLng(6.9271, 79.8612);
+      throw Exception('Failed to get current location: $e');
     }
   }
 
-  // Get location coordinates based on provided location or current location
-  static Future<LatLng> getLocationCoordinates(String? locationName) async {
-    if (locationName != null && locationName.isNotEmpty) {
-      return await getCoordinatesFromLocation(locationName);
-    } else {
-      return await getCurrentLocation();
+  /// Converts a [Position] object to a user-friendly [Placemark].
+  ///
+  /// Returns the first placemark found for the given coordinates.
+  /// Throws an exception if no placemark is found.
+  static Future<Placemark> getPlacemarkFromPosition(Position position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        return placemarks.first;
+      } else {
+        throw Exception('No placemark found for the current location.');
+      }
+    } catch (e) {
+      throw Exception('Failed to get placemark: $e');
     }
   }
 }

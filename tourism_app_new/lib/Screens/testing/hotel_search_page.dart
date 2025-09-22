@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
 import 'package:tourism_app_new/widgets/property_card.dart';
 
 class HotelSearchScreen extends StatefulWidget {
@@ -13,9 +15,7 @@ class HotelSearchScreen extends StatefulWidget {
 class _HotelSearchScreenState extends State<HotelSearchScreen> {
   // Controllers for search filters
   final _stateController = TextEditingController();
-  final _latitudeController = TextEditingController();
-  final _longitudeController = TextEditingController();
-  final _radiusController = TextEditingController();
+  final _radiusController = TextEditingController(text: '10'); // Default radius
 
   // State variables
   List<Hotel> _hotels = [];
@@ -23,25 +23,23 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
   bool _isLoading = true;
   bool _showFilters = false;
   String _searchQuery = '';
+  String _currentLocationName = '';
 
   @override
   void initState() {
     super.initState();
-    _loadAllHotels();
+    _searchByCurrentLocation();
   }
 
   @override
   void dispose() {
     _stateController.dispose();
-    _latitudeController.dispose();
-    _longitudeController.dispose();
     _radiusController.dispose();
     super.dispose();
   }
 
   Future<void> _loadAllHotels() async {
     setState(() => _isLoading = true);
-
     try {
       final hotels = await HotelApiService.getAllHotels();
       setState(() {
@@ -55,27 +53,44 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
     }
   }
 
+  Future<void> _searchByCurrentLocation() async {
+    setState(() => _isLoading = true);
+    try {
+      final position = await LocationService.getCurrentPosition();
+      final placemark = await LocationService.getPlacemarkFromPosition(position);
+      final locationName = placemark.locality ?? placemark.administrativeArea ?? 'Current Location';
+
+      final radius = double.tryParse(_radiusController.text.trim()) ?? 10.0;
+
+      final hotels = await HotelApiService.searchHotels(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        radiusKm: radius,
+      );
+
+      setState(() {
+        _hotels = hotels;
+        _filteredHotels = hotels;
+        _isLoading = false;
+        _currentLocationName = locationName;
+        _stateController.text = locationName;
+      });
+      _showSuccessSnackBar('Showing hotels near $locationName');
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showErrorSnackBar('Failed to get location or search hotels: $e');
+      _loadAllHotels(); // Fallback to loading all hotels
+    }
+  }
+
   Future<void> _searchHotels() async {
     setState(() => _isLoading = true);
-
     try {
       final hotels = await HotelApiService.searchHotels(
-        state:
-            _stateController.text.trim().isEmpty
-                ? null
-                : _stateController.text.trim(),
-        latitude:
-            _latitudeController.text.trim().isEmpty
-                ? null
-                : double.tryParse(_latitudeController.text.trim()),
-        longitude:
-            _longitudeController.text.trim().isEmpty
-                ? null
-                : double.tryParse(_longitudeController.text.trim()),
-        radiusKm:
-            _radiusController.text.trim().isEmpty
-                ? null
-                : double.tryParse(_radiusController.text.trim()),
+        state: _stateController.text.trim().isEmpty ? null : _stateController.text.trim(),
+        radiusKm: _radiusController.text.trim().isEmpty
+            ? null
+            : double.tryParse(_radiusController.text.trim()),
       );
 
       setState(() {
@@ -84,7 +99,6 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
         _isLoading = false;
         _showFilters = false;
       });
-
       _showSuccessSnackBar('Found ${hotels.length} hotels');
     } catch (e) {
       setState(() => _isLoading = false);
@@ -94,10 +108,11 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
 
   void _clearFilters() {
     _stateController.clear();
-    _latitudeController.clear();
-    _longitudeController.clear();
-    _radiusController.clear();
-    setState(() => _showFilters = false);
+    _radiusController.text = '10';
+    setState(() {
+      _showFilters = false;
+      _currentLocationName = '';
+    });
     _loadAllHotels();
   }
 
@@ -107,12 +122,11 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
       if (query.isEmpty) {
         _filteredHotels = _hotels;
       } else {
-        _filteredHotels =
-            _hotels.where((hotel) {
-              return hotel.name.toLowerCase().contains(query.toLowerCase()) ||
-                  hotel.address.toLowerCase().contains(query.toLowerCase()) ||
-                  hotel.state.toLowerCase().contains(query.toLowerCase());
-            }).toList();
+        _filteredHotels = _hotels.where((hotel) {
+          return hotel.name.toLowerCase().contains(query.toLowerCase()) ||
+              hotel.address.toLowerCase().contains(query.toLowerCase()) ||
+              hotel.state.toLowerCase().contains(query.toLowerCase());
+        }).toList();
       }
     });
   }
@@ -122,11 +136,6 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: 'Retry',
-          textColor: Colors.white,
-          onPressed: _loadAllHotels,
-        ),
       ),
     );
   }
@@ -155,6 +164,11 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
             icon: Icon(
               _showFilters ? Icons.filter_list_off : Icons.filter_list,
             ),
+          ),
+          IconButton(
+            onPressed: _searchByCurrentLocation,
+            icon: const Icon(Icons.my_location),
+            tooltip: 'Search Nearby',
           ),
           IconButton(
             onPressed: _loadAllHotels,
@@ -197,16 +211,15 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
         decoration: InputDecoration(
           hintText: 'Search hotels by name, address, or state...',
           prefixIcon: const Icon(Icons.search),
-          suffixIcon:
-              _searchQuery.isNotEmpty
-                  ? IconButton(
-                    onPressed: () {
-                      _filterHotelsByName('');
-                      FocusScope.of(context).unfocus();
-                    },
-                    icon: const Icon(Icons.clear),
-                  )
-                  : null,
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  onPressed: () {
+                    _filterHotelsByName('');
+                    FocusScope.of(context).unfocus();
+                  },
+                  icon: const Icon(Icons.clear),
+                )
+              : null,
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
@@ -256,7 +269,7 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
                 child: TextField(
                   controller: _stateController,
                   decoration: const InputDecoration(
-                    labelText: 'State',
+                    labelText: 'State or City',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -268,34 +281,6 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
                   controller: _radiusController,
                   decoration: const InputDecoration(
                     labelText: 'Radius (km)',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _latitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Latitude',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _longitudeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Longitude',
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -318,6 +303,18 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
                   label: const Text('Apply Filters'),
                 ),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: _searchByCurrentLocation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green[600],
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.my_location),
+                  label: const Text('Search Nearby'),
+                ),
+              ),
             ],
           ),
         ],
@@ -335,12 +332,17 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            '${_filteredHotels.length} Hotels Found',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+          Expanded(
+            child: Text(
+              _currentLocationName.isNotEmpty
+                  ? '${_filteredHotels.length} Hotels near $_currentLocationName'
+                  : '${_filteredHotels.length} Hotels Found',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (_isLoading)
@@ -387,25 +389,15 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
             Text(
               _searchQuery.isNotEmpty || _showFilters
                   ? 'Try adjusting your search criteria'
-                  : 'Be the first to add a hotel!',
+                  : 'Use the location button to find hotels near you.',
+              textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[500]),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed:
-                  _searchQuery.isNotEmpty || _showFilters
-                      ? _clearFilters
-                      : () => Navigator.pushNamed(context, '/create-hotel'),
-              icon: Icon(
-                _searchQuery.isNotEmpty || _showFilters
-                    ? Icons.clear_all
-                    : Icons.add,
-              ),
-              label: Text(
-                _searchQuery.isNotEmpty || _showFilters
-                    ? 'Clear Search'
-                    : 'Add Hotel',
-              ),
+              onPressed: _searchByCurrentLocation,
+              icon: const Icon(Icons.my_location),
+              label: const Text('Search Nearby'),
             ),
           ],
         ),
@@ -413,7 +405,7 @@ class _HotelSearchScreenState extends State<HotelSearchScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: _loadAllHotels,
+      onRefresh: _searchByCurrentLocation,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: _filteredHotels.length,
