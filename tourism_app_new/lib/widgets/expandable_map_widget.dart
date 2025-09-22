@@ -55,6 +55,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
 
       setState(() {
         _center = coordinates;
+
         _markers.clear();
         _markers.add(
           Marker(
