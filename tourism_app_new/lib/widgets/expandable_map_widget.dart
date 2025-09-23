@@ -1,4 +1,6 @@
 // expandable_map_widget.dart
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -112,6 +114,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return Container(
+          height: widget.isExpanded ? 650 : 180,
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Column(
@@ -119,8 +122,10 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
             children: [
               SizedBox(
                 width: double.infinity,
-                height: widget.isExpanded ? 500 : 250,
+                height: widget.isExpanded ? 600 : 150,
                 child: Stack(
+                  clipBehavior:
+                      Clip.none, // 👈 allow button to overflow outside
                   children: [
                     // Map container
                     Positioned.fill(
@@ -134,8 +139,8 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                             ),
                             borderRadius: BorderRadius.circular(30),
                           ),
-                          shadows: [
-                            const BoxShadow(
+                          shadows: const [
+                            BoxShadow(
                               color: Color(0x3F000000),
                               blurRadius: 8,
                               offset: Offset(0, 4),
@@ -162,33 +167,44 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                                     ),
                                     myLocationEnabled: true,
                                     myLocationButtonEnabled: false,
+                                    zoomControlsEnabled:
+                                        true, // 👈 disable native zoom buttons
                                     zoomGesturesEnabled: true,
                                     scrollGesturesEnabled: true,
+                                    rotateGesturesEnabled: true,
+                                    tiltGesturesEnabled: true,
+                                    gestureRecognizers:
+                                        <Factory<OneSequenceGestureRecognizer>>{
+                                          Factory<OneSequenceGestureRecognizer>(
+                                            () => EagerGestureRecognizer(),
+                                          ),
+                                        },
                                     markers: _markers,
                                   ),
                         ),
                       ),
                     ),
 
-                    // Toggle button inside the map container at bottom-right
+                    // Toggle button - half inside, half outside
                     Positioned(
-                      bottom: 12,
+                      bottom: -20, // 👈 push down so half is outside
+                      //left: 12,
                       right: 12,
                       child: GestureDetector(
                         onTap: widget.onToggle,
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 16,
+                            vertical: 10,
                           ),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
+                            boxShadow: const [
                               BoxShadow(
                                 color: Colors.black26,
-                                blurRadius: 4,
-                                offset: const Offset(2, 2),
+                                blurRadius: 6,
+                                offset: Offset(2, 2),
                               ),
                             ],
                           ),

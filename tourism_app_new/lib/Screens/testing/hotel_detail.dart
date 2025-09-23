@@ -10,6 +10,7 @@ import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/faq_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
+import 'package:tourism_app_new/widgets/FAQ_widget.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
 import 'package:tourism_app_new/widgets/check_availability_card.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
@@ -36,46 +37,10 @@ class _EnhancedHotelDetailsScreenState
   bool isFavorite = false;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
-  List<FAQ> faqs = [];
   bool isLoadingRooms = true;
   bool isLoadingFAQs = true;
   Room? cheapestRoom;
   Set<String> allAmenities = {};
-  final TextEditingController _faqController = TextEditingController();
-  bool _isSubmittingFAQ = false;
-
-  // Dummy FAQs for display
-  final List<Map<String, dynamic>> dummyFAQs = [
-    {
-      'question': 'Is parking available?',
-      'answer': 'Yes, we offer complimentary parking for all guests.',
-      'likes': 15,
-      'dislikes': 2,
-      'userReaction': null,
-    },
-    {
-      'question': 'What time is check-in?',
-      'answer': 'Check-in is from 3:00 PM and check-out is until 11:00 AM.',
-      'likes': 23,
-      'dislikes': 1,
-      'userReaction': null,
-    },
-    {
-      'question': 'Do you have a fitness center?',
-      'answer': '',
-      'likes': 8,
-      'dislikes': 0,
-      'userReaction': null,
-    },
-    {
-      'question': 'Is WiFi free?',
-      'answer':
-          'Yes, complimentary high-speed WiFi is available throughout the hotel.',
-      'likes': 34,
-      'dislikes': 0,
-      'userReaction': null,
-    },
-  ];
 
   @override
   void initState() {
@@ -92,12 +57,10 @@ class _EnhancedHotelDetailsScreenState
           rooms: 1,
         );
     _loadHotelRooms();
-    _loadFAQs();
   }
 
   @override
   void dispose() {
-    _faqController.dispose();
     super.dispose();
   }
 
@@ -122,80 +85,6 @@ class _EnhancedHotelDetailsScreenState
         isLoadingRooms = false;
       });
     }
-  }
-
-  Future<void> _loadFAQs() async {
-    try {
-      final loadedFAQs = await FAQApiService.getFAQs(widget.hotel.id);
-      setState(() {
-        faqs = loadedFAQs;
-        isLoadingFAQs = false;
-      });
-    } catch (e) {
-      print('Error loading FAQs: $e');
-      setState(() {
-        isLoadingFAQs = false;
-      });
-    }
-  }
-
-  Future<void> _submitFAQ() async {
-    if (_faqController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a question')));
-      return;
-    }
-
-    setState(() {
-      _isSubmittingFAQ = true;
-    });
-
-    try {
-      final newFAQ = await FAQApiService.createFAQ(
-        hotelId: widget.hotel.id,
-        question: _faqController.text.trim(),
-      );
-
-      setState(() {
-        faqs.add(newFAQ);
-        _faqController.clear();
-        _isSubmittingFAQ = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Question submitted successfully!')),
-      );
-    } catch (e) {
-      setState(() {
-        _isSubmittingFAQ = false;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to submit question: $e')));
-    }
-  }
-
-  Future<void> _reactToFAQ(int faqIndex, bool isLike) async {
-    setState(() {
-      final faq = dummyFAQs[faqIndex];
-
-      // Remove previous reaction
-      if (faq['userReaction'] == true) {
-        faq['likes']--;
-      } else if (faq['userReaction'] == false) {
-        faq['dislikes']--;
-      }
-
-      // Add new reaction
-      if (isLike) {
-        faq['likes']++;
-      } else {
-        faq['dislikes']++;
-      }
-
-      faq['userReaction'] = isLike;
-    });
   }
 
   void _navigateToRoomList(int hotelId, SearchParams searchParams) {
@@ -335,142 +224,6 @@ class _EnhancedHotelDetailsScreenState
                 Text(
                   distance,
                   style: TextStyle(color: Colors.grey[600], fontSize: 11),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFAQItem(Map<String, dynamic> faq, int index) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[200]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: ExpansionTile(
-        title: Text(
-          faq['question'],
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (faq['answer'] != null && faq['answer'].isNotEmpty)
-                  Text(
-                    faq['answer'],
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[600],
-                      height: 1.4,
-                    ),
-                  )
-                else
-                  Text(
-                    'This question is awaiting an answer from the hotel.',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey[500],
-                      fontStyle: FontStyle.italic,
-                      height: 1.4,
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Text(
-                      'Was this helpful?',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                    const SizedBox(width: 12),
-                    InkWell(
-                      onTap: () => _reactToFAQ(index, true),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              faq['userReaction'] == true
-                                  ? AppColors.mainGreen.withOpacity(0.1)
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.thumb_up,
-                              size: 14,
-                              color:
-                                  faq['userReaction'] == true
-                                      ? AppColors.mainGreen
-                                      : Colors.grey,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${faq['likes']}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color:
-                                    faq['userReaction'] == true
-                                        ? AppColors.mainGreen
-                                        : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    InkWell(
-                      onTap: () => _reactToFAQ(index, false),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color:
-                              faq['userReaction'] == false
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.grey[100],
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.thumb_down,
-                              size: 14,
-                              color:
-                                  faq['userReaction'] == false
-                                      ? Colors.red
-                                      : Colors.grey,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${faq['dislikes']}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color:
-                                    faq['userReaction'] == false
-                                        ? Colors.red
-                                        : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
@@ -1180,27 +933,8 @@ class _EnhancedHotelDetailsScreenState
                     const SizedBox(height: 16),
                     // Display dummy FAQs
                     Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200], // light grey background
-                        borderRadius: BorderRadius.circular(
-                          20,
-                        ), // rounded corners
-                        border: Border.all(
-                          color: Colors.grey[300]!,
-                        ), // optional border
-                      ),
-                      child: Column(
-                        children:
-                            dummyFAQs
-                                .asMap()
-                                .entries
-                                .map(
-                                  (entry) =>
-                                      _buildFAQItem(entry.value, entry.key),
-                                )
-                                .toList(),
-                      ),
+                      height: 400, // Fixed height for testing
+                      child: FAQWidget(hotelId: widget.hotel.id),
                     ),
 
                     //const SizedBox(height: 32),

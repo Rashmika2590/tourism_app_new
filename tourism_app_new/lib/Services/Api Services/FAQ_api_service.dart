@@ -1,8 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/models/faq_model.dart';
 
-class FAQApiService {
+class FAQService {
   static const String baseUrl =
       "https://crabi-go-backend.t7gbzs75g5tc2.ap-southeast-1.cs.amazonlightsail.com";
   static final AuthService _authService = AuthService();
@@ -31,6 +32,8 @@ class FAQApiService {
 
     try {
       T response = await requestFunction(token);
+
+      // Only retry for http.Response
       if (response is http.Response) {
         print("Response status: ${response.statusCode}");
         if (response.statusCode == 401 && maxRetries > 0) {
@@ -42,6 +45,7 @@ class FAQApiService {
                 "Authentication failed - could not refresh token",
               );
             }
+            print("Successfully refreshed token");
             response = await requestFunction(token);
             print(
               "Retry response status: ${(response as http.Response).statusCode}",
@@ -54,6 +58,7 @@ class FAQApiService {
           }
         }
       }
+
       return response;
     } catch (e) {
       print("Request failed: $e");
@@ -61,11 +66,75 @@ class FAQApiService {
     }
   }
 
-  // ====== GET FAQs FOR HOTEL ======
-  static Future<List<FAQ>> getFAQs(int hotelId) async {
-    return await _makeAuthenticatedRequest<List<FAQ>>(
+  // ====== CREATE FAQ ======
+  static Future<CreateFAQResponse> createFAQ(CreateFAQRequest request) async {
+    return await _makeAuthenticatedRequest<CreateFAQResponse>(
       requestFunction: (token) async {
-        final uri = Uri.parse("$baseUrl/faq/?hotel_id=$hotelId");
+        final uri = Uri.parse("$baseUrl/faq/");
+
+        print("Creating FAQ for hotel: ${request.hotelId}");
+
+        final response = await http.post(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+          body: jsonEncode(request.toJson()),
+        );
+
+        print("Create FAQ response status: ${response.statusCode}");
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonData = jsonDecode(response.body);
+          return CreateFAQResponse.fromJson(jsonData);
+        } else {
+          print("Create FAQ Error: ${response.statusCode} - ${response.body}");
+          throw Exception("Failed to create FAQ: ${response.body}");
+        }
+      },
+    );
+  }
+
+  // ====== ADD REACTION TO FAQ ======
+  static Future<FAQReactionResponse> addReaction(
+    int faqId,
+    FAQReactionRequest request,
+  ) async {
+    return await _makeAuthenticatedRequest<FAQReactionResponse>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/faq/$faqId/reaction");
+
+        print("Adding reaction to FAQ: $faqId, isLike: ${request.isLike}");
+
+        final response = await http.post(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+          body: jsonEncode(request.toJson()),
+        );
+
+        print("Add reaction response status: ${response.statusCode}");
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final jsonData = jsonDecode(response.body);
+          return FAQReactionResponse.fromJson(jsonData);
+        } else {
+          print(
+            "Add reaction Error: ${response.statusCode} - ${response.body}",
+          );
+          throw Exception("Failed to add reaction: ${response.body}");
+        }
+      },
+    );
+  }
+
+  // ====== GET FAQS FOR HOTEL ======
+  static Future<FAQResponse> getFAQsForHotel(int hotelId) async {
+    return await _makeAuthenticatedRequest<FAQResponse>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/faq/hotel/$hotelId/");
+
         print("Getting FAQs for hotel: $hotelId");
 
         final response = await http.get(
@@ -76,164 +145,49 @@ class FAQApiService {
           },
         );
 
-        print("Get FAQs response: ${response.statusCode}");
+        print("Get FAQs response status: ${response.statusCode}");
         if (response.statusCode == 200) {
-          final List<dynamic> jsonData = json.decode(response.body);
-          return jsonData.map((item) => FAQ.fromJson(item)).toList();
+          final jsonData = jsonDecode(response.body);
+          return FAQResponse.fromJson(jsonData);
         } else {
-          throw Exception("Failed to load FAQs: ${response.body}");
+          print("Get FAQs Error: ${response.statusCode} - ${response.body}");
+          throw Exception("Failed to get FAQs: ${response.body}");
         }
       },
     );
   }
 
-  // ====== CREATE FAQ ======
-  static Future<FAQ> createFAQ({
+  // ====== HELPER METHODS ======
+  static Future<CreateFAQResponse> createFAQForHotel({
     required int hotelId,
     required String question,
   }) async {
-    return await _makeAuthenticatedRequest<FAQ>(
-      requestFunction: (token) async {
-        final uri = Uri.parse("$baseUrl/faq/");
-        final body = jsonEncode({
-          "hotel_id": hotelId,
-          "created_date": DateTime.now().toIso8601String(),
-          "updated_date": DateTime.now().toIso8601String(),
-          "question": question,
-        });
-
-        print("Creating FAQ for hotel: $hotelId");
-        final response = await http.post(
-          uri,
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $token",
-          },
-          body: body,
-        );
-
-        print("Create FAQ response: ${response.statusCode}");
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          return FAQ.fromJson(json.decode(response.body));
-        } else {
-          throw Exception("Failed to create FAQ: ${response.body}");
-        }
-      },
+    final now = DateTime.now();
+    final request = CreateFAQRequest(
+      hotelId: hotelId,
+      question: question,
+      createdDate: now,
+      updatedDate: now,
     );
+
+    return await createFAQ(request);
   }
 
-  // ====== REACT TO FAQ ======
-  static Future<bool> reactToFAQ({
-    required int faqId,
-    required bool isLike,
-  }) async {
-    return await _makeAuthenticatedRequest<bool>(
-      requestFunction: (token) async {
-        final uri = Uri.parse("$baseUrl/faq/$faqId/reaction");
-        final body = jsonEncode({
-          "is_like": isLike,
-          "created_date": DateTime.now().toIso8601String(),
-        });
-
-        print("Reacting to FAQ: $faqId with ${isLike ? 'like' : 'dislike'}");
-        final response = await http.post(
-          uri,
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $token",
-          },
-          body: body,
-        );
-
-        print("React to FAQ response: ${response.statusCode}");
-        if (response.statusCode == 200 || response.statusCode == 201) {
-          return true;
-        } else {
-          throw Exception("Failed to react to FAQ: ${response.body}");
-        }
-      },
+  static Future<FAQReactionResponse> likeFAQ(int faqId) async {
+    final request = FAQReactionRequest(
+      isLike: true,
+      createdDate: DateTime.now(),
     );
+
+    return await addReaction(faqId, request);
   }
 
-  // ====== GET FAQ BY ID ======
-  static Future<FAQ> getFAQById(int faqId) async {
-    return await _makeAuthenticatedRequest<FAQ>(
-      requestFunction: (token) async {
-        final uri = Uri.parse("$baseUrl/faq/$faqId");
-        print("Getting FAQ by ID: $faqId");
-
-        final response = await http.get(
-          uri,
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $token",
-          },
-        );
-
-        print("Get FAQ by ID response: ${response.statusCode}");
-        if (response.statusCode == 200) {
-          return FAQ.fromJson(json.decode(response.body));
-        } else {
-          throw Exception("Failed to load FAQ: ${response.body}");
-        }
-      },
+  static Future<FAQReactionResponse> dislikeFAQ(int faqId) async {
+    final request = FAQReactionRequest(
+      isLike: false,
+      createdDate: DateTime.now(),
     );
-  }
-}
 
-// FAQ Model
-class FAQ {
-  final int id;
-  final int hotelId;
-  final DateTime createdDate;
-  final DateTime updatedDate;
-  final String question;
-  final String? answer;
-  int likes;
-  int dislikes;
-  bool? userReaction; // true for like, false for dislike, null for no reaction
-
-  FAQ({
-    required this.id,
-    required this.hotelId,
-    required this.createdDate,
-    required this.updatedDate,
-    required this.question,
-    this.answer,
-    this.likes = 0,
-    this.dislikes = 0,
-    this.userReaction,
-  });
-
-  factory FAQ.fromJson(Map<String, dynamic> json) {
-    return FAQ(
-      id: json['id'] ?? 0,
-      hotelId: json['hotel_id'] ?? 0,
-      createdDate: DateTime.parse(
-        json['created_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedDate: DateTime.parse(
-        json['updated_date'] ?? DateTime.now().toIso8601String(),
-      ),
-      question: json['question'] ?? '',
-      answer: json['answer'],
-      likes: json['likes'] ?? 0,
-      dislikes: json['dislikes'] ?? 0,
-      userReaction: json['user_reaction'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'hotel_id': hotelId,
-      'created_date': createdDate.toIso8601String(),
-      'updated_date': updatedDate.toIso8601String(),
-      'question': question,
-      'answer': answer,
-      'likes': likes,
-      'dislikes': dislikes,
-      'user_reaction': userReaction,
-    };
+    return await addReaction(faqId, request);
   }
 }
