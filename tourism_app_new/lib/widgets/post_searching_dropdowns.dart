@@ -128,7 +128,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unnecessary_null_comparison
     final hasNullDetails = widget.searchParams.checkInDate == null;
 
     return Container(
@@ -143,323 +142,334 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
           ),
         ],
       ),
-      child: Column(
-        children: [
-          if (hasNullDetails)
-            Container(
-              padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(top: 10),
-              decoration: BoxDecoration(
-                color: Colors.red[50],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red[200]!),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.red, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "If you need to book this, please add details",
-                      style: TextStyle(
-                        color: Colors.red[700],
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+      child: SingleChildScrollView(
+        // ✅ makes everything scrollable
+        child: Column(
+          children: [
+            if (hasNullDetails)
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(top: 10),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red[200]!),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.red, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "If you need to book this, please add details",
+                        style: TextStyle(
+                          color: Colors.red[700],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
+                  ],
+                ),
+              ),
+
+            // --- main content ---
+            Container(
+              padding: const EdgeInsets.all(15),
+              child: Column(
+                children: [
+                  // Row with location + date
+                  Row(
+                    children: [
+                      // location input
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8.0,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  color: Colors.grey[600],
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  // ✅ prevents overflow
+                                  child:
+                                      editingLocation
+                                          ? TextField(
+                                            controller: locationController,
+                                            autofocus: true,
+                                            decoration: const InputDecoration(
+                                              hintText: "Enter location",
+                                              border: InputBorder.none,
+                                            ),
+                                            style: TextStyle(
+                                              color: Colors.grey[800],
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                            onSubmitted: (_) {
+                                              setState(() {
+                                                editingLocation = false;
+                                                showSearchButton = true;
+                                              });
+                                            },
+                                          )
+                                          : GestureDetector(
+                                            onTap: () {
+                                              setState(() {
+                                                editingLocation = true;
+                                              });
+                                            },
+                                            child: TypeAheadField<
+                                              Map<String, String>
+                                            >(
+                                              textFieldConfiguration:
+                                                  TextFieldConfiguration(
+                                                    style: const TextStyle(
+                                                      fontSize: 13,
+                                                    ),
+                                                    controller:
+                                                        locationController,
+                                                    decoration: const InputDecoration(
+                                                      isDense: true,
+                                                      contentPadding:
+                                                          EdgeInsets.symmetric(
+                                                            vertical: 12,
+                                                          ),
+                                                      hintText:
+                                                          'Where do you want to stay?',
+                                                      border: InputBorder.none,
+                                                    ),
+                                                  ),
+                                              suggestionsBoxDecoration:
+                                                  SuggestionsBoxDecoration(
+                                                    constraints:
+                                                        BoxConstraints.expand(
+                                                          width:
+                                                              MediaQuery.of(
+                                                                context,
+                                                              ).size.width -
+                                                              60,
+                                                        ),
+                                                  ),
+                                              suggestionsCallback: (
+                                                pattern,
+                                              ) async {
+                                                if (pattern.isEmpty) return [];
+                                                return await _getSuggestions(
+                                                  pattern,
+                                                );
+                                              },
+                                              itemBuilder: (
+                                                context,
+                                                suggestion,
+                                              ) {
+                                                return ListTile(
+                                                  title: Text(
+                                                    suggestion['description']!,
+                                                  ),
+                                                  subtitle: Text(
+                                                    'State: ${_extractCityName(suggestion['description']!)}',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                              onSuggestionSelected: (
+                                                suggestion,
+                                              ) {
+                                                String
+                                                stateName = _extractCityName(
+                                                  suggestion['description']!,
+                                                );
+                                                locationController.text =
+                                                    stateName;
+                                                setState(() {
+                                                  editingLocation = false;
+                                                });
+                                              },
+                                              noItemsFoundBuilder:
+                                                  (context) => const Padding(
+                                                    padding: EdgeInsets.all(
+                                                      8.0,
+                                                    ),
+                                                    child: Text(
+                                                      'No locations found',
+                                                    ),
+                                                  ),
+                                            ),
+                                          ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      // Date selector
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showDatePicker = !showDatePicker;
+                            showDurationDropdown = false;
+                            showGuestSelector = false;
+                            showSearchButton = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.calendar_month,
+                                color: Colors.white,
+                                size: 22,
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 15),
+                              Text(
+                                selectedTime.format(context),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // Duration + Guests
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showDurationDropdown = !showDurationDropdown;
+                            showDatePicker = false;
+                            showGuestSelector = false;
+                            showSearchButton = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            _formatDuration(selectedDurationHours),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        // ✅ avoid overflow
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              showGuestSelector = !showGuestSelector;
+                              showDatePicker = false;
+                              showDurationDropdown = false;
+                              showSearchButton = false;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.people_outline, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$adults Adults',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$children Children',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '$rooms Room',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
 
-          // --- main content ---
-          Container(
-            padding: const EdgeInsets.all(15),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    // Grey container wrapping only the location icon and text
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.location_on_outlined,
-                              color: Colors.grey[600],
-                              size: 18,
-                            ),
-                            SizedBox(width: 8),
-                            Container(
-                              width:
-                                  MediaQuery.of(context).size.width *
-                                  0.2, // Adjust width as needed
-                              child:
-                                  editingLocation
-                                      ? TextField(
-                                        controller: locationController,
-                                        autofocus: true,
-                                        decoration: const InputDecoration(
-                                          hintText: "Enter location",
-                                          border: InputBorder.none,
-                                        ),
-                                        style: TextStyle(
-                                          color: Colors.grey[800],
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                        onSubmitted: (_) {
-                                          setState(() {
-                                            editingLocation = false;
-                                            showSearchButton = true;
-                                          });
-                                        },
-                                      )
-                                      : GestureDetector(
-                                        onTap: () {
-                                          setState(
-                                            () => editingLocation = true,
-                                          );
-                                        },
-                                        child: Container(
-                                          child: TypeAheadField<
-                                            Map<String, String>
-                                          >(
-                                            textFieldConfiguration:
-                                                TextFieldConfiguration(
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                  ),
-                                                  controller:
-                                                      locationController,
-                                                  decoration: InputDecoration(
-                                                    isDense: true,
-                                                    contentPadding:
-                                                        EdgeInsets.symmetric(
-                                                          vertical: 12,
-                                                        ),
-                                                    hintText:
-                                                        'Where do you want to stay?',
-                                                    labelStyle: TextStyle(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w500,
-                                                      color: Colors.grey,
-                                                    ),
-                                                    border: InputBorder.none,
-                                                  ),
-                                                ),
-                                            suggestionsBoxDecoration:
-                                                SuggestionsBoxDecoration(
-                                                  constraints:
-                                                      BoxConstraints.expand(
-                                                        width:
-                                                            MediaQuery.of(
-                                                              context,
-                                                            ).size.width -
-                                                            60,
-                                                      ),
-                                                ),
-                                            suggestionsCallback: (
-                                              pattern,
-                                            ) async {
-                                              if (pattern.isEmpty) return [];
-                                              return await _getSuggestions(
-                                                pattern,
-                                              );
-                                            },
-                                            itemBuilder: (context, suggestion) {
-                                              return ListTile(
-                                                title: Text(
-                                                  suggestion['description']!,
-                                                ),
-                                                subtitle: Text(
-                                                  'State: ${_extractCityName(suggestion['description']!)}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            onSuggestionSelected: (suggestion) {
-                                              String stateName =
-                                                  _extractCityName(
-                                                    suggestion['description']!,
-                                                  );
-                                              locationController.text =
-                                                  stateName;
-                                              setState(
-                                                () => editingLocation = false,
-                                              );
-                                            },
-                                            noItemsFoundBuilder:
-                                                (context) => const Padding(
-                                                  padding: EdgeInsets.all(8.0),
-                                                  child: Text(
-                                                    'No locations found',
-                                                  ),
-                                                ),
-                                          ),
-                                        ),
-                                      ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    // Date button (outside the grey container)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showDatePicker = !showDatePicker;
-                          showDurationDropdown = false;
-                          showGuestSelector = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        width: MediaQuery.of(context).size.width * 0.515,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: themeColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.calendar_month,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            Text(
-                              '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(width: 15),
-                            Text(
-                              selectedTime.format(context),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showDurationDropdown = !showDurationDropdown;
-                          showDatePicker = false;
-                          showGuestSelector = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: themeColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _formatDuration(selectedDurationHours),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showGuestSelector = !showGuestSelector;
-                          showDatePicker = false;
-                          showDurationDropdown = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        width: MediaQuery.of(context).size.width * 0.64,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.people_outline, size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$adults Adults',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '$children Children',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '$rooms Room',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // extended dropdowns
-          if (showDatePicker) _buildDatePickerSection(),
-          if (showDurationDropdown) _buildDurationSection(),
-          if (showGuestSelector) _buildGuestSection(),
-          if (showSearchButton) _buildSearchSection(),
-        ],
+            // extended dropdowns
+            if (showDatePicker) _buildDatePickerSection(),
+            if (showDurationDropdown) _buildDurationSection(),
+            if (showGuestSelector) _buildGuestSection(),
+            if (showSearchButton) _buildSearchSection(),
+          ],
+        ),
       ),
     );
   }

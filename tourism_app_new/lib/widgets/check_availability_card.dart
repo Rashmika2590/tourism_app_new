@@ -1,26 +1,37 @@
-// widgets/check_availability_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
+import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
+import 'package:tourism_app_new/models/search_params_model.dart';
 
-class CheckAvailabilityCard extends StatefulWidget {
-  final int? hotelId;
-  final String? hotelState;
+class EnhancedCheckAvailabilityCard extends StatefulWidget {
+  final int hotelId;
+  final String hotelState;
+  final SearchParams initialSearchParams;
+  final Function(SearchParams)? onAvailabilityConfirmed;
 
-  const CheckAvailabilityCard({super.key, this.hotelId, this.hotelState});
+  const EnhancedCheckAvailabilityCard({
+    Key? key,
+    required this.hotelId,
+    required this.hotelState,
+    required this.initialSearchParams,
+    this.onAvailabilityConfirmed,
+  }) : super(key: key);
 
   @override
-  State<CheckAvailabilityCard> createState() => _CheckAvailabilityCardState();
+  State<EnhancedCheckAvailabilityCard> createState() =>
+      _EnhancedCheckAvailabilityCardState();
 }
 
-class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
+class _EnhancedCheckAvailabilityCardState
+    extends State<EnhancedCheckAvailabilityCard> {
   bool showDatePicker = false;
   bool showDurationDropdown = false;
   bool showGuestSelector = false;
-  bool showSearchButton = false;
+  bool showCheckoutInfo = false;
 
   late DateTime selectedDate;
   late TimeOfDay selectedTime;
@@ -34,61 +45,66 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
 
   RoomAvailability? availability;
   bool _isCheckingAvailability = false;
+  String? availabilityMessage;
+  bool hasAvailability = false;
+  bool _showAvailabilityButton = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeFromProvider();
+    _initializeFromSearchParams();
   }
 
-  void _initializeFromProvider() {
-    final bookingState = Provider.of<BookingState>(context, listen: false);
-
-    // Use data from provider if available
-    selectedDate = bookingState.checkInDate;
-    selectedTime = bookingState.checkInTime;
-    selectedDurationHours = bookingState.duration;
-    adults = bookingState.adults;
-    children = bookingState.children;
-    rooms = 1;
+  void _initializeFromSearchParams() {
+    selectedDate = widget.initialSearchParams.checkInDate;
+    selectedTime = widget.initialSearchParams.checkInTime;
+    selectedDurationHours = widget.initialSearchParams.durationHours;
+    adults = widget.initialSearchParams.adults;
+    children = widget.initialSearchParams.children;
+    rooms = widget.initialSearchParams.rooms;
   }
+
+  DateTime get checkoutDateTime =>
+      selectedDate.add(Duration(hours: selectedDurationHours));
+  TimeOfDay get checkoutTime => TimeOfDay.fromDateTime(checkoutDateTime);
 
   String _formatDuration(int hours) {
-    return '$hours hour${hours > 1 ? 's' : ''}';
+    if (hours < 24) {
+      return '$hours hour${hours > 1 ? 's' : ''}';
+    } else {
+      int days = hours ~/ 24;
+      int remainingHours = hours % 24;
+      if (remainingHours == 0) {
+        return '$days day${days > 1 ? 's' : ''}';
+      } else {
+        return '$days day${days > 1 ? 's' : ''} ${remainingHours}h';
+      }
+    }
   }
 
-  Future<void> _performSearch() async {
-    final location = widget.hotelState;
-    if (location == null || location.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Location is required')));
-      return;
-    }
+  String _formatDateTime(DateTime date, TimeOfDay time) {
+    return '${date.day.toString().padLeft(2, '0')}-${date.month.toString().padLeft(2, '0')}-${date.year} ${time.format(context)}';
+  }
 
+  Future<void> _checkAvailability() async {
     setState(() {
       _isCheckingAvailability = true;
-      showSearchButton = false;
+      availabilityMessage = null;
+      hasAvailability = false;
     });
 
     try {
       final checkInTime =
           '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
-
-      // Calculate checkout date based on duration
-      final checkOutDate = selectedDate.add(
-        Duration(hours: selectedDurationHours),
-      );
       final checkOutTime =
-          '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}:00';
+          '${checkoutTime.hour.toString().padLeft(2, '0')}:${checkoutTime.minute.toString().padLeft(2, '0')}:00';
 
-      // Call the availability API
       final result = await RoomAvailabilityService.searchAvailability(
         checkInDate: selectedDate,
         checkInTime: checkInTime,
-        checkOutDate: checkOutDate,
+        checkOutDate: checkoutDateTime,
         checkOutTime: checkOutTime,
-        state: location,
+        state: widget.hotelState,
         adultCount: adults,
         childrenCount: children,
       );
@@ -96,26 +112,38 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       setState(() {
         availability = result;
         _isCheckingAvailability = false;
+        hasAvailability = result.hasAvailableRooms();
+
+        if (hasAvailability) {
+          availabilityMessage =
+              '${result.getTotalAvailableRooms()} rooms available!';
+        } else {
+          availabilityMessage =
+              'No rooms available for the selected dates and criteria. Please try different dates or modify your search.';
+        }
       });
 
       // Update provider with new search parameters
       final bookingState = Provider.of<BookingState>(context, listen: false);
-      bookingState.setState(location);
+      bookingState.setState(widget.hotelState);
       bookingState.setCheckInDate(selectedDate);
       bookingState.setCheckInTime(selectedTime);
       bookingState.setDuration(selectedDurationHours);
       bookingState.setGuests(adultCount: adults, childrenCount: children);
 
-      // Show success message
+      // Show result message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            availability!.hasAvailableRooms()
-                ? '${availability!.getTotalAvailableRooms()} rooms available!'
-                : 'No rooms available for the selected criteria',
-          ),
-          backgroundColor:
-              availability!.hasAvailableRooms() ? Colors.green : Colors.orange,
+          content: Text(availabilityMessage!),
+          backgroundColor: hasAvailability ? Colors.green : Colors.orange,
+          action:
+              hasAvailability
+                  ? SnackBarAction(
+                    label: 'Proceed',
+                    textColor: Colors.white,
+                    onPressed: () => _proceedWithBooking(),
+                  )
+                  : null,
         ),
       );
     } catch (e) {
@@ -123,23 +151,48 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       setState(() {
         availability = RoomAvailability(available: {});
         _isCheckingAvailability = false;
+        hasAvailability = false;
+        availabilityMessage = 'Failed to check availability. Please try again.';
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to check availability: $e')),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     }
   }
 
+  void _proceedWithBooking() {
+    if (hasAvailability && widget.onAvailabilityConfirmed != null) {
+      final searchParams = SearchParams(
+        state: widget.hotelState,
+        checkInDate: selectedDate,
+        checkInTime: selectedTime,
+        durationHours: selectedDurationHours,
+        adults: adults,
+        children: children,
+        rooms: rooms,
+      );
+      widget.onAvailabilityConfirmed!(searchParams);
+    }
+  }
+
+  String _formatCheckoutDate() {
+    DateTime checkoutDate = selectedDate.add(
+      Duration(hours: selectedDurationHours),
+    );
+    return '${checkoutDate.day.toString().padLeft(2, '0')}-${checkoutDate.month.toString().padLeft(2, '0')}-${checkoutDate.year}';
+  }
+
+  String _formatCheckoutTime() {
+    DateTime checkoutDate = selectedDate.add(
+      Duration(hours: selectedDurationHours),
+    );
+    TimeOfDay checkoutTime = TimeOfDay.fromDateTime(checkoutDate);
+    return checkoutTime.format(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final availableMsg =
-        availability == null
-            ? ""
-            : availability!.hasAvailableRooms()
-            ? "Available ✅ (${availability!.getTotalAvailableRooms()} rooms)"
-            : "Not Available ❌";
-
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -154,183 +207,310 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       ),
       child: Column(
         children: [
-          // Main content
+          // Header
+          // Container(
+          //   padding: const EdgeInsets.all(15),
+          //   child: Row(
+          //     children: [
+          //       const Text(
+          //         'Check Availability',
+          //         style: TextStyle(
+          //           fontSize: 18,
+          //           fontWeight: FontWeight.bold,
+          //           color: Colors.black87,
+          //         ),
+          //       ),
+          //       const Spacer(),
+          //       if (availabilityMessage != null)
+          //         Icon(
+          //           hasAvailability ? Icons.check_circle : Icons.error,
+          //           color: hasAvailability ? Colors.green : Colors.orange,
+          //           size: 20,
+          //         ),
+          //     ],
+          //   ),
+          // ),
+
+          // --- main content ---
           Container(
             padding: const EdgeInsets.all(15),
-            child: Column(
-              children: [
-                // Date and Time Row
-                Row(
+            child: Expanded(
+              // ensures scroll takes available space
+              child: SingleChildScrollView(
+                scrollDirection: Axis.vertical,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            showDatePicker = !showDatePicker;
-                            showDurationDropdown = false;
-                            showGuestSelector = false;
-                            showSearchButton = false;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: themeColor,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                    // First Row: Check-in and Check-out
+                    Row(
+                      children: const [
+                        Text(
+                          'Check-in',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Spacer(),
+                        Text(
+                          'Check-out',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      children: [
+                        // Check-in Date and Time
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showDatePicker = !showDatePicker;
+                                showDurationDropdown = false;
+                                showGuestSelector = false;
+                                showCheckoutInfo = false;
+                                _showAvailabilityButton = true;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                selectedTime.format(context),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                              decoration: BoxDecoration(
+                                color: themeColor,
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                            ],
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '${selectedDate.day.toString().padLeft(2, '0')}-'
+                                      '${selectedDate.month.toString().padLeft(2, '0')}-'
+                                      '${selectedDate.year}',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    selectedTime.format(context),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 10),
+
+                        // Check-out Date and Time
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {},
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.calendar_today,
+                                    size: 16,
+                                    color: Color.fromARGB(255, 114, 114, 114),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      _formatCheckoutDate(),
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color.fromARGB(
+                                          255,
+                                          114,
+                                          114,
+                                          114,
+                                        ),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _formatCheckoutTime(),
+                                    style: const TextStyle(
+                                      color: Color.fromARGB(255, 114, 114, 114),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Second Row: Duration and Guest/Room Info
+                    Row(
+                      children: [
+                        // Duration
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              showDurationDropdown = !showDurationDropdown;
+                              showDatePicker = false;
+                              showGuestSelector = false;
+                              showCheckoutInfo = false;
+                              _showAvailabilityButton = true;
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              _formatDuration(selectedDurationHours),
+                              style: const TextStyle(
+                                color: Color.fromARGB(255, 114, 114, 114),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+
+                        // Guest and Room Info
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                showGuestSelector = !showGuestSelector;
+                                showDatePicker = false;
+                                showDurationDropdown = false;
+                                showCheckoutInfo = false;
+                                _showAvailabilityButton = true;
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: themeColor,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.people_outline,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Flexible(
+                                    child: Text(
+                                      '$adults Adults',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      '$children Children',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Flexible(
+                                    child: Text(
+                                      '$rooms Room',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
 
-                const SizedBox(height: 8),
+          // Extended sections
+          if (showDatePicker) _buildDatePickerSection(),
+          if (showDurationDropdown) _buildDurationSection(),
+          if (showGuestSelector) _buildGuestSection(),
+          if (showCheckoutInfo) _buildCheckoutInfoSection(),
 
-                // Duration and Guests Row
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showDurationDropdown = !showDurationDropdown;
-                          showDatePicker = false;
-                          showGuestSelector = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: themeColor,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _formatDuration(selectedDurationHours),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          showGuestSelector = !showGuestSelector;
-                          showDatePicker = false;
-                          showDurationDropdown = false;
-                          showSearchButton = false;
-                        });
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              color: Colors.grey[600],
-                              size: 18,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '$adults Adults',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '$children Children',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              '$rooms Room',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Extended sections
-                if (showDatePicker) _buildDatePickerSection(),
-                if (showDurationDropdown) _buildDurationSection(),
-                if (showGuestSelector) _buildGuestSection(),
-
-                // Show search button after interaction
-                if (showSearchButton) _buildSearchSection(),
-
-                const SizedBox(height: 10),
-
-                // Search Button (always visible)
-                ElevatedButton(
-                  onPressed: _isCheckingAvailability ? null : _performSearch,
+          // Check Availability Button (initially hidden)
+          if (_showAvailabilityButton || availabilityMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed:
+                      _isCheckingAvailability ? null : _checkAvailability,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: themeColor,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 50,
-                      vertical: 12,
-                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
                   child:
                       _isCheckingAvailability
                           ? const SizedBox(
-                            width: 20,
-                            height: 20,
+                            width: 18,
+                            height: 18,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
@@ -339,68 +519,148 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
                             ),
                           )
                           : const Text(
-                            'Search',
+                            'Check Availability',
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                 ),
+              ),
+            ),
+          ],
 
-                // Availability message
-                if (availableMsg.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+          // Availability message
+          if (availabilityMessage != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: hasAvailability ? Colors.green[50] : Colors.orange[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color:
+                        hasAvailability
+                            ? Colors.green[200]!
+                            : Colors.orange[200]!,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      hasAvailability
+                          ? Icons.check_circle_outline
+                          : Icons.info_outline,
+                      color: hasAvailability ? Colors.green : Colors.orange,
+                      size: 18,
                     ),
-                    decoration: BoxDecoration(
-                      color:
-                          availableMsg.contains("Available")
-                              ? Colors.green[50]
-                              : Colors.orange[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color:
-                            availableMsg.contains("Available")
-                                ? Colors.green[200]!
-                                : Colors.orange[200]!,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        availabilityMessage!,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color:
+                              hasAvailability
+                                  ? Colors.green[800]
+                                  : Colors.orange[800],
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          availableMsg.contains("Available")
-                              ? Icons.check_circle_outline
-                              : Icons.info_outline,
-                          color:
-                              availableMsg.contains("Available")
-                                  ? Colors.green
-                                  : Colors.orange,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            availableMsg,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  availableMsg.contains("Available")
-                                      ? Colors.green[800]
-                                      : Colors.orange[800],
-                            ),
-                          ),
-                        ),
-                      ],
+                  ],
+                ),
+              ),
+            ),
+
+            // Proceed button when available
+            if (hasAvailability) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 10,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _proceedWithBooking,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                    child: const Text(
+                      'Proceed to Room Selection',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
+                ),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckoutInfoSection() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      child: Container(
+        margin: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[600], size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  'Check-out Information',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: Colors.blue[800],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.logout, color: Colors.blue[600], size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'Check-out: ${_formatDateTime(checkoutDateTime, checkoutTime)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.blue[700],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,27 +670,18 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
+        margin: const EdgeInsets.only(top: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-              spreadRadius: 1,
-            ),
-          ],
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              DateFormat('MMMM').format(selectedDate).toUpperCase(),
+              DateFormat('MMMM yyyy').format(selectedDate).toUpperCase(),
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
@@ -443,7 +694,7 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
             Row(
               children: [
                 const Text(
-                  'From',
+                  'Check-in Time',
                   style: TextStyle(
                     color: Colors.grey,
                     fontSize: 15,
@@ -468,7 +719,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
                     if (time != null) {
                       setState(() {
                         selectedTime = time;
-                        showSearchButton = true;
                       });
                     }
                   },
@@ -488,12 +738,11 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               onPressed: () {
                 setState(() {
                   showDatePicker = false;
-                  showSearchButton = true;
                 });
               },
               style: _buttonStyle(),
               child: const Text(
-                'Select Date',
+                'Done',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 16,
@@ -512,21 +761,12 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
+        margin: const EdgeInsets.only(top: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-              spreadRadius: 1,
-            ),
-          ],
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Column(
           children: [
@@ -546,7 +786,7 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               ],
             ),
             const SizedBox(height: 16),
-            Container(
+            SizedBox(
               height: 200,
               child: SingleChildScrollView(
                 child: Column(
@@ -562,7 +802,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               onPressed: () {
                 setState(() {
                   showDurationDropdown = false;
-                  showSearchButton = true;
                 });
               },
               style: _buttonStyle(),
@@ -587,7 +826,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       onTap:
           () => setState(() {
             selectedDurationHours = hours;
-            showSearchButton = true;
           }),
       child: Container(
         width: double.infinity,
@@ -617,21 +855,12 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Container(
+        margin: const EdgeInsets.only(top: 12),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-              spreadRadius: 1,
-            ),
-          ],
+          color: Colors.grey[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey[200]!),
         ),
         child: Column(
           children: [
@@ -656,7 +885,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               adults,
               (value) => setState(() {
                 adults = value;
-                showSearchButton = true;
               }),
             ),
             const SizedBox(height: 16),
@@ -665,7 +893,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               children,
               (value) => setState(() {
                 children = value;
-                showSearchButton = true;
               }),
             ),
             const SizedBox(height: 16),
@@ -674,7 +901,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               rooms,
               (value) => setState(() {
                 rooms = value;
-                showSearchButton = true;
               }),
             ),
             const SizedBox(height: 24),
@@ -682,7 +908,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
               onPressed: () {
                 setState(() {
                   showGuestSelector = false;
-                  showSearchButton = true;
                 });
               },
               style: _buttonStyle(),
@@ -752,54 +977,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
     );
   }
 
-  Widget _buildSearchSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: Colors.grey[200]!, width: 1)),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, -2),
-              spreadRadius: 1,
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.topRight,
-              child: GestureDetector(
-                onTap: () => setState(() => showSearchButton = false),
-                child: const Icon(Icons.close, color: Colors.grey, size: 20),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: _performSearch,
-              style: _buttonStyle(),
-              child: const Text(
-                '            Search              ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildCalendar() {
     return Column(
       children: [
@@ -840,7 +1017,6 @@ class _CheckAvailabilityCardState extends State<CheckAvailabilityCard> {
                           selectedDate.month,
                           day,
                         );
-                        showSearchButton = true;
                       }),
                   child: Container(
                     width: 36,

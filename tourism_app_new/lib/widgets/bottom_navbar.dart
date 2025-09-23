@@ -18,6 +18,7 @@ class AnimatedBottomNavBar extends StatefulWidget {
 class _AnimatedBottomNavBarState extends State<AnimatedBottomNavBar> {
   final List<IconData> icons = [
     Icons.access_time_rounded,
+    Icons.search_rounded,
     Icons.home_rounded,
     Icons.person_rounded,
   ];

@@ -11,6 +11,7 @@ import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/faq_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
+import 'package:tourism_app_new/widgets/check_availability_card.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 
@@ -749,9 +750,13 @@ class _EnhancedHotelDetailsScreenState
 
                     // Booking Details Section
                     const SizedBox(height: 16),
-                    SearchCardWithData(
-                      searchParams: _searchParams,
-                      onSearchPressed: (newParams) {
+                    // Booking Details Section
+                    const SizedBox(height: 16),
+                    EnhancedCheckAvailabilityCard(
+                      hotelId: widget.hotel.id,
+                      hotelState: widget.hotel.state,
+                      initialSearchParams: _searchParams,
+                      onAvailabilityConfirmed: (newParams) {
                         setState(() {
                           _searchParams = newParams;
                         });
