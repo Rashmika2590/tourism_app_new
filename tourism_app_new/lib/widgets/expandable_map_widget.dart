@@ -1,4 +1,6 @@
 // expandable_map_widget.dart
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -165,6 +167,11 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                                     zoomGesturesEnabled: true,
                                     scrollGesturesEnabled: true,
                                     markers: _markers,
+                                    gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+                                      Factory<OneSequenceGestureRecognizer>(
+                                        () => EagerGestureRecognizer(),
+                                      ),
+                                    },
                                   ),
                         ),
                       ),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
-import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
@@ -11,17 +10,15 @@ import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/faq_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
-import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
+import 'package:tourism_app_new/widgets/check_availability_card.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class EnhancedHotelDetailsScreen extends StatefulWidget {
   final Hotel hotel;
-  final SearchParams? searchParams;
 
   const EnhancedHotelDetailsScreen({
     Key? key,
     required this.hotel,
-    this.searchParams,
   }) : super(key: key);
 
   @override
@@ -31,7 +28,6 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 
 class _EnhancedHotelDetailsScreenState
     extends State<EnhancedHotelDetailsScreen> {
-  late SearchParams _searchParams;
   bool isFavorite = false;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
@@ -79,17 +75,6 @@ class _EnhancedHotelDetailsScreenState
   @override
   void initState() {
     super.initState();
-    _searchParams =
-        widget.searchParams ??
-        SearchParams(
-          state: widget.hotel.state,
-          checkInDate: DateTime.now(),
-          checkInTime: TimeOfDay.now(),
-          durationHours: 1,
-          adults: 1,
-          children: 0,
-          rooms: 1,
-        );
     _loadHotelRooms();
     _loadFAQs();
   }
@@ -197,10 +182,8 @@ class _EnhancedHotelDetailsScreenState
     });
   }
 
-  void _navigateToRoomList(int hotelId, SearchParams searchParams) {
-    final checkOutDate = searchParams.checkInDate.add(
-      Duration(hours: searchParams.durationHours),
-    );
+  void _navigateToRoomList(int hotelId, BookingState bookingState) {
+    final checkOutDate = bookingState.checkOutDate;
 
     Navigator.push(
       context,
@@ -208,14 +191,14 @@ class _EnhancedHotelDetailsScreenState
         builder:
             (_) => RoomsListScreen(
               hotelId: hotelId,
-              checkInDate: searchParams.checkInDate,
-              checkInTime: _formatTimeOfDay(searchParams.checkInTime),
+              checkInDate: bookingState.checkInDate,
+              checkInTime: _formatTimeOfDay(bookingState.checkInTime),
               checkOutDate: checkOutDate,
               checkOutTime: _formatTimeOfDay(
                 TimeOfDay.fromDateTime(checkOutDate),
               ),
-              adultCount: searchParams.adults,
-              childrenCount: searchParams.children,
+              adultCount: bookingState.adults,
+              childrenCount: bookingState.children,
             ),
       ),
     );
@@ -749,14 +732,9 @@ class _EnhancedHotelDetailsScreenState
 
                     // Booking Details Section
                     const SizedBox(height: 16),
-                    SearchCardWithData(
-                      searchParams: _searchParams,
-                      onSearchPressed: (newParams) {
-                        setState(() {
-                          _searchParams = newParams;
-                        });
-                        _navigateToRoomList(widget.hotel.id, newParams);
-                      },
+                    CheckAvailabilityCard(
+                      hotelId: widget.hotel.id,
+                      hotelState: widget.hotel.state,
                     ),
                     const SizedBox(height: 24),
                     // Exclusive Add-ons Widget
@@ -1376,14 +1354,12 @@ class _EnhancedHotelDetailsScreenState
                   SizedBox(
                     height: 48,
                     child: ElevatedButton(
-                      onPressed:
-                          () =>
-                              hotelRooms.isNotEmpty
-                                  ? _navigateToRoomList(
-                                    widget.hotel.id,
-                                    _searchParams,
-                                  )
-                                  : null,
+                      onPressed: () {
+                        if (hotelRooms.isNotEmpty) {
+                          final bookingState = Provider.of<BookingState>(context, listen: false);
+                          _navigateToRoomList(widget.hotel.id, bookingState);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.mainGreen,
                         foregroundColor: Colors.white,
