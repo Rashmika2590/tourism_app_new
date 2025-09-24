@@ -8,6 +8,7 @@ class FAQ {
   final int dislikeCount;
   final DateTime createdDate;
   final DateTime updatedDate;
+  final String? userReaction; // 🆕 ADDED THIS FIELD for user reaction status
 
   FAQ({
     required this.id,
@@ -19,6 +20,7 @@ class FAQ {
     required this.dislikeCount,
     required this.createdDate,
     required this.updatedDate,
+    this.userReaction, // 🆕 ADDED THIS FIELD
   });
 
   factory FAQ.fromJson(Map<String, dynamic> json) {
@@ -32,6 +34,8 @@ class FAQ {
       dislikeCount: json['dislike_count'] ?? 0,
       createdDate: DateTime.parse(json['created_date']),
       updatedDate: DateTime.parse(json['updated_date']),
+      userReaction:
+          json['user_reaction'], // 🆕 ADDED THIS FIELD - can be 'like', 'dislike', or null
     );
   }
 
@@ -46,6 +50,7 @@ class FAQ {
       'dislike_count': dislikeCount,
       'created_date': createdDate.toIso8601String(),
       'updated_date': updatedDate.toIso8601String(),
+      'user_reaction': userReaction, // 🆕 ADDED THIS FIELD
     };
   }
 }
@@ -61,7 +66,6 @@ class FAQResponse {
         (json['faqs'] as List? ?? [])
             .map((faqJson) => FAQ.fromJson(faqJson))
             .toList();
-
     return FAQResponse(hotelId: json['hotel_id'] ?? 0, faqs: faqsList);
   }
 }
