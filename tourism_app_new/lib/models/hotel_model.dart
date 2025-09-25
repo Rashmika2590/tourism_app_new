@@ -15,6 +15,12 @@ class Hotel {
   final String description;
   final String userUid;
   final HotelVerification? verification;
+  final List<String> terms;
+  final double? cancellationPercentage;
+  final double? reviewRating; // For search API
+  final double? averageRating; // For details API
+  final int? totalReviews;
+  final bool isFavourite;
 
   Hotel({
     required this.id,
@@ -33,7 +39,16 @@ class Hotel {
     required this.description,
     required this.userUid,
     this.verification,
+    required this.terms,
+    this.cancellationPercentage,
+    this.reviewRating,
+    this.averageRating,
+    this.totalReviews,
+    required this.isFavourite,
   });
+
+  // Get the appropriate rating (prioritize averageRating for details, fallback to reviewRating)
+  double? get rating => averageRating ?? reviewRating;
 
   factory Hotel.fromJson(Map<String, dynamic> json) {
     return Hotel(
@@ -52,6 +67,12 @@ class Hotel {
       enableLongStay: json['enable_long_stay'] ?? false,
       description: json['description'] ?? '',
       userUid: json['user_uid'] ?? '',
+      terms: List<String>.from(json['terms'] ?? []),
+      cancellationPercentage: json['cancellation_percentage']?.toDouble(),
+      reviewRating: json['review_rating']?.toDouble(),
+      averageRating: json['average_rating']?.toDouble(),
+      totalReviews: json['total_reviews'],
+      isFavourite: json['is_favourite'] ?? false,
       verification:
           json['verification'] != null
               ? HotelVerification.fromJson(json['verification'])
@@ -77,6 +98,12 @@ class Hotel {
       'description': description,
       'user_uid': userUid,
       'verification': verification?.toJson(),
+      'terms': terms,
+      'cancellation_percentage': cancellationPercentage,
+      'review_rating': reviewRating,
+      'average_rating': averageRating,
+      'total_reviews': totalReviews,
+      'is_favourite': isFavourite,
     };
   }
 
@@ -96,6 +123,12 @@ class Hotel {
     bool? enableLongStay,
     String? description,
     String? userUid,
+    List<String>? terms,
+    double? cancellationPercentage,
+    double? reviewRating,
+    double? averageRating,
+    int? totalReviews,
+    bool? isFavourite,
     HotelVerification? verification,
   }) {
     return Hotel(
@@ -114,6 +147,13 @@ class Hotel {
       enableLongStay: enableLongStay ?? this.enableLongStay,
       description: description ?? this.description,
       userUid: userUid ?? this.userUid,
+      terms: terms ?? this.terms,
+      cancellationPercentage:
+          cancellationPercentage ?? this.cancellationPercentage,
+      reviewRating: reviewRating ?? this.reviewRating,
+      averageRating: averageRating ?? this.averageRating,
+      totalReviews: totalReviews ?? this.totalReviews,
+      isFavourite: isFavourite ?? this.isFavourite,
       verification: verification ?? this.verification,
     );
   }

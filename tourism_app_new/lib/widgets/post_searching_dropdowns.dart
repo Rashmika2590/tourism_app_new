@@ -126,6 +126,15 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     return cityName;
   }
 
+  void _showSearchButton() {
+    setState(() {
+      showSearchButton = true;
+      showDatePicker = false;
+      showDurationDropdown = false;
+      showGuestSelector = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasNullDetails = widget.searchParams.checkInDate == null;
@@ -216,11 +225,21 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                                               fontSize: 18,
                                               fontWeight: FontWeight.w500,
                                             ),
+                                            onChanged: (value) {
+                                              // Show search button when user starts typing
+                                              if (value.trim().isNotEmpty) {
+                                                _showSearchButton();
+                                              }
+                                            },
                                             onSubmitted: (_) {
                                               setState(() {
                                                 editingLocation = false;
-                                                showSearchButton = true;
                                               });
+                                              if (locationController.text
+                                                  .trim()
+                                                  .isNotEmpty) {
+                                                _showSearchButton();
+                                              }
                                             },
                                           )
                                           : GestureDetector(
@@ -249,6 +268,14 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                                                           'Where do you want to stay?',
                                                       border: InputBorder.none,
                                                     ),
+                                                    onChanged: (value) {
+                                                      // Show search button when user types
+                                                      if (value
+                                                          .trim()
+                                                          .isNotEmpty) {
+                                                        _showSearchButton();
+                                                      }
+                                                    },
                                                   ),
                                               suggestionsBoxDecoration:
                                                   SuggestionsBoxDecoration(
@@ -298,6 +325,8 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                                                 setState(() {
                                                   editingLocation = false;
                                                 });
+                                                // Show search button when suggestion is selected
+                                                _showSearchButton();
                                               },
                                               noItemsFoundBuilder:
                                                   (context) => const Padding(

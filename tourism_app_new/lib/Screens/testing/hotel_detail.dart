@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
@@ -15,6 +16,7 @@ import 'package:tourism_app_new/widgets/activity_row.dart';
 import 'package:tourism_app_new/widgets/check_availability_card.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
+import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
 class EnhancedHotelDetailsScreen extends StatefulWidget {
   final Hotel hotel;
@@ -34,17 +36,19 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 class _EnhancedHotelDetailsScreenState
     extends State<EnhancedHotelDetailsScreen> {
   late SearchParams _searchParams;
-  bool isFavorite = false;
+  late bool isFavorite;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
   bool isLoadingRooms = true;
   bool isLoadingFAQs = true;
   Room? cheapestRoom;
   Set<String> allAmenities = {};
+  bool isUpdatingFavorite = false;
 
   @override
   void initState() {
     super.initState();
+    isFavorite = widget.hotel.isFavourite;
     _searchParams =
         widget.searchParams ??
         SearchParams(
@@ -83,6 +87,53 @@ class _EnhancedHotelDetailsScreenState
       print('Error loading hotel rooms: $e');
       setState(() {
         isLoadingRooms = false;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (isUpdatingFavorite) return;
+
+    setState(() {
+      isUpdatingFavorite = true;
+    });
+
+    try {
+      if (isFavorite) {
+        // Remove from favorites - this would require the favourite ID
+        // For now, we'll assume the API handles this by user_id and hotel_id
+        await FavouriteApiService.removeFavourite(widget.hotel.id);
+      } else {
+        // Add to favorites - you'll need to get the current user ID
+        await FavouriteApiService.addFavourite(
+          userId: "current_user_id", // Replace with actual user ID
+          hotelId: widget.hotel.id,
+        );
+      }
+
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isFavorite ? 'Added to favorites' : 'Removed from favorites',
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      print('Error toggling favorite: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update favorites'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } finally {
+      setState(() {
+        isUpdatingFavorite = false;
       });
     }
   }
@@ -282,15 +333,23 @@ class _EnhancedHotelDetailsScreenState
                   ],
                 ),
                 child: IconButton(
-                  icon: Icon(
-                    isFavorite ? Icons.favorite : Icons.favorite_border,
-                    color: isFavorite ? Colors.red : Colors.black,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      isFavorite = !isFavorite;
-                    });
-                  },
+                  icon:
+                      isUpdatingFavorite
+                          ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.grey,
+                              ),
+                            ),
+                          )
+                          : Icon(
+                            isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: isFavorite ? Colors.red : Colors.black,
+                          ),
+                  onPressed: isUpdatingFavorite ? null : _toggleFavorite,
                 ),
               ),
               Container(
@@ -372,9 +431,9 @@ class _EnhancedHotelDetailsScreenState
                             size: 16,
                           ),
                           const SizedBox(width: 4),
-                          const Text(
-                            '4.8',
-                            style: TextStyle(
+                          Text(
+                            widget.hotel.rating?.toStringAsFixed(1) ?? '4.8',
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
@@ -382,7 +441,7 @@ class _EnhancedHotelDetailsScreenState
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '(73 reviews)',
+                            '(${widget.hotel.totalReviews ?? 73} reviews)',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 12,
@@ -434,7 +493,7 @@ class _EnhancedHotelDetailsScreenState
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min, // shrink column height
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,25 +531,36 @@ class _EnhancedHotelDetailsScreenState
                               ),
                             ),
                             IconButton(
-                              padding:
-                                  EdgeInsets.zero, // remove default padding
-                              constraints:
-                                  const BoxConstraints(), // remove extra space
-                              icon: Icon(
-                                isFavorite
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                color: isFavorite ? Colors.red : Colors.black,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  isFavorite = !isFavorite;
-                                });
-                              },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              icon:
+                                  isUpdatingFavorite
+                                      ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.grey,
+                                              ),
+                                        ),
+                                      )
+                                      : Icon(
+                                        isFavorite
+                                            ? Icons.favorite
+                                            : Icons.favorite_border,
+                                        color:
+                                            isFavorite
+                                                ? Colors.red
+                                                : Colors.black,
+                                      ),
+                              onPressed:
+                                  isUpdatingFavorite ? null : _toggleFavorite,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4), // reduce vertical spacing
+                        const SizedBox(height: 4),
                         Text(
                           '${widget.hotel.address}, ${widget.hotel.state}',
                           style: TextStyle(
@@ -501,8 +571,75 @@ class _EnhancedHotelDetailsScreenState
                       ],
                     ),
 
-                    // Booking Details Section
-                    const SizedBox(height: 16),
+                    // Hotel Rules Section (if any)
+                    // if (widget.hotel.rules.isNotEmpty) ...[
+                    //   const SizedBox(height: 16),
+                    //   Container(
+                    //     padding: const EdgeInsets.all(16),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.orange[50],
+                    //       borderRadius: BorderRadius.circular(12),
+                    //       border: Border.all(color: Colors.orange[200]!),
+                    //     ),
+                    //     child: Column(
+                    //       crossAxisAlignment: CrossAxisAlignment.start,
+                    //       children: [
+                    //         Row(
+                    //           children: [
+                    //             Icon(
+                    //               Icons.rule,
+                    //               color: Colors.orange[700],
+                    //               size: 20,
+                    //             ),
+                    //             const SizedBox(width: 8),
+                    //             Text(
+                    //               'Hotel Rules',
+                    //               style: TextStyle(
+                    //                 fontSize: 16,
+                    //                 fontWeight: FontWeight.bold,
+                    //                 color: Colors.orange[700],
+                    //               ),
+                    //             ),
+                    //           ],
+                    //         ),
+                    //         const SizedBox(height: 12),
+                    //         ...widget.hotel.rules
+                    //             .map(
+                    //               (rule) => Padding(
+                    //                 padding: const EdgeInsets.only(bottom: 8),
+                    //                 child: Row(
+                    //                   crossAxisAlignment:
+                    //                       CrossAxisAlignment.start,
+                    //                   children: [
+                    //                     Container(
+                    //                       margin: const EdgeInsets.only(top: 6),
+                    //                       width: 4,
+                    //                       height: 4,
+                    //                       decoration: BoxDecoration(
+                    //                         color: Colors.orange[700],
+                    //                         shape: BoxShape.circle,
+                    //                       ),
+                    //                     ),
+                    //                     const SizedBox(width: 12),
+                    //                     Expanded(
+                    //                       child: Text(
+                    //                         rule,
+                    //                         style: TextStyle(
+                    //                           fontSize: 14,
+                    //                           color: Colors.orange[800],
+                    //                         ),
+                    //                       ),
+                    //                     ),
+                    //                   ],
+                    //                 ),
+                    //               ),
+                    //             )
+                    //             .toList(),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ],
+
                     // Booking Details Section
                     const SizedBox(height: 16),
                     EnhancedCheckAvailabilityCard(
@@ -517,6 +654,7 @@ class _EnhancedHotelDetailsScreenState
                       },
                     ),
                     const SizedBox(height: 24),
+
                     // Exclusive Add-ons Widget
                     const Text(
                       "Tap for Exclusive Add-ons",
@@ -528,12 +666,9 @@ class _EnhancedHotelDetailsScreenState
                     ),
                     const SizedBox(height: 12),
                     ExclusiveAddonsWidget(),
-
                     const SizedBox(height: 16),
 
                     // Combined Amenities and What's Included Section
-
-                    //const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -544,50 +679,6 @@ class _EnhancedHotelDetailsScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Amenities section
-                          // if (allAmenities.isNotEmpty) ...[
-                          //   const Text(
-                          //     'Available Amenities',
-                          //     style: TextStyle(
-                          //       fontSize: 16,
-                          //       fontWeight: FontWeight.w600,
-                          //       color: Colors.black87,
-                          //     ),
-                          //   ),
-                          //   const SizedBox(height: 12),
-                          //   ...allAmenities
-                          //       .take(6)
-                          //       .map(
-                          //         (amenity) => Padding(
-                          //           padding: const EdgeInsets.symmetric(
-                          //             vertical: 4,
-                          //           ),
-                          //           child: Row(
-                          //             children: [
-                          //               Icon(
-                          //                 _getAmenityIcon(amenity),
-                          //                 size: 20,
-                          //                 color: Colors.green[600],
-                          //               ),
-                          //               const SizedBox(width: 12),
-                          //               Text(
-                          //                 amenity.trim(),
-                          //                 style: const TextStyle(
-                          //                   fontSize: 14,
-                          //                   color: Colors.black87,
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //         ),
-                          //       )
-                          //       .toList(),
-                          //   const SizedBox(height: 16),
-                          //   const Divider(color: Colors.grey),
-                          //   const SizedBox(height: 16),
-                          // ],
-
-                          // What's included section
                           const Text(
                             'What\'s Included in Your Stay',
                             style: TextStyle(
@@ -622,7 +713,7 @@ class _EnhancedHotelDetailsScreenState
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 10,
-                      ), // reduced vertical padding
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -640,21 +731,19 @@ class _EnhancedHotelDetailsScreenState
                             Icons.local_offer,
                             color: AppColors.buttonColor,
                             size: 20,
-                          ), // slightly smaller icon
+                          ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize:
-                                  MainAxisSize
-                                      .min, // ensures column height shrinks to content
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Text(
                                   'Special Offer Available!',
                                   style: TextStyle(
                                     color: Color.fromARGB(255, 1, 93, 88),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 13, // slightly smaller font
+                                    fontSize: 13,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -662,7 +751,7 @@ class _EnhancedHotelDetailsScreenState
                                   'Book now and save up to 20% on your stay',
                                   style: TextStyle(
                                     color: AppColors.buttonColor,
-                                    fontSize: 11, // slightly smaller font
+                                    fontSize: 11,
                                   ),
                                 ),
                               ],
@@ -686,19 +775,11 @@ class _EnhancedHotelDetailsScreenState
                       height: 100,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.grey[500]!,
-                          width: 2, // border width updated
-                        ),
+                        border: Border.all(color: Colors.grey[500]!, width: 2),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(
-                              0.35,
-                            ), // shadow color
-                            offset: const Offset(
-                              1,
-                              3,
-                            ), // right and bottom shadow
+                            color: Colors.black.withOpacity(0.35),
+                            offset: const Offset(1, 3),
                             blurRadius: 3,
                           ),
                         ],
@@ -827,8 +908,7 @@ class _EnhancedHotelDetailsScreenState
                     const SizedBox(height: 12),
                     Text(
                       widget.hotel.description.isNotEmpty
-                          ? '${widget.hotel.description} Wake up to sweeping ocean views and the gentle rhythm of waves at Seaside Paradise, a peaceful beachfront retreat nestled on the golden shores of Mirissa. Designed with simplicity and comfort in mind, this cozy stay is ideal for couples or solo travelers craving a short, refreshing getaway'
-                              'Inside, the space is thoughtfully arranged to maximize comfort and functionality.'
+                          ? '${widget.hotel.description} Wake up to sweeping ocean views and the gentle rhythm of waves at Seaside Paradise, a peaceful beachfront retreat nestled on the golden shores of Mirissa. Designed with simplicity and comfort in mind, this cozy stay is ideal for couples or solo travelers craving a short, refreshing getaway. Inside, the space is thoughtfully arranged to maximize comfort and functionality.'
                           : 'Located in one of the most vibrant places and easily accessible to major attractions. Our hotel offers comfortable accommodations with modern amenities and excellent service to make your stay memorable. Experience luxury and comfort in the heart of ${widget.hotel.state}.',
                       style: TextStyle(
                         fontSize: 13,
@@ -857,151 +937,11 @@ class _EnhancedHotelDetailsScreenState
                         color: Colors.black87,
                       ),
                     ),
-                    //const SizedBox(height: 16),
-                    // Container(
-                    //   padding: const EdgeInsets.all(16),
-                    //   decoration: BoxDecoration(
-                    //     color: Colors.grey[50],
-                    //     borderRadius: BorderRadius.circular(12),
-                    //     border: Border.all(color: Colors.grey[200]!),
-                    //   ),
-                    //   child: Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.start,
-                    //     children: [
-                    //       Text(
-                    //         'Ask a Question',
-                    //         style: TextStyle(
-                    //           fontSize: 16,
-                    //           fontWeight: FontWeight.w600,
-                    //           color: Colors.grey[800],
-                    //         ),
-                    //       ),
-                    //       const SizedBox(height: 12),
-                    //       TextField(
-                    //         controller: _faqController,
-                    //         maxLines: 3,
-                    //         decoration: InputDecoration(
-                    //           hintText:
-                    //               'Type your question about this hotel...',
-                    //           border: OutlineInputBorder(
-                    //             borderRadius: BorderRadius.circular(8),
-                    //             borderSide: BorderSide(
-                    //               color: Colors.grey[300]!,
-                    //             ),
-                    //           ),
-                    //           focusedBorder: OutlineInputBorder(
-                    //             borderRadius: BorderRadius.circular(8),
-                    //             borderSide: BorderSide(
-                    //               color: AppColors.mainGreen,
-                    //             ),
-                    //           ),
-                    //           filled: true,
-                    //           fillColor: Colors.white,
-                    //         ),
-                    //       ),
-                    //       const SizedBox(height: 12),
-                    //       Align(
-                    //         alignment: Alignment.centerRight,
-                    //         child: ElevatedButton(
-                    //           onPressed: _isSubmittingFAQ ? null : _submitFAQ,
-                    //           style: ElevatedButton.styleFrom(
-                    //             backgroundColor: AppColors.mainGreen,
-                    //             foregroundColor: Colors.white,
-                    //             shape: RoundedRectangleBorder(
-                    //               borderRadius: BorderRadius.circular(8),
-                    //             ),
-                    //           ),
-                    //           child:
-                    //               _isSubmittingFAQ
-                    //                   ? const SizedBox(
-                    //                     width: 16,
-                    //                     height: 16,
-                    //                     child: CircularProgressIndicator(
-                    //                       strokeWidth: 2,
-                    //                       valueColor:
-                    //                           AlwaysStoppedAnimation<Color>(
-                    //                             Colors.white,
-                    //                           ),
-                    //                     ),
-                    //                   )
-                    //                   : const Text('Submit Question'),
-                    //         ),
-                    //       ),
-                    //     ],
-                    //   ),
-                    // ),
                     const SizedBox(height: 16),
-                    // Display dummy FAQs
                     Container(
-                      height: 400, // Fixed height for testing
+                      height: 400,
                       child: FAQWidget(hotelId: widget.hotel.id),
                     ),
-
-                    //const SizedBox(height: 32),
-                    // Row(
-                    //   children: [
-                    //     Expanded(
-                    //       child: ElevatedButton(
-                    //         onPressed: () {
-                    //           Navigator.push(
-                    //             context,
-                    //             MaterialPageRoute(
-                    //               builder:
-                    //                   (_) => RoomCreationScreen(
-                    //                     hotelId: widget.hotel.id,
-                    //                   ),
-                    //             ),
-                    //           );
-                    //         },
-                    //         style: ElevatedButton.styleFrom(
-                    //           backgroundColor: Colors.blue[600],
-                    //           foregroundColor: Colors.white,
-                    //           padding: const EdgeInsets.symmetric(vertical: 16),
-                    //           shape: RoundedRectangleBorder(
-                    //             borderRadius: BorderRadius.circular(12),
-                    //           ),
-                    //         ),
-                    //         child: const Text(
-                    //           "Add Room",
-                    //           style: TextStyle(fontWeight: FontWeight.w600),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //     const SizedBox(width: 12),
-                    //     Expanded(
-                    //       child: ElevatedButton(
-                    //         onPressed: () {
-                    //           if (hasBookingDetails) {
-                    //             _navigateToRoomList(
-                    //               widget.hotel.id,
-                    //               bookingState,
-                    //             );
-                    //           } else {
-                    //             ScaffoldMessenger.of(context).showSnackBar(
-                    //               const SnackBar(
-                    //                 content: Text(
-                    //                   'Please set booking details first',
-                    //                 ),
-                    //               ),
-                    //             );
-                    //           }
-                    //         },
-                    //         style: ElevatedButton.styleFrom(
-                    //           backgroundColor: AppColors.mainGreen,
-                    //           foregroundColor: Colors.white,
-                    //           padding: const EdgeInsets.symmetric(vertical: 16),
-                    //           shape: RoundedRectangleBorder(
-                    //             borderRadius: BorderRadius.circular(12),
-                    //           ),
-                    //         ),
-                    //         child: const Text(
-                    //           "Show Rooms",
-                    //           style: TextStyle(fontWeight: FontWeight.w600),
-                    //         ),
-                    //       ),
-                    //     ),
-                    //   ],
-                    // ),
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -1093,19 +1033,30 @@ class _EnhancedHotelDetailsScreenState
                             ),
                         ],
                       ),
-                      InkWell(
-                        onTap: () {
-                          // Open terms & conditions link
-                        },
-                        child: const Text(
-                          '  View Terms & Conditions',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.blue,
-                            decoration: TextDecoration.underline,
+                      widget.hotel != null
+                          ? TermsConditionsWidget.buildTermsButton(
+                            context: context,
+                            terms: widget.hotel!.terms,
+                            text: "Terms & Conditions Apply",
+                          )
+                          : GestureDetector(
+                            onTap: () {
+                              // Fallback for when hotel is null
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Terms not available'),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              "Terms & Conditions Apply",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
                     ],
                   ),
 
