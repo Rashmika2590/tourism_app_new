@@ -433,6 +433,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    Text(widget.hotelId.toString()),
                     const SizedBox(height: 12),
                     TabBar(
                       controller: _tabController,
