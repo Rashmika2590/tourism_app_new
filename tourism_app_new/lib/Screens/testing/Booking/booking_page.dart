@@ -46,16 +46,25 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isBookingForSomeoneElse = false;
   double _totalPrice = 0.0;
   double _serviceFee = 5.0;
+  User? _user;
 
   @override
   void initState() {
     super.initState();
     _calculateTotalPrice();
-    // TODO: Load user details from app's registered user
-    // For now, set some dummy data
-    _nameController.text = 'Amantha Nirmal';
-    _emailController.text = 'amantha.nirmal@email.com';
-    _phoneController.text = '+94 77 123 4567';
+    _loadUserDetails();
+  }
+
+  Future<void> _loadUserDetails() async {
+    final user = await SharedPrefUser.getUser();
+    setState(() {
+      _user = user;
+      if (user != null) {
+        _nameController.text = user.name;
+        _emailController.text = user.email;
+        _phoneController.text = user.phone;
+      }
+    });
   }
 
   @override
@@ -172,10 +181,6 @@ class _BookingScreenState extends State<BookingScreen> {
             ],
           ),
     );
-  }
-
-  Future<User?> _loadUser() async {
-    return await SharedPrefUser.getUser(); // This returns your User model
   }
 
   void _showErrorDialog(String error) {
@@ -585,34 +590,18 @@ class _BookingScreenState extends State<BookingScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: FutureBuilder<User?>(
-                future: _loadUser(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData) {
-                    return const Text("No user data found");
-                  }
-
-                  final user = snapshot.data!;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDetailRow("Name", user.name),
-                      const SizedBox(height: 12),
-                      _buildDetailRow("E-mail", user.email),
-                      const SizedBox(height: 12),
-                      _buildDetailRow("Phone", user.phone),
-                      const SizedBox(height: 12),
-                      _buildDetailRow(
-                        "Country",
-                        user.updatedBy,
-                      ), // if you stored country there
-                    ],
-                  );
-                },
-              ),
+              child: _user != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow("Name", _user!.name),
+                        const SizedBox(height: 12),
+                        _buildDetailRow("E-mail", _user!.email),
+                        const SizedBox(height: 12),
+                        _buildDetailRow("Phone", _user!.phone),
+                      ],
+                    )
+                  : const Center(child: CircularProgressIndicator()),
             ),
 
             const SizedBox(height: 16),
