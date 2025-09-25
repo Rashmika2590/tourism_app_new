@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/booking_page.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
 class RoomsListScreen extends StatefulWidget {
-  final int hotelId;
+  final Hotel hotel;
   final DateTime? checkInDate;
   final String? checkInTime;
   final DateTime? checkOutDate;
@@ -17,7 +19,7 @@ class RoomsListScreen extends StatefulWidget {
 
   const RoomsListScreen({
     Key? key,
-    required this.hotelId,
+    required this.hotel,
     this.checkInDate,
     this.checkInTime,
     this.checkOutDate,
@@ -93,7 +95,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
     _dataFuture.then((data) {
       final allRooms = data[0] as List<Room>;
       final availability = data[1] as RoomAvailability;
-      final availableRoomIds = availability.getRoomIdsForHotel(widget.hotelId);
+      final availableRoomIds = availability.getRoomIdsForHotel(widget.hotel.id);
 
       // Filter rooms properly
       final availableRooms =
@@ -117,7 +119,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   }
 
   Future<List<dynamic>> _fetchRoomsAndAvailability() async {
-    final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotelId);
+    final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotel.id);
     final availabilityFuture = RoomAvailabilityService.searchAvailability(
       checkInDate: widget.checkInDate!,
       checkInTime: widget.checkInTime!,
@@ -181,6 +183,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
       MaterialPageRoute(
         builder:
             (context) => BookingScreen(
+              hotel: widget.hotel,
               room: _selectedRoom!,
               checkInDate: widget.checkInDate!,
               checkInTime: widget.checkInTime!,
@@ -404,7 +407,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
           final allRooms = snapshot.data![0] as List<Room>;
           final availability = snapshot.data![1] as RoomAvailability;
           final availableRoomIds = availability.getRoomIdsForHotel(
-            widget.hotelId,
+            widget.hotel.id,
           );
 
           final availableRooms =
@@ -1140,18 +1143,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        // Show terms and conditions
-                      },
-                      child: Text(
-                        "Terms & Conditions Apply",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          decoration: TextDecoration.underline,
-                        ),
-                      ),
+                    TermsConditionsWidget.buildTermsButton(
+                      context: context,
+                      terms: widget.hotel.terms,
                     ),
                   ],
                 ),

@@ -1,13 +1,17 @@
 // Screens/booking_screen.dart
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/booking_api_service.dart';
 import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/user_model.dart';
+import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
 class BookingScreen extends StatefulWidget {
+  final Hotel hotel;
   final Room room;
   final DateTime checkInDate;
   final String checkInTime;
@@ -18,6 +22,7 @@ class BookingScreen extends StatefulWidget {
 
   const BookingScreen({
     Key? key,
+    required this.hotel,
     required this.room,
     required this.checkInDate,
     required this.checkInTime,
@@ -787,21 +792,29 @@ class _BookingScreenState extends State<BookingScreen> {
               child: Column(
                 children: [
                   // Terms & Conditions
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Terms & Conditions',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Icon(Icons.chevron_right),
-                      ],
+                  GestureDetector(
+                    onTap: () {
+                      TermsConditionsWidget.showTermsAndConditions(
+                        context: context,
+                        terms: widget.hotel.terms,
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Terms & Conditions',
+                            style: TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Icon(Icons.chevron_right),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -970,24 +983,31 @@ class _BookingScreenState extends State<BookingScreen> {
                               fontSize: 12,
                               color: Colors.grey.shade600,
                             ),
-                            children: const [
-                              TextSpan(text: 'I agree to the '),
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
                               TextSpan(
                                 text: 'Terms & Conditions',
-                                style: TextStyle(
+                                style: const TextStyle(
                                   color: Colors.blue,
                                   decoration: TextDecoration.underline,
                                 ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    TermsConditionsWidget.showTermsAndConditions(
+                                      context: context,
+                                      terms: widget.hotel.terms,
+                                    );
+                                  },
                               ),
-                              TextSpan(text: ' and '),
-                              TextSpan(
+                              const TextSpan(text: ' and '),
+                              const TextSpan(
                                 text: 'Privacy Policy',
                                 style: TextStyle(
                                   color: Colors.blue,
                                   decoration: TextDecoration.underline,
                                 ),
                               ),
-                              TextSpan(text: '.'),
+                              const TextSpan(text: '.'),
                             ],
                           ),
                         ),

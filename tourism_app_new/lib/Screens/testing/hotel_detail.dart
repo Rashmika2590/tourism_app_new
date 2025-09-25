@@ -148,7 +148,7 @@ class _EnhancedHotelDetailsScreenState
       MaterialPageRoute(
         builder:
             (_) => RoomsListScreen(
-              hotelId: hotelId,
+              hotel: widget.hotel,
               checkInDate: searchParams.checkInDate,
               checkInTime: _formatTimeOfDay(searchParams.checkInTime),
               checkOutDate: checkOutDate,
