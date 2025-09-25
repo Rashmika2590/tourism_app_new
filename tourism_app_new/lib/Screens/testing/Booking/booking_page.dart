@@ -53,9 +53,9 @@ class _BookingScreenState extends State<BookingScreen> {
     _calculateTotalPrice();
     // TODO: Load user details from app's registered user
     // For now, set some dummy data
-    _nameController.text = 'Amantha Nirmal';
-    _emailController.text = 'amantha.nirmal@email.com';
-    _phoneController.text = '+94 77 123 4567';
+    _nameController.text = '';
+    _emailController.text = '';
+    _phoneController.text = '';
   }
 
   @override
@@ -607,7 +607,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       const SizedBox(height: 12),
                       _buildDetailRow(
                         "Country",
-                        user.updatedBy,
+                        user.role == 'user' ? 'Sri Lanka' : 'Sri Lanka',
                       ), // if you stored country there
                     ],
                   );
@@ -1062,19 +1062,26 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildDetailRow(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black54,
+    return Padding(
+      padding: const EdgeInsets.only(right: 25.0, left: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontSize: 16, color: Colors.black)),
-      ],
+          Spacer(),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 14, color: Colors.black),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -230,7 +230,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                                 turns: widget.isExpanded ? 0.5 : 0,
                                 duration: const Duration(milliseconds: 300),
                                 child: Icon(
-                                  Icons.expand_less,
+                                  Icons.expand_more,
                                   color: Theme.of(context).primaryColor,
                                   size: 20,
                                 ),
@@ -245,7 +245,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                     if (widget.isExpanded)
                       Positioned(
                         top: MediaQuery.of(context).padding.top + 8,
-                        left: 16,
+                        right: 16,
                         child: FloatingActionButton(
                           mini: true,
                           onPressed: widget.onToggle,

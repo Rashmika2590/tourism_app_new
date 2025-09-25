@@ -278,15 +278,18 @@ class _RoomsListScreenState extends State<RoomsListScreen>
 
           final allRooms = snapshot.data![0] as List<Room>;
           final availability = snapshot.data![1] as RoomAvailability;
-          final availableRoomIds =
-              availability.getRoomIdsForHotel(widget.hotelId);
+          final availableRoomIds = availability.getRoomIdsForHotel(
+            widget.hotelId,
+          );
 
-          final availableRooms = allRooms
-              .where((room) => availableRoomIds.contains(room.id))
-              .toList();
-          final unavailableRooms = allRooms
-              .where((room) => !availableRoomIds.contains(room.id))
-              .toList();
+          final availableRooms =
+              allRooms
+                  .where((room) => availableRoomIds.contains(room.id))
+                  .toList();
+          final unavailableRooms =
+              allRooms
+                  .where((room) => !availableRoomIds.contains(room.id))
+                  .toList();
           final rooms = availableRooms + unavailableRooms;
 
           return Column(
@@ -313,58 +316,81 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                       labelPadding: const EdgeInsets.symmetric(horizontal: 5),
                       indicator: const BoxDecoration(),
                       dividerColor: Colors.transparent,
-                      tabs: rooms.asMap().entries.map((entry) {
-                        final index = entry.key;
-                        final room = entry.value;
-                        final isSelected = _tabController?.index == index;
-                        final isAvailable = availableRoomIds.contains(room.id);
+                      tabs:
+                          rooms.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final room = entry.value;
+                            final isSelected = _tabController?.index == index;
+                            final isAvailable = availableRoomIds.contains(
+                              room.id,
+                            );
 
-                        return Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 40, // increased width
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isAvailable
-                                        ? Colors.teal
-                                        : Colors.grey)
-                                    : (isAvailable
-                                        ? Colors.grey[300]
-                                        : Colors.grey[200]),
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                room.type,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? Colors.white
-                                      : (isAvailable
-                                          ? Colors.black
-                                          : Colors.grey[500]),
-                                  fontWeight: FontWeight.w500,
+                            return Column(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 40, // increased width
+                                    vertical: 7,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        isSelected
+                                            ? (isAvailable
+                                                ? Colors.teal
+                                                : Colors.grey)
+                                            : (isAvailable
+                                                ? Colors.grey[300]
+                                                : Colors.grey[200]),
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text(
+                                    room.type,
+                                    style: TextStyle(
+                                      color:
+                                          isSelected
+                                              ? Colors.white
+                                              : (isAvailable
+                                                  ? Colors.black
+                                                  : Colors.grey[500]),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              isAvailable
-                                  ? "≈ ${room.price.toInt()} LKR"
-                                  : "Unavailable",
-                              style: TextStyle(
-                                color: isSelected
-                                    ? (isAvailable ? Colors.teal : Colors.red)
-                                    : Colors.grey[700],
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                                const SizedBox(height: 4),
+                                Text(
+                                  () {
+                                    if (!isAvailable) return "Unavailable";
+
+                                    if (_selectedRoom == null) {
+                                      // Before any room is selected, just show base price
+                                      return "≈ ${room.price.toInt()} LKR";
+                                    }
+
+                                    final priceDiff =
+                                        room.price - _selectedRoom!.price;
+                                    if (priceDiff == 0) {
+                                      return "≈ ${room.price.toInt()} LKR";
+                                    } else if (priceDiff > 0) {
+                                      return "+${priceDiff.toInt()} LKR";
+                                    } else {
+                                      return "${priceDiff.toInt()} LKR"; // already negative
+                                    }
+                                  }(),
+                                  style: TextStyle(
+                                    color:
+                                        isSelected
+                                            ? (isAvailable
+                                                ? Colors.teal
+                                                : Colors.red)
+                                            : Colors.grey[700],
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
                     ),
                   ],
                 ),
