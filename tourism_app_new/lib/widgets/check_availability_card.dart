@@ -579,8 +579,8 @@ class _EnhancedCheckAvailabilityCardState
               ),
             ),
 
-            // Proceed button when available
-            if (hasAvailability) ...[
+            // Proceed button
+            if (availabilityMessage != null)
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -589,9 +589,9 @@ class _EnhancedCheckAvailabilityCardState
                 child: SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _proceedWithBooking,
+                    onPressed: hasAvailability ? _proceedWithBooking : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: hasAvailability ? Colors.green : Colors.grey,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
@@ -608,7 +608,6 @@ class _EnhancedCheckAvailabilityCardState
                   ),
                 ),
               ),
-            ],
           ],
         ],
       ),
