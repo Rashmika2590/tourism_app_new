@@ -1,13 +1,14 @@
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:tourism_app_new/models/user_model.dart';
 import 'package:tourism_app_new/Services/Authentication/trac_registration_status.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final firebase_auth.FirebaseAuth _auth = firebase_auth.FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   static const String _keepSignedInKey = 'keep_signed_in';
@@ -36,20 +37,31 @@ class AuthService {
   }
 
   // Register with email & password
-  Future<User?> registerWithEmailPassword(String email, String password) async {
+  Future<firebase_auth.User?> registerWithEmailPassword(String email, String password) async {
     try {
-      UserCredential userCredential = await _auth
+      firebase_auth.UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
-      User? user = userCredential.user;
+      firebase_auth.User? firebaseUser = userCredential.user;
 
-      if (user != null) {
-        await _saveTokenWithExpiry(user);
+      if (firebaseUser != null) {
+        final user = User(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'No Name',
+          email: firebaseUser.email!,
+          phone: firebaseUser.phoneNumber ?? 'No Phone',
+          password: '', // Password should not be stored here
+          createdTime: firebaseUser.metadata.creationTime ?? DateTime.now(),
+          updatedTime: firebaseUser.metadata.lastSignInTime ?? DateTime.now(),
+          updatedBy: 'self',
+        );
+        await SharedPrefUser.saveUser(user);
+        await _saveTokenWithExpiry(firebaseUser);
         await UserStateManager.markUserAsRegistered(email);
         await _setKeepSignedIn(true);
         debugPrint("New user registered: $email");
         debugPrint("Auto-login enabled for new user");
       }
-      return user;
+      return firebaseUser;
     } on FirebaseAuthException catch (e) {
       debugPrint("Registration failed: ${e.message}");
       return null;
@@ -57,20 +69,35 @@ class AuthService {
   }
 
   // Login with email & password
-  Future<User?> loginWithEmailPassword(
+  Future<firebase_auth.User?> loginWithEmailPassword(
     String email,
     String password, {
     bool keepSignedIn = false,
   }) async {
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+      firebase_auth.UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      User? user = userCredential.user;
+      firebase_auth.User? firebaseUser = userCredential.user;
 
-      if (user != null) {
-        await _saveTokenWithExpiry(user);
+      if (firebaseUser != null) {
+        // Create a User model object
+        final user = User(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'No Name',
+          email: firebaseUser.email!,
+          phone: firebaseUser.phoneNumber ?? 'No Phone',
+          password: '', // Password should not be stored here
+          createdTime: firebaseUser.metadata.creationTime ?? DateTime.now(),
+          updatedTime: firebase_auth.FirebaseAuth.instance.currentUser?.metadata.lastSignInTime ?? DateTime.now(),
+          updatedBy: 'self',
+        );
+
+        // Save the user model to shared preferences
+        await SharedPrefUser.saveUser(user);
+
+        await _saveTokenWithExpiry(firebaseUser);
         bool isRegisteredUser =
             await UserStateManager.isLoginWithRegisteredEmail(email);
 
@@ -85,7 +112,7 @@ class AuthService {
           );
         }
       }
-      return user;
+      return firebaseUser;
     } on FirebaseAuthException catch (e) {
       debugPrint("Login failed: ${e.message}");
       return null;
@@ -93,24 +120,35 @@ class AuthService {
   }
 
   // Anonymous Sign-In
-  Future<User?> signInAnonymously() async {
+  Future<firebase_auth.User?> signInAnonymously() async {
     try {
-      UserCredential userCredential = await _auth.signInAnonymously();
-      User? user = userCredential.user;
+      firebase_auth.UserCredential userCredential = await _auth.signInAnonymously();
+      firebase_auth.User? firebaseUser = userCredential.user;
 
-      if (user != null) {
-        await _saveTokenWithExpiry(user);
+      if (firebaseUser != null) {
+        final user = User(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'Anonymous',
+          email: firebaseUser.email ?? '',
+          phone: firebaseUser.phoneNumber ?? '',
+          password: '',
+          createdTime: firebaseUser.metadata.creationTime ?? DateTime.now(),
+          updatedTime: firebaseUser.metadata.lastSignInTime ?? DateTime.now(),
+          updatedBy: 'self',
+        );
+        await SharedPrefUser.saveUser(user);
+        await _saveTokenWithExpiry(firebaseUser);
         await _setKeepSignedIn(true);
         debugPrint("Anonymous sign in - auto-login enabled");
       }
-      return user;
+      return firebaseUser;
     } on FirebaseAuthException catch (e) {
       debugPrint("Anonymous Sign-In failed: ${e.message}");
       return null;
     }
   }
 
-  Future<User?> signInWithGoogle() async {
+  Future<firebase_auth.User?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return null;
@@ -123,25 +161,36 @@ class AuthService {
         idToken: googleAuth.idToken,
       );
 
-      UserCredential userCredential = await _auth.signInWithCredential(
+      firebase_auth.UserCredential userCredential = await _auth.signInWithCredential(
         credential,
       );
-      User? user = userCredential.user;
+      firebase_auth.User? firebaseUser = userCredential.user;
 
-      if (user != null) {
-        await _saveTokenWithExpiry(user);
+      if (firebaseUser != null) {
+        final user = User(
+          uid: firebaseUser.uid,
+          name: firebaseUser.displayName ?? 'No Name',
+          email: firebaseUser.email!,
+          phone: firebaseUser.phoneNumber ?? 'No Phone',
+          password: '', // Password should not be stored here
+          createdTime: firebaseUser.metadata.creationTime ?? DateTime.now(),
+          updatedTime: firebaseUser.metadata.lastSignInTime ?? DateTime.now(),
+          updatedBy: 'self',
+        );
+        await SharedPrefUser.saveUser(user);
+        await _saveTokenWithExpiry(firebaseUser);
 
         if (userCredential.additionalUserInfo?.isNewUser ?? false) {
           await _setKeepSignedIn(true);
-          await UserStateManager.markUserAsRegistered(user.email!);
-          debugPrint("New Google user registered: ${user.email}");
+          await UserStateManager.markUserAsRegistered(firebaseUser.email!);
+          debugPrint("New Google user registered: ${firebaseUser.email}");
         } else {
           await _setKeepSignedIn(true);
-          debugPrint("Existing Google user login: ${user.email}");
+          debugPrint("Existing Google user login: ${firebaseUser.email}");
         }
       }
 
-      return user;
+      return firebaseUser;
     } catch (e) {
       debugPrint("Google Sign-In failed: $e");
       return null;
@@ -222,7 +271,7 @@ class AuthService {
   }
 
   // Save token + expiry
-  Future<void> _saveTokenWithExpiry(User user) async {
+  Future<void> _saveTokenWithExpiry(firebase_auth.User user) async {
     final token = await user.getIdToken(true);
     if (token == null) return;
     await SharedPreferecesUtil.setToken(token);
@@ -244,7 +293,7 @@ class AuthService {
   }
 
   // Current user
-  User? getCurrentUser() => _auth.currentUser;
+  firebase_auth.User? getCurrentUser() => _auth.currentUser;
 
   // Debug auth status
   Future<Map<String, dynamic>> getUserAuthStatus() async {
@@ -262,7 +311,7 @@ class AuthService {
 
   // Init auth state listener
   Future<void> initializeAuth() async {
-    _auth.authStateChanges().listen((User? user) {
+    _auth.authStateChanges().listen((firebase_auth.User? user) {
       if (user == null) {
         debugPrint('User is currently signed out!');
       } else {
