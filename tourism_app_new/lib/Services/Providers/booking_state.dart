@@ -10,6 +10,9 @@ class BookingState extends ChangeNotifier {
   int adults = 1;
   int children = 0;
   String state = '';
+  double? latitude;
+  double? longitude;
+  double radiusKm = 10.0; // Default radius in km
   String specialRequest = '';
   double price = 0.0;
   String paymentMethod = 'Card'; // default payment method
@@ -55,6 +58,13 @@ class BookingState extends ChangeNotifier {
 
   void setState(String s) {
     state = s;
+    notifyListeners();
+  }
+
+  void setLocation({double? lat, double? lon, double? radius}) {
+    if (lat != null) latitude = lat;
+    if (lon != null) longitude = lon;
+    if (radius != null) radiusKm = radius;
     notifyListeners();
   }
 

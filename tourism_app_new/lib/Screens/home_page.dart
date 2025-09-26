@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/profile/profile_page.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
-import 'package:tourism_app_new/Screens/testing/Availability/availability_search_screen.dart';
+import 'package:tourism_app_new/Screens/location_search_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
+import 'package:tourism_app_new/Services/Location/location_service.dart';
+import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:tourism_app_new/widgets/bottom_navbar.dart';
 
@@ -25,6 +29,23 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _loadTokenAndUser();
+    _loadLocation();
+  }
+
+  Future<void> _loadLocation() async {
+    try {
+      final position = await LocationService.getCurrentPosition();
+      // ignore: use_build_context_synchronously
+      Provider.of<BookingState>(context, listen: false).setLocation(
+        lat: position.latitude,
+        lon: position.longitude,
+      );
+    } catch (e) {
+      // Handle location errors, e.g., show a snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error getting location: $e')),
+      );
+    }
   }
 
   Future<void> _loadTokenAndUser() async {
@@ -80,7 +101,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      RoomAvailabilityScreen(),
+      const LocationSearchScreen(),
       const HotelSearchScreen(),
       HotelCreationScreen(), // no const here
       const ProfilePage(),

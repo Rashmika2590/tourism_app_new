@@ -111,7 +111,7 @@ class RoomAvailabilityService {
     String? state,
     double? latitude,
     double? longitude,
-    double? maxDistanceKm,
+    double? radiusKm,
     int? adultCount,
     int? childrenCount,
   }) async {
@@ -123,7 +123,7 @@ class RoomAvailabilityService {
       state: state,
       latitude: latitude,
       longitude: longitude,
-      maxDistanceKm: maxDistanceKm,
+      radiusKm: radiusKm,
       adultCount: adultCount,
       childrenCount: childrenCount,
     );
