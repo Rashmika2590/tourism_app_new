@@ -328,7 +328,9 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        state: state, // Pass the state for the old search method
+        latitude: latitude,
+        longitude: longitude,
+        maxDistanceKm: 10, // Default radius of 10km
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
