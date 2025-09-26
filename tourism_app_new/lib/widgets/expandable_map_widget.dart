@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
+import 'package:tourism_app_new/constants/colors.dart';
 
 class ExpandableMapWidget extends StatefulWidget {
   final bool isExpanded;
@@ -214,13 +215,13 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                               Icon(
                                 Icons.map,
                                 size: 17,
-                                color: Theme.of(context).primaryColor,
+                                color: Colors.grey[800],
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 widget.isExpanded ? 'Hide map' : 'View map',
                                 style: TextStyle(
-                                  color: Theme.of(context).primaryColor,
+                                  color: Colors.grey[800],
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -231,7 +232,7 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
                                 duration: const Duration(milliseconds: 300),
                                 child: Icon(
                                   Icons.expand_more,
-                                  color: Theme.of(context).primaryColor,
+                                  color: Colors.grey[800],
                                   size: 20,
                                 ),
                               ),

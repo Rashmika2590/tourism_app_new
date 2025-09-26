@@ -15,7 +15,11 @@ import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/widgets/expandable_map_widget.dart';
+import 'package:tourism_app_new/widgets/filtering%20option.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
+import 'package:tourism_app_new/widgets/filter_bottom_sheet.dart';
+import 'package:tourism_app_new/widgets/sort_bottom_sheet.dart';
+import 'package:tourism_app_new/widgets/sorting_options.dart';
 
 class HotelWithRoomDetails {
   final Hotel hotel;
@@ -52,8 +56,14 @@ class _RoomAvailabilityResultsScreenState
   // State variables for search results (not managed by provider)
   late RoomAvailability _currentAvailability;
   late List<HotelWithRoomDetails> _currentHotelWithRoomDetails;
+  late List<HotelWithRoomDetails>
+  _originalHotelWithRoomDetails; // Keep original for filtering
   bool _isLoading = false;
   String? _errorMessage;
+
+  // Filter and Sort states
+  FilterOptions _currentFilters = FilterOptions();
+  SortOption _currentSortOption = SortOption.recommended;
 
   @override
   void initState() {
@@ -61,6 +71,7 @@ class _RoomAvailabilityResultsScreenState
     // Initialize with widget values
     _currentAvailability = widget.availability;
     _currentHotelWithRoomDetails = widget.hotelWithRoomDetails;
+    _originalHotelWithRoomDetails = List.from(widget.hotelWithRoomDetails);
 
     final bookingState = Provider.of<BookingState>(context, listen: false);
     if (bookingState.state.isEmpty) {
@@ -94,26 +105,6 @@ class _RoomAvailabilityResultsScreenState
       );
     }
   }
-
-  // void _navigateToRoomList(int hotelId, BookingState bookingState) {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder:
-  //           (_) => RoomsListScreen(
-  //             hotelId: hotelId,
-  //             checkInDate: bookingState.checkInDate,
-  //             checkInTime: bookingState.checkInTime.format(context),
-  //             checkOutDate: bookingState.checkOutDate,
-  //             checkOutTime: bookingState.checkInTime.format(
-  //               context,
-  //             ), // Use checkInTime for checkout time
-  //             adultCount: bookingState.adults,
-  //             childrenCount: bookingState.children,
-  //           ),
-  //     ),
-  //   );
-  // }
 
   void _toggleMap() {
     setState(() {
@@ -172,6 +163,7 @@ class _RoomAvailabilityResultsScreenState
       setState(() {
         _currentAvailability = availability;
         _currentHotelWithRoomDetails = hotelWithRoomDetails;
+        _originalHotelWithRoomDetails = List.from(hotelWithRoomDetails);
         _isLoading = false;
       });
     } catch (e) {
@@ -240,6 +232,156 @@ class _RoomAvailabilityResultsScreenState
     final hour = int.parse(parts[0]);
     final minute = int.parse(parts[1]);
     return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Widget _buildResultsHeader() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      color: Colors.transparent,
+      child: Column(
+        children: [
+          // Filter and Sort buttons at the bottom
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Advanced filter button on the left
+              InkWell(
+                onTap: () => _showAdvancedFilter(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.tune, color: Colors.grey[600], size: 24),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Advanced',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Sort by dropdown on the right
+              InkWell(
+                onTap: () => _showSortOptions(),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Sort by',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.grey[600],
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAdvancedFilter() async {
+    final newFilters = await showModalBottomSheet<FilterOptions>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => FilterBottomSheet(
+            currentFilters: _currentFilters,
+            hotels: _originalHotelWithRoomDetails,
+          ),
+    );
+
+    if (newFilters != null) {
+      setState(() {
+        _currentFilters = newFilters;
+        _applyFiltersAndSort();
+      });
+    }
+  }
+
+  void _showSortOptions() async {
+    final newSortOption = await showModalBottomSheet<SortOption>(
+      context: context,
+      builder:
+          (context) => SortBottomSheet(currentSortOption: _currentSortOption),
+    );
+
+    if (newSortOption != null) {
+      setState(() {
+        _currentSortOption = newSortOption;
+        _applyFiltersAndSort();
+      });
+    }
+  }
+
+  void _applyFiltersAndSort() {
+    List<HotelWithRoomDetails> filteredResults = List.from(
+      _originalHotelWithRoomDetails,
+    );
+
+    // Apply filters
+    if (_currentFilters.minPrice != null || _currentFilters.maxPrice != null) {
+      filteredResults =
+          filteredResults.where((hotel) {
+            final price = hotel.cheapestRoom.price;
+            final minPrice = _currentFilters.minPrice ?? 0;
+            final maxPrice = _currentFilters.maxPrice ?? double.infinity;
+            return price >= minPrice && price <= maxPrice;
+          }).toList();
+    }
+
+    if (_currentFilters.selectedAmenities.isNotEmpty) {
+      filteredResults =
+          filteredResults.where((hotel) {
+            return _currentFilters.selectedAmenities.every(
+              (amenity) => hotel.cheapestRoom.amenities.contains(amenity),
+            );
+          }).toList();
+    }
+
+    // Apply sorting
+    switch (_currentSortOption) {
+      case SortOption.priceLowToHigh:
+        filteredResults.sort(
+          (a, b) => a.cheapestRoom.price.compareTo(b.cheapestRoom.price),
+        );
+        break;
+      case SortOption.priceHighToLow:
+        filteredResults.sort(
+          (a, b) => b.cheapestRoom.price.compareTo(a.cheapestRoom.price),
+        );
+        break;
+      case SortOption.ratingHighToLow:
+        filteredResults.sort(
+          (a, b) => b.hotel.latitude.compareTo(a.hotel.latitude),
+        );
+        break;
+      case SortOption.nameAZ:
+        filteredResults.sort((a, b) => a.hotel.name.compareTo(b.hotel.name));
+        break;
+      case SortOption.recommended:
+      default:
+        // Keep original order for recommended
+        break;
+    }
+
+    setState(() {
+      _currentHotelWithRoomDetails = filteredResults;
+    });
   }
 
   Widget _buildEnhancedHotelCard(
@@ -490,6 +632,7 @@ class _RoomAvailabilityResultsScreenState
   @override
   Widget build(BuildContext context) {
     final bookingState = Provider.of<BookingState>(context, listen: true);
+    final resultsCount = _currentHotelWithRoomDetails.length;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -529,6 +672,20 @@ class _RoomAvailabilityResultsScreenState
                           ],
                         ),
                         Padding(
+                          padding: const EdgeInsets.only(left: 16.0),
+                          child: Align(
+                            alignment: Alignment.bottomLeft,
+                            child: Text(
+                              'Handpicked for you ($resultsCount ${resultsCount == 1 ? 'result' : 'results'})',
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: SearchCardWithData(
                             searchParams: SearchParams(
@@ -553,6 +710,13 @@ class _RoomAvailabilityResultsScreenState
                             },
                           ),
                         ),
+
+                        // Results count and filter/sort buttons
+                        if (_currentAvailability.hasAvailableRooms() &&
+                            !_isLoading &&
+                            _errorMessage == null)
+                          _buildResultsHeader(),
+
                         if (_isLoading)
                           const Padding(
                             padding: EdgeInsets.all(20.0),
