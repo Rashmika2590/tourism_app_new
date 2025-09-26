@@ -4,7 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/profile/profile_page.dart';
 import 'package:tourism_app_new/Screens/searching_page.dart';
-import 'package:tourism_app_new/Screens/location_search_screen.dart';
+import 'package:tourism_app_new/Screens/testing/Availability/availability_search_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -101,7 +101,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      const LocationSearchScreen(),
+      RoomAvailabilityScreen(),
       const HotelSearchScreen(),
       HotelCreationScreen(), // no const here
       const ProfilePage(),

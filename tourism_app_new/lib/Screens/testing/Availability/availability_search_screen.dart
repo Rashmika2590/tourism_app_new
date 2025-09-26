@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -62,18 +63,106 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   List<Hotel> _filteredHotels = [];
   bool _isLoadingHotels = false;
 
+  // New state for map and location-based search
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  List<Hotel> _searchedHotels = [];
+  bool _initialSearchTriggered = false;
+
   @override
   void initState() {
     _tabController = TabController(length: 2, vsync: this);
-    _loadAllHotels();
+    _loadAllHotels(); // This is for the "Popular" hotels list, keep it for now
     super.initState();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Trigger initial search when location is available and it hasn't run yet
+    if (!_initialSearchTriggered) {
+      final bookingState = Provider.of<BookingState>(context);
+      if (bookingState.latitude != null && bookingState.longitude != null) {
+        // Use a post frame callback to avoid calling setState during a build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _fetchHotelsByLocation();
+          setState(() {
+            _initialSearchTriggered = true;
+          });
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _stateController.dispose();
     _tabController.dispose();
+    _mapController?.dispose();
     super.dispose();
+  }
+
+  // --- New methods for location-based search ---
+
+  Future<void> _fetchHotelsByLocation() async {
+    final bookingState = Provider.of<BookingState>(context, listen: false);
+    if (bookingState.latitude == null || bookingState.longitude == null) {
+      setState(() {
+        _errorMessage = "Current location not available.";
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingHotels = true; // Reuse existing loading state
+      _errorMessage = null;
+    });
+
+    try {
+      final hotels = await HotelApiService.searchHotels(
+        latitude: bookingState.latitude,
+        longitude: bookingState.longitude,
+        radiusKm: bookingState.radiusKm,
+      );
+      setState(() {
+        _searchedHotels = hotels;
+        _isLoadingHotels = false;
+        _updateMarkers();
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingHotels = false;
+        _errorMessage = "Failed to load nearby hotels: $e";
+      });
+    }
+  }
+
+  void _updateMarkers() {
+    final markers = _searchedHotels.map((hotel) {
+      return Marker(
+        markerId: MarkerId(hotel.id.toString()),
+        position: LatLng(hotel.latitude, hotel.longitude),
+        infoWindow: InfoWindow(
+          title: hotel.name,
+          snippet: hotel.address,
+        ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => EnhancedHotelDetailsScreen(hotel: hotel),
+            ),
+          );
+        },
+      );
+    }).toSet();
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  void _onMapCreated(GoogleMapController controller) {
+    _mapController = controller;
   }
 
   // Update checkout date based on duration - now uses provider
@@ -213,21 +302,15 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       double? longitude;
       String? state = _stateController.text.trim();
 
-      // If no location is typed, use the device's current location
+      // If no location is typed, use the new location-based search flow
       if (state.isEmpty) {
-        final position = await LocationService.getCurrentPosition();
-        latitude = position.latitude;
-        longitude = position.longitude;
-
-        // For display purposes, update the text field with the location name
-        final placemark = await LocationService.getPlacemarkFromPosition(
-          position,
-        );
-        state = placemark.locality ?? placemark.administrativeArea;
-        if (state != null) {
-          _stateController.text = state;
-        }
+        await _fetchHotelsByLocation();
+        setState(() => _isLoading = false);
+        return; // Exit the old flow
       }
+
+      // If a state is typed, proceed with the old availability logic (or this can be updated too)
+      // For now, we'll keep the old logic for state-based search, but ideally, this would also be unified.
 
       // Calculate check-out date based on duration
       final checkOutDate = bookingState.checkInDate.add(
@@ -245,10 +328,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        //state: state != '' ? state : null,
-        latitude: latitude,
-        longitude: longitude,
-        radiusKm: bookingState.radiusKm,
+        state: state, // Pass the state for the old search method
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
@@ -258,22 +338,20 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         _isLoading = false;
       });
 
-      bookingState.setState(state ?? '');
+      bookingState.setState(state);
 
       if (availability.hotelIds.isNotEmpty) {
         await _fetchHotelAndRoomDetails();
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => RoomAvailabilityResultsScreen(
-                  availability: availability,
-                  hotelWithRoomDetails: _hotelWithRoomDetails,
-                ),
+            builder: (context) => RoomAvailabilityResultsScreen(
+              availability: availability,
+              hotelWithRoomDetails: _hotelWithRoomDetails,
+            ),
           ),
         );
       } else {
-        // Show a message if no results are found
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('No hotels found for the selected criteria.'),
@@ -994,93 +1072,82 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                 ),
               ],
 
-              // Popular Hotels Section
+              // --- Location Based Search UI ---
               const SizedBox(height: 20),
-              Text(
-                "Popular Hotels",
-                style: TextStyle(
-                  fontSize: _getResponsiveFontSize(context, 18),
-                  fontWeight: FontWeight.bold,
+              if (bookingState.latitude != null &&
+                  bookingState.longitude != null) ...[
+                // Radius Filter
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [5, 10, 20].map((radius) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      child: ChoiceChip(
+                        label: Text('$radius km'),
+                        selected: bookingState.radiusKm == radius,
+                        onSelected: (selected) {
+                          if (selected) {
+                            bookingState.setLocation(radius: radius.toDouble());
+                            _fetchHotelsByLocation();
+                          }
+                        },
+                      ),
+                    );
+                  }).toList(),
                 ),
-              ),
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              _isLoadingHotels
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredHotels.isEmpty
-                  ? const Text("No hotels available")
-                  : SizedBox(
-                    height: 200,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _filteredHotels.length,
-                      separatorBuilder:
-                          (context, index) =>
-                              const SizedBox(width: 20), // space between cards
-                      itemBuilder: (context, index) {
-                        final hotel = _filteredHotels[index];
-                        return SizedBox(
-                          width: 300,
-                          child: HotelCard(
-                            tag: "Popular",
-                            hotel: hotel,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) => EnhancedHotelDetailsScreen(
-                                        hotel: hotel,
+                // Map View
+                SizedBox(
+                  height: 250,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: GoogleMap(
+                      onMapCreated: _onMapCreated,
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(
+                          bookingState.latitude!,
+                          bookingState.longitude!,
+                        ),
+                        zoom: 12,
+                      ),
+                      markers: _markers,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Hotels List
+                _isLoadingHotels
+                    ? const Center(child: CircularProgressIndicator())
+                    : _searchedHotels.isEmpty
+                        ? const Center(child: Text("No hotels found nearby."))
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _searchedHotels.length,
+                            itemBuilder: (context, index) {
+                              final hotel = _searchedHotels[index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: HotelCard(
+                                  hotel: hotel,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EnhancedHotelDetailsScreen(
+                                          hotel: hotel,
+                                        ),
                                       ),
+                                    );
+                                  },
                                 ),
                               );
                             },
                           ),
-                        );
-                      },
-                    ),
-                  ),
-
-              //SizedBox(height: screenHeight * 0.001),
-
-              // Top Rated Hotels Section
-              Text(
-                "Featured Hotels",
-                style: TextStyle(
-                  fontSize: _getResponsiveFontSize(context, 18),
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-
-              _isLoadingHotels
-                  ? const Center(child: CircularProgressIndicator())
-                  : _filteredHotels.isEmpty
-                  ? const Text("No hotels available")
-                  : SizedBox(
-                    height: 200,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: _filteredHotels.length,
-                      separatorBuilder:
-                          (context, index) =>
-                              const SizedBox(width: 20), // space between cards
-                      itemBuilder: (context, index) {
-                        final hotel = _filteredHotels[index];
-                        return SizedBox(
-                          width: 300,
-                          child: HotelCard(
-                            tag: "Featured",
-                            hotel: hotel,
-                            onTap: () {
-                              _stateController.text = hotel.state;
-                              bookingState.setState(hotel.state);
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                  ),
+              ],
 
               SizedBox(height: screenHeight * 0.1),
             ],
