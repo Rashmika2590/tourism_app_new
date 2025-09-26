@@ -6,7 +6,7 @@ class RoomAvailabilityParams {
   final String? state;
   final double? latitude;
   final double? longitude;
-  final double? radiusKm;
+  final double? maxDistanceKm;
   final int? adultCount;
   final int? childrenCount;
 
@@ -18,7 +18,7 @@ class RoomAvailabilityParams {
     this.state,
     this.latitude,
     this.longitude,
-    this.radiusKm,
+    this.maxDistanceKm,
     this.adultCount,
     this.childrenCount,
   });
@@ -34,7 +34,8 @@ class RoomAvailabilityParams {
     if (state != null) params['state'] = state;
     if (latitude != null) params['latitude'] = latitude.toString();
     if (longitude != null) params['longitude'] = longitude.toString();
-    if (radiusKm != null) params['radius_km'] = radiusKm.toString();
+    if (maxDistanceKm != null)
+      params['max_distance_km'] = maxDistanceKm.toString();
     if (adultCount != null) params['adult_count'] = adultCount.toString();
     if (childrenCount != null)
       params['children_count'] = childrenCount.toString();
