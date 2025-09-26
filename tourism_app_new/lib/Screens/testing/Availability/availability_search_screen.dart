@@ -248,7 +248,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         //state: state != '' ? state : null,
         latitude: latitude,
         longitude: longitude,
-        maxDistanceKm: 10, // Default radius of 10km
+        radiusKm: bookingState.radiusKm,
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
