@@ -1,11 +1,15 @@
 // Screens/booking_screen.dart
+// Screens/booking_screen.dart
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/booking_api_service.dart';
 import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/user_model.dart';
+import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
 class BookingScreen extends StatefulWidget {
   final Room room;
@@ -15,6 +19,7 @@ class BookingScreen extends StatefulWidget {
   final String checkOutTime;
   final int adultCount;
   final int childrenCount;
+  final Hotel hotel;
 
   const BookingScreen({
     Key? key,
@@ -25,6 +30,7 @@ class BookingScreen extends StatefulWidget {
     required this.checkOutTime,
     required this.adultCount,
     required this.childrenCount,
+    required this.hotel,
   }) : super(key: key);
 
   @override
@@ -46,16 +52,13 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isBookingForSomeoneElse = false;
   double _totalPrice = 0.0;
   double _serviceFee = 5.0;
+  User? _currentUser;
 
   @override
   void initState() {
     super.initState();
     _calculateTotalPrice();
-    // TODO: Load user details from app's registered user
-    // For now, set some dummy data
-    _nameController.text = '';
-    _emailController.text = '';
-    _phoneController.text = '';
+    _loadUserData();
   }
 
   @override
@@ -66,6 +69,17 @@ class _BookingScreenState extends State<BookingScreen> {
     _specialRequestController.dispose();
     _promoCodeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = await SharedPrefUser.getUser();
+      setState(() {
+        _currentUser = user;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+    }
   }
 
   void _calculateTotalPrice() {
@@ -97,7 +111,18 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _submitBooking() async {
-    if (!_formKey.currentState!.validate()) return;
+    // Debug print to check if method is called
+    print('Submit booking called');
+
+    if (!_agreeToTerms) {
+      _showErrorDialog('Please agree to the Terms & Conditions');
+      return;
+    }
+
+    if (_currentUser == null) {
+      _showErrorDialog('User data not available. Please try again.');
+      return;
+    }
 
     setState(() => _isBooking = true);
 
@@ -121,14 +146,17 @@ class _BookingScreenState extends State<BookingScreen> {
         bookingTime: DateTime.now().toIso8601String(),
       );
 
+      print('Sending booking request...');
       final response = await BookingApiService.createBooking(bookingRequest);
+      print('Booking response received: ${response.id}');
 
       if (mounted) {
         _showSuccessDialog(response);
       }
     } catch (e) {
+      print('Booking error: $e');
       if (mounted) {
-        _showErrorDialog(e.toString());
+        _showErrorDialog('Booking failed: ${e.toString()}');
       }
     } finally {
       if (mounted) {
@@ -138,6 +166,7 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _showSuccessDialog(BookingResponse booking) {
+    print('Showing success dialog');
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -152,7 +181,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 if (booking.id != null) Text('Booking ID: ${booking.id}'),
                 Text('Room: ${widget.room.name}'),
                 Text('Status: ${booking.status}'),
-                Text('Total Price: LKR ${booking.price.toStringAsFixed(0)}'),
+                Text('Total Price: LKR ${_totalPrice.toStringAsFixed(0)}'),
                 const SizedBox(height: 8),
                 const Text(
                   'You will receive a confirmation email shortly.',
@@ -163,29 +192,27 @@ class _BookingScreenState extends State<BookingScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
-                  Navigator.of(context).pop();
+                  Navigator.of(context).pop(); // Close dialog
+                  Navigator.of(context).pop(); // Go back to previous screen
                 },
                 child: const Text('OK'),
               ),
             ],
           ),
-    );
-  }
-
-  Future<User?> _loadUser() async {
-    return await SharedPrefUser.getUser(); // This returns your User model
+    ).then((value) {
+      print('Dialog closed');
+    });
   }
 
   void _showErrorDialog(String error) {
+    print('Showing error dialog: $error');
     showDialog(
       context: context,
       builder:
           (context) => AlertDialog(
             icon: const Icon(Icons.error, color: Colors.red, size: 60),
-            title: const Text('Booking Failed'),
-            content: Text(error),
+            title: const Text('Booking Failed, Not available'),
+            content: Text("error"),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -202,33 +229,42 @@ class _BookingScreenState extends State<BookingScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
-          color: isSelected ? Colors.teal : Colors.grey.shade300,
+          color: isSelected ? AppColors.mainGreen : Colors.grey.shade300,
           width: isSelected ? 2 : 1,
         ),
       ),
       child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+        visualDensity: const VisualDensity(horizontal: 0, vertical: -2),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
+            color: isSelected ? AppColors.mainGreen : Colors.grey.shade300,
+            borderRadius: BorderRadius.circular(20),
           ),
-          child: Icon(icon, color: Colors.grey.shade600),
+          child: Icon(
+            icon,
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            size: 20,
+          ),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
+        ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 10),
         ),
         trailing:
             isSelected
                 ? Container(
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: Colors.teal,
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: AppColors.mainGreen,
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.check, color: Colors.white, size: 14),
@@ -243,24 +279,6 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // void _handleBookingForSomeoneElse() {
-  //   setState(() {
-  //     _isBookingForSomeoneElse = !_isBookingForSomeoneElse;
-  //     if (!_isBookingForSomeoneElse) {
-  //       // Reset to default user details
-  //       _nameController.text = 'Amantha Nirmal';
-  //       _emailController.text = 'amantha.nirmal@email.com';
-  //       _phoneController.text = '+94 77 123 4567';
-  //     } else {
-  //       // Clear fields for someone else's details
-  //       _nameController.clear();
-  //       _emailController.clear();
-  //       _phoneController.clear();
-  //     }
-  //   });
-  // }
-
-  // Add this method to handle the tap
   void _handleBookingForSomeoneElse() {
     setState(() {
       _isBookingForSomeoneElse = !_isBookingForSomeoneElse;
@@ -287,8 +305,6 @@ class _BookingScreenState extends State<BookingScreen> {
         child: Column(
           children: [
             // Booking details section
-
-            // Updated Container widget
             Container(
               margin: const EdgeInsets.all(16),
               padding: const EdgeInsets.all(16),
@@ -574,7 +590,7 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
             const Text(
               '*Free cancellation within 24 hours of booking',
-              style: TextStyle(color: Colors.teal, fontSize: 12),
+              style: TextStyle(color: AppColors.mainGreen, fontSize: 12),
             ),
 
             // Guest details form
@@ -585,39 +601,31 @@ class _BookingScreenState extends State<BookingScreen> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: FutureBuilder<User?>(
-                future: _loadUser(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (!snapshot.hasData) {
-                    return const Text("No user data found");
-                  }
-
-                  final user = snapshot.data!;
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildDetailRow("Name", user.name),
-                      const SizedBox(height: 12),
-                      _buildDetailRow("E-mail", user.email),
-                      const SizedBox(height: 12),
-                      _buildDetailRow("Phone", user.phone),
-                      const SizedBox(height: 12),
-                      _buildDetailRow(
-                        "Country",
-                        user.role == 'user' ? 'Sri Lanka' : 'Sri Lanka',
-                      ), // if you stored country there
-                    ],
-                  );
-                },
-              ),
+              child:
+                  _currentUser == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailRow("Name", _currentUser!.name),
+                          const SizedBox(height: 12),
+                          _buildDetailRow("E-mail", _currentUser!.email),
+                          const SizedBox(height: 12),
+                          _buildDetailRow("Phone", _currentUser!.phone),
+                          const SizedBox(height: 12),
+                          _buildDetailRow(
+                            "Country",
+                            _currentUser!.role == 'user'
+                                ? 'Sri Lanka'
+                                : 'Sri Lanka',
+                          ),
+                        ],
+                      ),
             ),
 
+            // ... rest of your existing UI code remains the same ...
+            // Price details section, Payment methods, etc.
             const SizedBox(height: 16),
-
-            // Price details section
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
@@ -696,7 +704,7 @@ class _BookingScreenState extends State<BookingScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.grey.shade200,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -787,25 +795,35 @@ class _BookingScreenState extends State<BookingScreen> {
               child: Column(
                 children: [
                   // Terms & Conditions
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+                  Material(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Terms & Conditions',
-                          style: TextStyle(fontWeight: FontWeight.w500),
+                      onTap: () {
+                        TermsConditionsWidget.showTermsAndConditions(
+                          context: context,
+                          terms: widget.hotel?.terms ?? [],
+                          title: "Terms & Conditions",
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text(
+                              'Terms & Conditions',
+                              style: TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            Icon(Icons.chevron_right),
+                          ],
                         ),
-                        Icon(Icons.chevron_right),
-                      ],
+                      ),
                     ),
                   ),
 
-                  const SizedBox(height: 12),
+                  //const SizedBox(height: 16),
 
                   // Special requests
                   Container(
@@ -954,6 +972,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   Row(
                     children: [
                       Checkbox(
+                        activeColor: AppColors.mainGreen,
                         value: _agreeToTerms,
                         onChanged: (value) {
                           setState(() {
@@ -966,28 +985,43 @@ class _BookingScreenState extends State<BookingScreen> {
                       Expanded(
                         child: RichText(
                           text: TextSpan(
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                            ),
-                            children: const [
-                              TextSpan(text: 'I agree to the '),
+                            style: const TextStyle(
+                              color: Colors.black,
+                            ), // base style
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
                               TextSpan(
                                 text: 'Terms & Conditions',
-                                style: TextStyle(
-                                  color: Colors.blue,
+                                style: const TextStyle(
+                                  color: AppColors.mainGreen,
                                   decoration: TextDecoration.underline,
                                 ),
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        TermsConditionsWidget.showTermsAndConditions(
+                                          context: context,
+                                          terms:
+                                              widget.hotel?.terms ??
+                                              [], // 👈 pass hotel terms list
+                                          title: "Terms & Conditions",
+                                        );
+                                      },
                               ),
-                              TextSpan(text: ' and '),
+                              const TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
-                                style: TextStyle(
-                                  color: Colors.blue,
+                                style: const TextStyle(
+                                  color: AppColors.mainGreen,
                                   decoration: TextDecoration.underline,
                                 ),
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        // 👉 show Privacy Policy page or bottom sheet here
+                                      },
                               ),
-                              TextSpan(text: '.'),
+                              const TextSpan(text: '.'),
                             ],
                           ),
                         ),
@@ -1011,19 +1045,17 @@ class _BookingScreenState extends State<BookingScreen> {
         decoration:
             (_isBooking || !_agreeToTerms)
                 ? BoxDecoration(
-                  color: Colors.grey, // disabled state
+                  color: Colors.grey,
                   borderRadius: BorderRadius.circular(28),
                 )
                 : BoxDecoration(
-                  gradient:
-                      AppGradients
-                          .primaryGradient, // <-- your gradient from constants
+                  color: AppColors.mainGreen,
                   borderRadius: BorderRadius.circular(28),
                 ),
         child: FloatingActionButton.extended(
           onPressed: (_isBooking || !_agreeToTerms) ? null : _submitBooking,
-          backgroundColor: Colors.transparent, // make FAB itself transparent
-          elevation: 0, // so gradient shows nicely
+          backgroundColor: Colors.transparent,
+          elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),

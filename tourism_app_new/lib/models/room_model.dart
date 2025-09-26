@@ -6,6 +6,7 @@ class Room {
   final double price;
   final int maxOccupancy;
   final List<String> amenities;
+  final List<String> images; // Added images field
 
   Room({
     required this.id,
@@ -15,6 +16,7 @@ class Room {
     required this.price,
     required this.maxOccupancy,
     required this.amenities,
+    this.images = const [], // Default empty list
   });
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -36,6 +38,24 @@ class Room {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      images:
+          (json['images'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'hotel_id': hotelId,
+      'name': name,
+      'type': type,
+      'price': price,
+      'max_occupancy': maxOccupancy,
+      'amenities': amenities,
+      'images': images,
+    };
   }
 }

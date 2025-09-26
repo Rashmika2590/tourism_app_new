@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/availability_model.dart';
+import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/booking_page.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
 class RoomsListScreen extends StatefulWidget {
-  final int hotelId;
+  final Hotel hotel;
   final DateTime? checkInDate;
   final String? checkInTime;
   final DateTime? checkOutDate;
@@ -17,7 +19,7 @@ class RoomsListScreen extends StatefulWidget {
 
   const RoomsListScreen({
     Key? key,
-    required this.hotelId,
+    required this.hotel,
     this.checkInDate,
     this.checkInTime,
     this.checkOutDate,
@@ -40,6 +42,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   int _currentImageIndex = 0;
   Set<String> _selectedAddOns = {};
   List<Room> _filteredRooms = [];
+  Set<int> _availableRoomIds = {};
 
   // Dummy data for each room type (will be replaced by actual room data)
   final Map<String, List<String>> _roomImages = {
@@ -93,14 +96,20 @@ class _RoomsListScreenState extends State<RoomsListScreen>
     _dataFuture.then((data) {
       final allRooms = data[0] as List<Room>;
       final availability = data[1] as RoomAvailability;
-      final availableRoomIds = availability.getRoomIdsForHotel(widget.hotelId);
+      _availableRoomIds =
+          availability
+              .getRoomIdsForHotel(widget.hotel.id)
+              .map((id) => id.toInt())
+              .toSet();
 
       // Filter rooms properly
       final availableRooms =
-          allRooms.where((room) => availableRoomIds.contains(room.id)).toList();
+          allRooms
+              .where((room) => _availableRoomIds.contains(room.id))
+              .toList();
       final unavailableRooms =
           allRooms
-              .where((room) => !availableRoomIds.contains(room.id))
+              .where((room) => !_availableRoomIds.contains(room.id))
               .toList();
       _filteredRooms = availableRooms + unavailableRooms;
 
@@ -117,7 +126,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   }
 
   Future<List<dynamic>> _fetchRoomsAndAvailability() async {
-    final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotelId);
+    final roomsFuture = RoomApiService.getRoomsByHotelId(widget.hotel.id);
     final availabilityFuture = RoomAvailabilityService.searchAvailability(
       checkInDate: widget.checkInDate!,
       checkInTime: widget.checkInTime!,
@@ -173,8 +182,14 @@ class _RoomsListScreenState extends State<RoomsListScreen>
         widget.childrenCount != null;
   }
 
+  // Helper method to check if selected room is available
+  bool _isSelectedRoomAvailable() {
+    return _selectedRoom != null &&
+        _availableRoomIds.contains(_selectedRoom!.id);
+  }
+
   void _navigateToBooking() {
-    if (_selectedRoom == null) return;
+    if (_selectedRoom == null || !_isSelectedRoomAvailable()) return;
 
     Navigator.push(
       context,
@@ -188,6 +203,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
               checkOutTime: widget.checkOutTime!,
               adultCount: widget.adultCount!,
               childrenCount: widget.childrenCount!,
+              hotel: widget.hotel,
             ),
       ),
     );
@@ -404,7 +420,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
           final allRooms = snapshot.data![0] as List<Room>;
           final availability = snapshot.data![1] as RoomAvailability;
           final availableRoomIds = availability.getRoomIdsForHotel(
-            widget.hotelId,
+            widget.hotel.id,
           );
 
           final availableRooms =
@@ -433,7 +449,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(widget.hotelId.toString()),
+                    Text(
+                      "Max Occupancy: ${_selectedRoom?.maxOccupancy} guests",
+                    ),
                     const SizedBox(height: 12),
                     TabBar(
                       controller: _tabController,
@@ -515,21 +533,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                   ),
                                 ),
                                 const SizedBox(height: 2),
-                                // Text(
-                                //   isAvailable
-                                //       ? "≈ ${room.price.toInt()} LKR"
-                                //       : "Unavailable",
-                                //   style: TextStyle(
-                                //     color:
-                                //         isSelected
-                                //             ? (isAvailable
-                                //                 ? AppColors.mainGreen
-                                //                 : Colors.red)
-                                //             : Colors.grey[700],
-                                //     fontSize: 12,
-                                //     fontWeight: FontWeight.w500,
-                                //   ),
-                                // ),
                               ],
                             );
                           }).toList(),
@@ -776,15 +779,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                               padding: EdgeInsets.only(
                                                 top: 8.0,
                                               ),
-                                              // child: Text(
-                                              //   "see more...",
-                                              //   style: TextStyle(
-                                              //     color: Colors.blue,
-                                              //     fontSize: 14,
-                                              //     decoration:
-                                              //         TextDecoration.underline,
-                                              //   ),
-                                              // ),
                                             ),
                                           ),
 
@@ -903,7 +897,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                                           fontSize: 12,
                                                         ),
                                                       ),
-                                                      // Removed price display here
                                                     ],
                                                   ),
                                                 ),
@@ -1141,27 +1134,43 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        // Show terms and conditions
-                      },
-                      child: Text(
-                        "Terms & Conditions Apply",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          decoration: TextDecoration.underline,
+                    widget.hotel != null
+                        ? TermsConditionsWidget.buildTermsButton(
+                          context: context,
+                          terms: widget.hotel!.terms,
+                          text: "Terms & Conditions Apply",
+                        )
+                        : GestureDetector(
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Terms not available'),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            "Terms & Conditions Apply",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
                   ],
                 ),
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed: _navigateToBooking,
+                onPressed:
+                    _selectedRoom != null && _isSelectedRoomAvailable()
+                        ? _navigateToBooking
+                        : null,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.mainGreen,
+                  backgroundColor:
+                      _selectedRoom != null && _isSelectedRoomAvailable()
+                          ? AppColors.mainGreen
+                          : Colors.grey,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
@@ -1171,8 +1180,10 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                     borderRadius: BorderRadius.circular(25),
                   ),
                 ),
-                child: const Text(
-                  "Proceed",
+                child: Text(
+                  _selectedRoom != null && !_isSelectedRoomAvailable()
+                      ? "Unavailable"
+                      : "Proceed",
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                 ),
               ),

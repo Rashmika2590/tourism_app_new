@@ -26,6 +26,12 @@ class MyApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           textTheme: GoogleFonts.poppinsTextTheme(Theme.of(context).textTheme),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            centerTitle: true,
+          ),
           scaffoldBackgroundColor: Colors.white,
         ),
         initialRoute: AppRoutes.splachscreen,
