@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
-import 'package:tourism_app_new/widgets/property_card.dart';
+import 'package:tourism_app_new/widgets/hotel_card.dart';
 
 class HotelSearchScreen extends StatefulWidget {
   const HotelSearchScreen({Key? key}) : super(key: key);

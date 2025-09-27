@@ -4,6 +4,10 @@ import 'package:tourism_app_new/widgets/expandable_map_widget.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 
 class PropertyDetailsPage extends StatefulWidget {
+  final int hotelId;
+
+  const PropertyDetailsPage({super.key, required this.hotelId});
+
   @override
   _PropertyDetailsPageState createState() => _PropertyDetailsPageState();
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
+import 'package:tourism_app_new/widgets/filtering%20option.dart';
 
 class BookingState extends ChangeNotifier {
   // --- Booking fields ---
@@ -13,6 +16,12 @@ class BookingState extends ChangeNotifier {
   String specialRequest = '';
   double price = 0.0;
   String paymentMethod = 'Card'; // default payment method
+
+  // --- Search and Filter fields ---
+  double? latitude;
+  double? longitude;
+  double radiusKm = 10.0; // Default radius
+  FilterOptions filterOptions = FilterOptions();
 
   // --- Computed property for checkout ---
   DateTime get checkOutDate {
@@ -73,6 +82,37 @@ class BookingState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setLocation({double? lat, double? lon, double? radius}) {
+    if (lat != null) latitude = lat;
+    if (lon != null) longitude = lon;
+    if (radius != null) radiusKm = radius;
+    notifyListeners();
+  }
+
+  void setFilterOptions(FilterOptions options) {
+    filterOptions = options;
+    if (options.maxDistance != null) {
+      radiusKm = options.maxDistance!;
+    }
+    notifyListeners();
+  }
+
+  Future<void> fetchInitialLocation() async {
+    try {
+      var status = await Permission.location.request();
+      if (status.isGranted) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        setLocation(lat: position.latitude, lon: position.longitude);
+      } else {
+        print("Location permission denied");
+      }
+    } catch (e) {
+      print("Failed to get location: $e");
+    }
+  }
+
   // --- Reset all values (optional) ---
   void resetBooking() {
     roomId = 0;
@@ -85,6 +125,9 @@ class BookingState extends ChangeNotifier {
     specialRequest = '';
     price = 0.0;
     paymentMethod = 'Card';
+    filterOptions = FilterOptions();
+    radiusKm = 10.0;
+    // Do not reset location
     notifyListeners();
   }
 

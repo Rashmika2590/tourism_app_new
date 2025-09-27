@@ -6,12 +6,12 @@ import 'package:tourism_app_new/widgets/filtering%20option.dart';
 
 class FilterBottomSheet extends StatefulWidget {
   final FilterOptions currentFilters;
-  final List<HotelWithRoomDetails> hotels;
+  final List<HotelWithRoomDetails>? hotels;
 
   const FilterBottomSheet({
     super.key,
     required this.currentFilters,
-    required this.hotels,
+    this.hotels,
   });
 
   @override
@@ -44,8 +44,8 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     );
 
     // Calculate price range from available hotels
-    if (widget.hotels.isNotEmpty) {
-      final prices = widget.hotels.map((h) => h.cheapestRoom.price).toList();
+    if (widget.hotels != null && widget.hotels!.isNotEmpty) {
+      final prices = widget.hotels!.map((h) => h.cheapestRoom.price).toList();
       _minPriceRange = prices.reduce((a, b) => a < b ? a : b);
       _maxPriceRange = prices.reduce((a, b) => a > b ? a : b);
     } else {
@@ -110,9 +110,11 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Price Range
-                  _buildPriceRangeSection(),
-                  const SizedBox(height: 24),
+                  // Price Range - Only show if hotel price data is available
+                  if (widget.hotels != null && widget.hotels!.isNotEmpty) ...[
+                    _buildPriceRangeSection(),
+                    const SizedBox(height: 24),
+                  ],
 
                   // Rating
                   _buildRatingSection(),
@@ -429,17 +431,17 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Distance from Center (km)',
+          'Radius from current location (km)',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 16),
         Slider(
-          value: _tempFilters.maxDistance ?? 50,
-          min: 0,
-          max: 100,
-          divisions: 20,
+          value: _tempFilters.maxDistance ?? 10,
+          min: 1,
+          max: 50,
+          divisions: 49,
           activeColor: AppColors.buttonColor,
-          label: '${(_tempFilters.maxDistance ?? 50).round()} km',
+          label: '${(_tempFilters.maxDistance ?? 10).round()} km',
           onChanged: (value) {
             setState(() {
               _tempFilters = _tempFilters.copyWith(maxDistance: value);
@@ -447,7 +449,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
           },
         ),
         Text(
-          'Within ${(_tempFilters.maxDistance ?? 50).round()} km',
+          'Within ${(_tempFilters.maxDistance ?? 10).round()} km',
           style: const TextStyle(fontWeight: FontWeight.w500),
         ),
       ],
