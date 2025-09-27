@@ -1,154 +1,187 @@
-// import 'package:flutter/material.dart';
-// import 'package:tourism_app_new/Screens/property_details_page.dart';
-// import 'package:tourism_app_new/core/services/api_service.dart';
-// import 'package:tourism_app_new/models/property_model.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
-// import 'package:geocoding/geocoding.dart';
-// import 'package:tourism_app_new/widgets/property_card.dart'; // Import PropertyCard
+import 'package:flutter/material.dart';
+import 'package:tourism_app_new/Screens/property_details_page.dart';
+import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
+import 'package:tourism_app_new/models/property_model.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:tourism_app_new/widgets/property_card.dart'; // Import PropertyCard
 
-// class PropertyListPage extends StatefulWidget {
-//   final String city;
+class PropertyListPage extends StatefulWidget {
+  final double latitude;
+  final double longitude;
+  final int adultCount;
+  final int childrenCount;
+  final String checkInDate;
+  final String checkInTime;
+  final String checkOutDate;
+  final String checkOutTime;
 
-//   const PropertyListPage({super.key, required this.city});
+  const PropertyListPage({
+    super.key,
+    required this.latitude,
+    required this.longitude,
+    required this.adultCount,
+    required this.childrenCount,
+    required this.checkInDate,
+    required this.checkInTime,
+    required this.checkOutDate,
+    required this.checkOutTime,
+  });
 
-//   @override
-//   State<PropertyListPage> createState() => _PropertyListPageState();
-// }
+  @override
+  State<PropertyListPage> createState() => _PropertyListPageState();
+}
 
-// class _PropertyListPageState extends State<PropertyListPage> {
-//   late Future<List<Property>> _filteredProperties;
-//   LatLng? _targetLocation;
+class _PropertyListPageState extends State<PropertyListPage> {
+  late Future<List<Property>> _properties;
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     _filteredProperties = fetchFilteredPropertiesByCity(widget.city);
-//     _loadLocationFromCity();
-//   }
+  @override
+  void initState() {
+    super.initState();
+    _properties = _fetchProperties();
+  }
 
-//   Future<void> _loadLocationFromCity() async {
-//     try {
-//       List<Location> locations = await locationFromAddress(widget.city);
-//       if (locations.isNotEmpty) {
-//         final loc = locations.first;
-//         setState(() {
-//           _targetLocation = LatLng(loc.latitude, loc.longitude);
-//         });
-//       }
-//     } catch (e) {
-//       print('Error finding location: $e');
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text('Location not found for "${widget.city}"')),
-//       );
-//     }
-//   }
+  Future<List<Property>> _fetchProperties() async {
+    try {
+      final availability = await RoomAvailabilityService.searchAvailability(
+        checkInDate: DateTime.parse(widget.checkInDate),
+        checkInTime: widget.checkInTime,
+        checkOutDate: DateTime.parse(widget.checkOutDate),
+        coTime: widget.checkOutTime,
+        latitude: widget.latitude,
+        longitude: widget.longitude,
+        maxDistanceKm: 50, // Default search radius
+        adultCount: widget.adultCount,
+        childrenCount: widget.childrenCount,
+      );
 
-//   void _onMapCreated(GoogleMapController controller) {}
+      if (!availability.hasAvailableRooms()) {
+        return [];
+      }
 
-//   Future<List<Property>> fetchFilteredPropertiesByCity(String city) async {
-//     try {
-//       final normalizedCity = city.trim().toLowerCase().replaceAll(
-//         RegExp(r'\s+'),
-//         ' ',
-//       );
-//       final allProperties = await ApiService.filterProperties({}, city: city);
+      final List<Future<Hotel>> futureHotels = availability.hotelIds
+          .map((id) => HotelApiService.getHotelById(id))
+          .toList();
 
-//       for (var p in allProperties) {
-//         print("🔍 Property: ${p.propertyName} | City: ${p.address.city}");
-//       }
+      final hotels = await Future.wait(futureHotels);
 
-//       return allProperties
-//           .where((p) => (p.address.city).toLowerCase().contains(normalizedCity))
-//           .toList();
-//     } catch (e) {
-//       debugPrint('Error fetching properties: $e');
-//       return [];
-//     }
-//   }
+      return hotels.map((hotel) => _mapHotelToProperty(hotel)).toList();
+    } catch (e) {
+      print('Error fetching properties: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load properties: $e')),
+      );
+      return [];
+    }
+  }
 
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(title: Text('Properties in ${widget.city}')),
-//       body: FutureBuilder<List<Property>>(
-//         future: _filteredProperties,
-//         builder: (context, snapshot) {
-//           if (snapshot.connectionState == ConnectionState.waiting) {
-//             return const Center(child: CircularProgressIndicator());
-//           }
-//           if (snapshot.hasError) {
-//             return Center(child: Text('Error: ${snapshot.error}'));
-//           }
+  Property _mapHotelToProperty(Hotel hotel) {
+    return Property(
+      id: hotel.id.toString(),
+      propertyName: hotel.name,
+      address: Address(
+        no: '',
+        street: hotel.address,
+        city: hotel.state,
+        province: '',
+        country: '',
+        postalCode: hotel.postalCode,
+        latitude: hotel.latitude,
+        longitude: hotel.longitude,
+      ),
+      propertyImage: PropertyImage(
+        primaryImageUrl: hotel.images.isNotEmpty ? hotel.images.first : '',
+        secondaryImages: hotel.images.length > 1 ? hotel.images.sublist(1) : [],
+      ),
+      rating: Rating(
+        userId: '',
+        rating: hotel.rating ?? 0.0,
+        comment: '',
+      ),
+      propertyType: 1,
+      availability: 1,
+      allowShortStays: hotel.enableShortStay,
+      allowLongStays: hotel.enableLongStay,
+      userRole: 0,
+      numOfHours: 0,
+      guestStayType: 1,
+      guestCapacities: [],
+      packages: [],
+    );
+  }
 
-//           final properties = snapshot.data!;
-//           print("🧱 UI Rendering ${properties.length} property cards");
+  void _onMapCreated(GoogleMapController controller) {}
 
-//           if (properties.isEmpty) {
-//             return const Center(child: Text('No properties found'));
-//           }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Available Properties')),
+      body: FutureBuilder<List<Property>>(
+        future: _properties,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-//           return SingleChildScrollView(
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.stretch,
-//               children: [
-//                 // 🗺️ Google Map
-//                 if (_targetLocation != null)
-//                   SizedBox(
-//                     height: 300,
-//                     child: GoogleMap(
-//                       onMapCreated: _onMapCreated,
-//                       initialCameraPosition: CameraPosition(
-//                         target: _targetLocation!,
-//                         zoom: 12.0,
-//                       ),
-//                       markers: {
-//                         Marker(
-//                           markerId: const MarkerId("searchCity"),
-//                           position: _targetLocation!,
-//                           infoWindow: InfoWindow(title: widget.city),
-//                         ),
-//                       },
-//                       myLocationEnabled: true,
-//                       zoomGesturesEnabled: true,
-//                       scrollGesturesEnabled: true,
-//                     ),
-//                   )
-//                 else
-//                   const Center(
-//                     child: Padding(
-//                       padding: EdgeInsets.symmetric(vertical: 20),
-//                       child: CircularProgressIndicator(),
-//                     ),
-//                   ),
-//                 // 🔽 Property Cards
-//                 Container(
-//                   padding: const EdgeInsets.symmetric(horizontal: 30),
-//                   child: ListView.builder(
-//                     shrinkWrap: true,
-//                     physics: const NeverScrollableScrollPhysics(),
-//                     itemCount: properties.length,
-//                     itemBuilder: (context, index) {
-//                       final property = properties[index];
-//                       return PropertyCard(
-//                         property: property,
-//                         onTap: () {
-//                           Navigator.push(
-//                             context,
-//                             MaterialPageRoute(
-//                               builder: (context) => PropertyDetailsPage(),
-//                             ),
-//                           );
-//                         },
-//                       );
-//                     },
-//                   ),
-//                 ),
-//                 const SizedBox(height: 10),
-//               ],
-//             ),
-//           );
-//         },
-//       ),
-//     );
-//   }
-// }
+          final properties = snapshot.data!;
+          if (properties.isEmpty) {
+            return const Center(child: Text('No properties found'));
+          }
+
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 300,
+                  child: GoogleMap(
+                    onMapCreated: _onMapCreated,
+                    initialCameraPosition: CameraPosition(
+                      target: LatLng(widget.latitude, widget.longitude),
+                      zoom: 12.0,
+                    ),
+                    markers: properties
+                        .map(
+                          (p) => Marker(
+                            markerId: MarkerId(p.id),
+                            position: LatLng(
+                              p.address.latitude,
+                              p.address.longitude,
+                            ),
+                            infoWindow: InfoWindow(title: p.propertyName),
+                          ),
+                        )
+                        .toSet(),
+                  ),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: properties.length,
+                  itemBuilder: (context, index) {
+                    final property = properties[index];
+                    return PropertyCard(
+                      property: property,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PropertyDetailsPage(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
