@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_creation.dart';
-import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
+import 'package:tourism_app_new/Services/Providers/favourite_provider.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
@@ -36,13 +36,11 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 class _EnhancedHotelDetailsScreenState
     extends State<EnhancedHotelDetailsScreen> {
   late SearchParams _searchParams;
-  late bool isFavorite;
   int currentImageIndex = 0;
   List<Room> hotelRooms = [];
   bool isLoadingRooms = true;
   Room? cheapestRoom;
   Set<String> allAmenities = {};
-  bool isUpdatingFavorite = false;
 
   // Availability card state variables
   bool showDatePicker = false;
@@ -116,50 +114,6 @@ class _EnhancedHotelDetailsScreenState
       print('Error loading hotel rooms: $e');
       setState(() {
         isLoadingRooms = false;
-      });
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    if (isUpdatingFavorite) return;
-
-    setState(() {
-      isUpdatingFavorite = true;
-    });
-
-    try {
-      if (isFavorite) {
-        await FavouriteApiService.removeFavourite(widget.hotel.id);
-      } else {
-        await FavouriteApiService.addFavourite(
-          userId: "current_user_id",
-          hotelId: widget.hotel.id,
-        );
-      }
-
-      setState(() {
-        isFavorite = !isFavorite;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isFavorite ? 'Added to favorites' : 'Removed from favorites',
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      print('Error toggling favorite: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update favorites'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } finally {
-      setState(() {
-        isUpdatingFavorite = false;
       });
     }
   }
@@ -1073,24 +1027,17 @@ class _EnhancedHotelDetailsScreenState
                     ),
                   ],
                 ),
-                child: IconButton(
-                  icon:
-                      isUpdatingFavorite
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.grey,
-                              ),
-                            ),
-                          )
-                          : Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : Colors.black,
-                          ),
-                  onPressed: isUpdatingFavorite ? null : _toggleFavorite,
+                child: Consumer<FavouriteProvider>(
+                  builder: (context, favouriteProvider, child) {
+                    final isFavourite = favouriteProvider.isFavourite(widget.hotel.id);
+                    return IconButton(
+                      icon: Icon(
+                        isFavourite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavourite ? Colors.red : Colors.black,
+                      ),
+                      onPressed: () => favouriteProvider.toggleFavourite(widget.hotel.id),
+                    );
+                  },
                 ),
               ),
               Container(
