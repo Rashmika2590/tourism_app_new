@@ -86,10 +86,6 @@ class _ExpandableMapWidgetState extends State<ExpandableMapWidget> {
         _isLoading = false;
       });
       // Optionally, show a snackbar or a message on the map
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading map: $e')));
-      print('Error loading location: $e');
     }
   }
 

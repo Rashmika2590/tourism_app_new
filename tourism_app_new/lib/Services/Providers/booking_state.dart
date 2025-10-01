@@ -1,119 +1,152 @@
+// Services/Providers/booking_state.dart - Enhanced with search location context
 import 'package:flutter/material.dart';
-import 'package:tourism_app_new/models/booking_model.dart';
 
 class BookingState extends ChangeNotifier {
-  // --- Booking fields ---
-  int roomId = 0;
-  DateTime checkInDate = DateTime.now();
-  TimeOfDay checkInTime = TimeOfDay.now();
-  int duration = 1; // in hours
-  int adults = 1;
-  int children = 0;
-  String state = '';
-  String specialRequest = '';
-  double price = 0.0;
-  String paymentMethod = 'Card'; // default payment method
+  // Existing booking properties
+  DateTime _checkInDate = DateTime.now();
+  TimeOfDay _checkInTime = TimeOfDay.now();
+  int _duration = 1;
+  int _adults = 1;
+  int _children = 0;
+  String _state = '';
+  double? _latitude;
+  double? _longitude;
 
-  // --- Computed property for checkout ---
-  DateTime get checkOutDate {
-    final checkInDateTime = DateTime(
-      checkInDate.year,
-      checkInDate.month,
-      checkInDate.day,
-      checkInTime.hour,
-      checkInTime.minute,
-    );
-    return checkInDateTime.add(Duration(hours: duration));
-  }
+  // New location-based search properties
+  double? _searchLatitude;
+  double? _searchLongitude;
+  double _searchRadius = 20.0; // Default radius in km
+  String _searchLocationName = '';
+  bool _useCurrentLocation = true;
 
-  // --- Setters with notifyListeners() ---
-  void setRoomId(int id) {
-    roomId = id;
-    notifyListeners();
-  }
+  // Getters for existing properties
+  DateTime get checkInDate => _checkInDate;
+  TimeOfDay get checkInTime => _checkInTime;
+  int get duration => _duration;
+  int get adults => _adults;
+  int get children => _children;
+  String get state => _state;
+  double? get latitude => _latitude;
+  double? get longitude => _longitude;
 
+  // Getters for new location properties
+  double? get searchLatitude => _searchLatitude;
+  double? get searchLongitude => _searchLongitude;
+  double get searchRadius => _searchRadius;
+  String get searchLocationName => _searchLocationName;
+  bool get useCurrentLocation => _useCurrentLocation;
+
+  // Check if search location is set
+  bool get hasSearchLocation =>
+      _searchLatitude != null && _searchLongitude != null;
+
+  // Existing setters
   void setCheckInDate(DateTime date) {
-    checkInDate = date;
+    _checkInDate = date;
     notifyListeners();
   }
 
   void setCheckInTime(TimeOfDay time) {
-    checkInTime = time;
+    _checkInTime = time;
     notifyListeners();
   }
 
-  void setDuration(int d) {
-    duration = d;
+  void setDuration(int duration) {
+    _duration = duration;
     notifyListeners();
   }
 
   void setGuests({required int adultCount, required int childrenCount}) {
-    adults = adultCount;
-    children = childrenCount;
+    _adults = adultCount;
+    _children = childrenCount;
     notifyListeners();
   }
 
-  void setState(String s) {
-    state = s;
+  void setState(String state) {
+    _state = state;
     notifyListeners();
   }
 
-  void setSpecialRequest(String s) {
-    specialRequest = s;
+  // New location-based setters
+  void setSearchLocation({
+    required double latitude,
+    required double longitude,
+    String locationName = '',
+    bool useCurrentLocation = false,
+  }) {
+    _searchLatitude = latitude;
+    _searchLongitude = longitude;
+    _searchLocationName = locationName;
+    _useCurrentLocation = useCurrentLocation;
     notifyListeners();
   }
 
-  void setPrice(double p) {
-    price = p;
+  void setSearchRadius(double radius) {
+    _searchRadius = radius;
     notifyListeners();
   }
 
-  void setPaymentMethod(String method) {
-    paymentMethod = method;
+  void setUseCurrentLocation(bool useCurrentLocation) {
+    _useCurrentLocation = useCurrentLocation;
     notifyListeners();
   }
 
-  // --- Reset all values (optional) ---
-  void resetBooking() {
-    roomId = 0;
-    checkInDate = DateTime.now();
-    checkInTime = TimeOfDay.now();
-    duration = 1;
-    adults = 1;
-    children = 0;
-    state = '';
-    specialRequest = '';
-    price = 0.0;
-    paymentMethod = 'Card';
+  void clearSearchLocation() {
+    _searchLatitude = null;
+    _searchLongitude = null;
+    _searchLocationName = '';
+    _useCurrentLocation = true;
     notifyListeners();
   }
 
-  // --- Convert current state to BookingRequest for API ---
-  BookingRequest toBookingRequest() {
-    final checkInDateTime = DateTime(
-      checkInDate.year,
-      checkInDate.month,
-      checkInDate.day,
-      checkInTime.hour,
-      checkInTime.minute,
-    );
+  void setCoordinates(double lat, double lng) {
+    _latitude = lat;
+    _longitude = lng;
+    notifyListeners();
+  }
 
-    final checkOutDateTime = checkInDateTime.add(Duration(hours: duration));
+  // Helper method to get search location display name
+  String getSearchLocationDisplayName() {
+    if (_searchLocationName.isNotEmpty) {
+      return _searchLocationName;
+    } else if (_useCurrentLocation) {
+      return 'Current Location';
+    } else if (hasSearchLocation) {
+      return 'Selected Location';
+    } else {
+      return 'No Location Set';
+    }
+  }
 
-    return BookingRequest(
-      roomId: roomId,
-      ciDate: "${checkInDateTime.toLocal()}".split(' ')[0],
-      ciTime:
-          "${checkInDateTime.hour.toString().padLeft(2, '0')}:${checkInDateTime.minute.toString().padLeft(2, '0')}",
-      coDate: "${checkOutDateTime.toLocal()}".split(' ')[0],
-      coTime:
-          "${checkOutDateTime.hour.toString().padLeft(2, '0')}:${checkOutDateTime.minute.toString().padLeft(2, '0')}",
-      adultCount: adults,
-      childrenCount: children,
-      specialRequest: specialRequest,
-      price: price,
-      paymentMethod: paymentMethod,
-      bookingTime: DateTime.now().toIso8601String(),
-    );
+  // Method to copy current search context (useful for passing to result screens)
+  Map<String, dynamic> getSearchContext() {
+    return {
+      'latitude': _searchLatitude,
+      'longitude': _searchLongitude,
+      'radius': _searchRadius,
+      'locationName': getSearchLocationDisplayName(),
+      'useCurrentLocation': _useCurrentLocation,
+      'checkInDate': _checkInDate,
+      'checkInTime': _checkInTime,
+      'duration': _duration,
+      'adults': _adults,
+      'children': _children,
+    };
+  }
+
+  // Reset all booking data
+  void reset() {
+    _checkInDate = DateTime.now();
+    _checkInTime = TimeOfDay.now();
+    _duration = 1;
+    _adults = 1;
+    _children = 0;
+    _state = '';
+    _searchLatitude = null;
+    _searchLongitude = null;
+    _searchRadius = 20.0;
+    _searchLocationName = '';
+    _useCurrentLocation = true;
+    notifyListeners();
   }
 }

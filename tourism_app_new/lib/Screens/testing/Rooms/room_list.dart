@@ -449,9 +449,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      "Max Occupancy: ${_selectedRoom?.maxOccupancy} guests",
-                    ),
+                    // Text(
+                    //   "Max Occupancy: ${_selectedRoom?.maxOccupancy} guests",
+                    // ),
                     const SizedBox(height: 12),
                     TabBar(
                       controller: _tabController,

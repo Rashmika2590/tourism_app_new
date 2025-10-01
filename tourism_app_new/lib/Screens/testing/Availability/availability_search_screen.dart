@@ -18,6 +18,7 @@ import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/routs.dart';
+import 'package:tourism_app_new/widgets/location_suggestion.dart';
 import 'package:tourism_app_new/widgets/property_card.dart';
 
 // Remove the duplicate HotelWithRoomDetails class from this file
@@ -106,37 +107,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       }
     }
     return cityName;
-  }
-
-  Future<List<Map<String, String>>> _getSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
-        ),
-      );
-
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final predictions = data['predictions'] as List<dynamic>;
-          return predictions.map((prediction) {
-            return {
-              'description': prediction['description'] as String,
-              'place_id': prediction['place_id'] as String,
-            };
-          }).toList();
-        } else {
-          print('Error from API: ${data['status']}');
-          return [];
-        }
-      } else {
-        throw Exception('Failed to load suggestions');
-      }
-    } catch (e) {
-      print('Error getting suggestions: $e');
-      return [];
-    }
   }
 
   Future<void> _selectDateTime(BookingState bookingState) async {
@@ -594,58 +564,18 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth < 360 ? 8 : 12,
                 ),
-                child: TypeAheadField<Map<String, String>>(
-                  textFieldConfiguration: TextFieldConfiguration(
-                    style: TextStyle(
-                      fontSize: _getResponsiveFontSize(context, 15.0),
-                    ),
-                    controller: _stateController,
-                    decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.search, color: Colors.grey),
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                      hintText: '   Where do you want to stay?',
-                      labelStyle: TextStyle(
-                        fontSize: _getResponsiveFontSize(context, 14.0),
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      focusedErrorBorder: InputBorder.none,
-                    ),
-                  ),
-                  suggestionsCallback: (pattern) async {
-                    if (pattern.isEmpty) return [];
-                    return await _getSuggestions(pattern);
+                child: LocationSearchField(
+                  controller: _stateController,
+                  onLocationSelected: (location) {
+                    // save directly to provider
+                    bookingState.setState(location.description);
+
+                    if (location.lat != null && location.lng != null) {
+                      print("📍 Lat: ${location.lat}, Lng: ${location.lng}");
+                      // You can store them in provider if needed
+                      bookingState.setCoordinates(location.lat!, location.lng!);
+                    }
                   },
-                  itemBuilder: (context, suggestion) {
-                    return ListTile(
-                      title: Text(suggestion['description']!),
-                      subtitle: Text(
-                        'State: ${_extractCityName(suggestion['description']!)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    );
-                  },
-                  onSuggestionSelected: (suggestion) {
-                    String stateName = _extractCityName(
-                      suggestion['description']!,
-                    );
-                    _stateController.text = stateName;
-                    // Also update the provider state
-                    bookingState.setState(stateName);
-                    print('🏛️ Selected: ${suggestion['description']}');
-                    print('🎯 Extracted State: $stateName');
-                  },
-                  noItemsFoundBuilder:
-                      (context) => const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Text('No locations found'),
-                      ),
                 ),
               ),
               const SizedBox(height: 10),
