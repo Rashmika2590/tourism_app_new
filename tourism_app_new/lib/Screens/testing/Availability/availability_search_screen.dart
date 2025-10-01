@@ -1,11 +1,11 @@
-// Enhanced room_availability_screen.dart with Provider integration
+// Enhanced room_availability_screen.dart with Lat/Lng based searching
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:provider/provider.dart'; // Add provider import
+import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Availability/availability_result_page.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
@@ -21,8 +21,6 @@ import 'package:tourism_app_new/routs.dart';
 import 'package:tourism_app_new/widgets/location_suggestion.dart';
 import 'package:tourism_app_new/widgets/property_card.dart';
 
-// Remove the duplicate HotelWithRoomDetails class from this file
-
 class RoomAvailabilityScreen extends StatefulWidget {
   const RoomAvailabilityScreen({super.key});
 
@@ -36,17 +34,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   late TabController _tabController;
   int selectedTabIndex = 0;
 
-  // Remove local state variables that are now managed by Provider
-  // DateTime? selectedDateTime;
-  // DateTime _checkInDate = DateTime.now();
-  // DateTime _checkOutDate = DateTime.now();
-  // int _durationHours = 1;
-  // int childrenCount = 0;
-  // int adultsCount = 1;
-  // int roomsCount = 1;
-  // String _checkInTime = '10:00:00';
-  // String _checkOutTime = '12:00:00';
-
   final List<int> _durationOptions = [1, 2, 3, 4, 5, 6, 8, 12, 24, 48, 72];
 
   // UI state variables
@@ -59,9 +46,14 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   List<HotelWithRoomDetails> _hotelWithRoomDetails = [];
   String? _errorMessage;
 
-  //variables for hotels
+  // Variables for hotels
   List<Hotel> _filteredHotels = [];
   bool _isLoadingHotels = false;
+
+  // Search location coordinates
+  double? _searchLatitude;
+  double? _searchLongitude;
+  final double _maxDistanceKm = 30.0; // Default search radius
 
   @override
   void initState() {
@@ -77,36 +69,10 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     super.dispose();
   }
 
-  // Update checkout date based on duration - now uses provider
   void _updateCheckOutDate(BookingState bookingState) {
     final checkOutDate = bookingState.checkInDate.add(
       Duration(hours: bookingState.duration),
     );
-
-    // Format times for API
-    final checkInTime = DateFormat('HH:mm:ss').format(bookingState.checkInDate);
-    final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
-
-    // If we need to store these in provider, we could add them to BookingState
-    // For now, we'll just use them directly in the API call
-  }
-
-  // Extract city/state name from Google Places API response
-  String _extractCityName(String fullAddress) {
-    String cityName = fullAddress;
-    List<String> parts = fullAddress.split(',');
-    if (parts.isNotEmpty) {
-      cityName = parts[0].trim();
-    }
-
-    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
-    for (String prefix in prefixesToRemove) {
-      if (cityName.startsWith(prefix)) {
-        cityName = cityName.substring(prefix.length);
-        break;
-      }
-    }
-    return cityName;
   }
 
   Future<void> _selectDateTime(BookingState bookingState) async {
@@ -163,7 +129,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
           selectedTabIndex = 1;
         });
 
-        // Update provider state instead of local variables
         bookingState.setCheckInDate(combined);
         bookingState.setCheckInTime(TimeOfDay.fromDateTime(combined));
       }
@@ -179,25 +144,66 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     });
 
     try {
-      double? latitude;
-      double? longitude;
-      String? state = _stateController.text.trim();
+      double latitude;
+      double longitude;
+      String locationName;
 
-      // If no location is typed, use the device's current location
-      if (state.isEmpty) {
+      // Check if location is entered
+      if (_stateController.text.trim().isNotEmpty) {
+        // User entered a location - use the coordinates from location selection
+        if (_searchLatitude != null && _searchLongitude != null) {
+          latitude = _searchLatitude!;
+          longitude = _searchLongitude!;
+          locationName = _stateController.text.trim();
+          print(
+            "📍 Using entered location: $locationName at ($latitude, $longitude)",
+          );
+        } else {
+          // Fallback: geocode the text if coordinates weren't captured
+          try {
+            final coordinates =
+                await LocationService.getCoordinatesFromLocationName(
+                  _stateController.text.trim(),
+                );
+            latitude = coordinates.latitude;
+            longitude = coordinates.longitude;
+            locationName = _stateController.text.trim();
+            print(
+              "📍 Geocoded location: $locationName at ($latitude, $longitude)",
+            );
+          } catch (e) {
+            throw Exception(
+              "Could not find location: ${_stateController.text}",
+            );
+          }
+        }
+      } else {
+        // No location entered - use current location
         final position = await LocationService.getCurrentPosition();
         latitude = position.latitude;
         longitude = position.longitude;
 
-        // For display purposes, update the text field with the location name
         final placemark = await LocationService.getPlacemarkFromPosition(
           position,
         );
-        state = placemark.locality ?? placemark.administrativeArea;
-        if (state != null) {
-          _stateController.text = state;
-        }
+        locationName =
+            placemark.locality ??
+            placemark.administrativeArea ??
+            'Current Location';
+        _stateController.text = locationName;
+
+        print(
+          "📍 Using current location: $locationName at ($latitude, $longitude)",
+        );
       }
+
+      // Update provider with search location
+      bookingState.setSearchLocation(
+        latitude: latitude,
+        longitude: longitude,
+        locationName: locationName,
+        useCurrentLocation: _stateController.text.trim().isEmpty,
+      );
 
       // Calculate check-out date based on duration
       final checkOutDate = bookingState.checkInDate.add(
@@ -210,15 +216,25 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       ).format(bookingState.checkInDate);
       final checkOutTime = DateFormat('HH:mm:ss').format(checkOutDate);
 
+      print("🔍 Searching with parameters:");
+      print("  - Location: $locationName");
+      print("  - Coordinates: ($latitude, $longitude)");
+      print("  - Radius: $_maxDistanceKm km");
+      print("  - Check-in: ${bookingState.checkInDate}");
+      print("  - Duration: ${bookingState.duration} hours");
+      print(
+        "  - Guests: ${bookingState.adults} adults, ${bookingState.children} children",
+      );
+
+      // Call API with lat/lng instead of state
       final availability = await RoomAvailabilityService.searchAvailability(
         checkInDate: bookingState.checkInDate,
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        //state: state != '' ? state : null,
         latitude: latitude,
         longitude: longitude,
-        maxDistanceKm: 10, // Default radius of 10km
+        maxDistanceKm: _maxDistanceKm,
         adultCount: bookingState.adults,
         childrenCount: bookingState.children,
       );
@@ -228,7 +244,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         _isLoading = false;
       });
 
-      bookingState.setState(state ?? '');
+      print("✅ Found ${availability.hotelIds.length} hotels");
 
       if (availability.hotelIds.isNotEmpty) {
         await _fetchHotelAndRoomDetails();
@@ -243,10 +259,11 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
           ),
         );
       } else {
-        // Show a message if no results are found
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No hotels found for the selected criteria.'),
+          SnackBar(
+            content: Text(
+              'No hotels found within $_maxDistanceKm km of $locationName',
+            ),
           ),
         );
       }
@@ -258,13 +275,12 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(_errorMessage!)));
+      print("❌ Search error: $e");
     }
   }
 
   Future<void> _fetchHotelAndRoomDetails() async {
     if (_availability == null || _availability!.hotelIds.isEmpty) return;
-
-    setState(() {});
 
     try {
       final List<HotelWithRoomDetails> hotelWithRoomDetailsList = [];
@@ -310,7 +326,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     }
   }
 
-  //get hotel details
   Future<void> _loadAllHotels() async {
     setState(() => _isLoadingHotels = true);
 
@@ -456,8 +471,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-
-    // Access the BookingState from provider
     final bookingState = Provider.of<BookingState>(context, listen: true);
 
     return Scaffold(
@@ -502,7 +515,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                   ),
                 ],
               ),
-              //SizedBox(height: screenHeight * 0.015),
 
               // TabBar
               Container(
@@ -564,18 +576,32 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                 padding: EdgeInsets.symmetric(
                   horizontal: screenWidth < 360 ? 8 : 12,
                 ),
-                child: LocationSearchField(
-                  controller: _stateController,
-                  onLocationSelected: (location) {
-                    // save directly to provider
-                    bookingState.setState(location.description);
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: LocationSearchField(
+                    controller: _stateController,
+                    onLocationSelected: (location) {
+                      // Store coordinates for search
+                      if (location.lat != null && location.lng != null) {
+                        setState(() {
+                          _searchLatitude = location.lat;
+                          _searchLongitude = location.lng;
+                        });
 
-                    if (location.lat != null && location.lng != null) {
-                      print("📍 Lat: ${location.lat}, Lng: ${location.lng}");
-                      // You can store them in provider if needed
-                      bookingState.setCoordinates(location.lat!, location.lng!);
-                    }
-                  },
+                        // Update provider
+                        bookingState.setSearchLocation(
+                          latitude: location.lat!,
+                          longitude: location.lng!,
+                          locationName: location.description,
+                        );
+
+                        print("📍 Location selected: ${location.description}");
+                        print(
+                          "   Coordinates: (${location.lat}, ${location.lng})",
+                        );
+                      }
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -597,7 +623,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             onTap: () {
                               setState(() {
                                 selectedTabIndex = 0;
-                                // Update provider with current date/time
                                 final now = DateTime.now();
                                 bookingState.setCheckInDate(now);
                                 bookingState.setCheckInTime(
@@ -683,11 +708,10 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     ),
                     const SizedBox(height: 10),
 
-                    // Date and Duration Selection Section
+                    // Duration and Guests Selection
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Row for Duration & Guests
                         Row(
                           children: [
                             Expanded(
@@ -725,7 +749,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
 
                         const SizedBox(height: 8),
 
-                        // Duration Dropdown - full width
+                        // Duration Dropdown
                         if (isDurationDropdownOpen)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
@@ -766,7 +790,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                             ),
                           ),
 
-                        // Guest Dropdown - full width
+                        // Guest Dropdown
                         if (isGuestDropdownOpen)
                           Container(
                             margin: const EdgeInsets.only(top: 8),
@@ -809,10 +833,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                                   min: 1,
                                 ),
                                 const SizedBox(height: 12),
-                                _buildCounterRow("Rooms", 1, (val) {
-                                  // You might want to add roomsCount to BookingState
-                                  // For now, we'll just keep it local or ignore
-                                }, min: 1),
+                                _buildCounterRow("Rooms", 1, (val) {}, min: 1),
                               ],
                             ),
                           ),
@@ -897,7 +918,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                   ),
                 ),
 
-              // No Results Message (when staying on the same page)
+              // No Results Message
               if (_availability != null && _availability!.hotelIds.isEmpty) ...[
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -912,7 +933,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'No rooms available for the selected criteria',
+                          'No rooms available within $_maxDistanceKm km',
                           style: TextStyle(
                             fontWeight: FontWeight.w500,
                             fontSize: _getResponsiveFontSize(context, 14),
@@ -945,8 +966,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                       scrollDirection: Axis.horizontal,
                       itemCount: _filteredHotels.length,
                       separatorBuilder:
-                          (context, index) =>
-                              const SizedBox(width: 20), // space between cards
+                          (context, index) => const SizedBox(width: 20),
                       itemBuilder: (context, index) {
                         final hotel = _filteredHotels[index];
                         return SizedBox(
@@ -971,9 +991,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                     ),
                   ),
 
-              //SizedBox(height: screenHeight * 0.001),
-
-              // Top Rated Hotels Section
+              // Featured Hotels Section
               Text(
                 "Featured Hotels",
                 style: TextStyle(
@@ -993,8 +1011,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                       scrollDirection: Axis.horizontal,
                       itemCount: _filteredHotels.length,
                       separatorBuilder:
-                          (context, index) =>
-                              const SizedBox(width: 20), // space between cards
+                          (context, index) => const SizedBox(width: 20),
                       itemBuilder: (context, index) {
                         final hotel = _filteredHotels[index];
                         return SizedBox(
@@ -1002,9 +1019,27 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
                           child: HotelCard(
                             tag: "Featured",
                             hotel: hotel,
-                            onTap: () {
-                              _stateController.text = hotel.state;
-                              bookingState.setState(hotel.state);
+                            onTap: () async {
+                              // When user taps featured hotel, geocode its location
+                              try {
+                                final coordinates =
+                                    await LocationService.getCoordinatesFromLocationName(
+                                      hotel.state,
+                                    );
+                                setState(() {
+                                  _stateController.text = hotel.state;
+                                  _searchLatitude = coordinates.latitude;
+                                  _searchLongitude = coordinates.longitude;
+                                });
+                                bookingState.setSearchLocation(
+                                  latitude: coordinates.latitude,
+                                  longitude: coordinates.longitude,
+                                  locationName: hotel.state,
+                                );
+                              } catch (e) {
+                                // Fallback to just setting the text
+                                _stateController.text = hotel.state;
+                              }
                             },
                           ),
                         );

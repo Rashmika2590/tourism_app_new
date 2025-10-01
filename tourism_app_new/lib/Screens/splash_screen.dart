@@ -302,3 +302,56 @@ class WaveClipper extends CustomClipper<Path> {
   bool shouldReclip(WaveClipper oldClipper) =>
       oldClipper.progress != progress || oldClipper.offset != offset;
 }
+
+// import 'dart:async';
+// import 'package:flutter/material.dart';
+// import 'package:tourism_app_new/routs.dart';
+
+// class SimpleSplashScreen extends StatefulWidget {
+//   const SimpleSplashScreen({super.key});
+
+//   @override
+//   State<SimpleSplashScreen> createState() => _SimpleSplashScreenState();
+// }
+
+// class _SimpleSplashScreenState extends State<SimpleSplashScreen> {
+//   @override
+//   void initState() {
+//     super.initState();
+
+//     // Navigate after 3 seconds
+//     Timer(const Duration(seconds: 3), () {
+//       Navigator.pushReplacementNamed(context, AppRoutes.login);
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       backgroundColor: Colors.white, // you can change background
+//       body: Center(
+//         child: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           children: [
+//             // App logo
+//             Image.asset('assets/logo/crabigo_logo.png', height: 120),
+//             const SizedBox(height: 20),
+//             // App name or tagline
+//             const Text(
+//               "CrabiGo",
+//               style: TextStyle(
+//                 fontSize: 28,
+//                 fontWeight: FontWeight.bold,
+//                 color: Colors.blueAccent,
+//               ),
+//             ),
+//             const SizedBox(height: 20),
+//             const CircularProgressIndicator(
+//               valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+// }

@@ -6,6 +6,7 @@ import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
+import 'package:tourism_app_new/widgets/location_suggestion.dart';
 
 class SearchCardWithData extends StatefulWidget {
   final SearchParams searchParams;
@@ -36,6 +37,10 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
   late int children;
   late int rooms;
 
+  // Add lat/lng properties
+  double? selectedLat;
+  double? selectedLng;
+
   final themeColor = const Color(0xFF4ECDC4);
   final List<int> durationOptions = [1, 2, 3, 4, 5, 6, 8, 12, 24, 48, 72];
 
@@ -50,6 +55,11 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     adults = widget.searchParams.adults;
     children = widget.searchParams.children;
     rooms = widget.searchParams.rooms;
+
+    // Initialize lat/lng if available in searchParams
+    // You might need to add these properties to your SearchParams model
+    selectedLat = widget.searchParams.latitude;
+    selectedLng = widget.searchParams.longitude;
   }
 
   String _formatDuration(int hours) {
@@ -65,6 +75,8 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
       adults: adults,
       children: children,
       rooms: rooms,
+      latitude: selectedLat, // Add lat to search params
+      longitude: selectedLng, // Add lng to search params
     );
 
     widget.onSearchPressed(searchParams);
@@ -78,52 +90,17 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     });
   }
 
-  Future<List<Map<String, String>>> _getSuggestions(String query) async {
-    try {
-      final response = await http.get(
-        Uri.parse(
-          'https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&key=AIzaSyC3d7coKXELrnxFCwCJ2ku2bhqnNpEo7-s&types=(cities)',
-        ),
-      );
+  // Handle location selection from the LocationSearchField
+  void _onLocationSelected(LocationSuggestion suggestion) {
+    setState(() {
+      locationController.text = suggestion.description;
+      selectedLat = suggestion.lat;
+      selectedLng = suggestion.lng;
+      editingLocation = false;
+    });
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final predictions = data['predictions'] as List<dynamic>;
-          return predictions.map((prediction) {
-            return {
-              'description': prediction['description'] as String,
-              'place_id': prediction['place_id'] as String,
-            };
-          }).toList();
-        } else {
-          print('Error from API: ${data['status']}');
-          return [];
-        }
-      } else {
-        throw Exception('Failed to load suggestions');
-      }
-    } catch (e) {
-      print('Error getting suggestions: $e');
-      return [];
-    }
-  }
-
-  String _extractCityName(String fullAddress) {
-    String cityName = fullAddress;
-    List<String> parts = fullAddress.split(',');
-    if (parts.isNotEmpty) {
-      cityName = parts[0].trim();
-    }
-
-    final prefixesToRemove = ['City of ', 'Greater ', 'Metro '];
-    for (String prefix in prefixesToRemove) {
-      if (cityName.startsWith(prefix)) {
-        cityName = cityName.substring(prefix.length);
-        break;
-      }
-    }
-    return cityName;
+    // Show search button when location is selected
+    _showSearchButton();
   }
 
   void _showSearchButton() {
@@ -152,7 +129,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
         ],
       ),
       child: SingleChildScrollView(
-        // ✅ makes everything scrollable
         child: Column(
           children: [
             if (hasNullDetails)
@@ -190,7 +166,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                   // Row with location + date
                   Row(
                     children: [
-                      // location input
+                      // location input - Updated to use LocationSearchField
                       Expanded(
                         child: Container(
                           decoration: BoxDecoration(
@@ -203,44 +179,14 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  color: Colors.grey[600],
-                                  size: 18,
-                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
-                                  // ✅ prevents overflow
                                   child:
                                       editingLocation
-                                          ? TextField(
+                                          ? LocationSearchField(
                                             controller: locationController,
-                                            autofocus: true,
-                                            decoration: const InputDecoration(
-                                              hintText: "Enter location",
-                                              border: InputBorder.none,
-                                            ),
-                                            style: TextStyle(
-                                              color: Colors.grey[800],
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                            onChanged: (value) {
-                                              // Show search button when user starts typing
-                                              if (value.trim().isNotEmpty) {
-                                                _showSearchButton();
-                                              }
-                                            },
-                                            onSubmitted: (_) {
-                                              setState(() {
-                                                editingLocation = false;
-                                              });
-                                              if (locationController.text
-                                                  .trim()
-                                                  .isNotEmpty) {
-                                                _showSearchButton();
-                                              }
-                                            },
+                                            onLocationSelected:
+                                                _onLocationSelected,
                                           )
                                           : GestureDetector(
                                             onTap: () {
@@ -248,95 +194,27 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                                                 editingLocation = true;
                                               });
                                             },
-                                            child: TypeAheadField<
-                                              Map<String, String>
-                                            >(
-                                              textFieldConfiguration:
-                                                  TextFieldConfiguration(
-                                                    style: const TextStyle(
-                                                      fontSize: 13,
-                                                    ),
-                                                    controller:
-                                                        locationController,
-                                                    decoration: const InputDecoration(
-                                                      isDense: true,
-                                                      contentPadding:
-                                                          EdgeInsets.symmetric(
-                                                            vertical: 12,
-                                                          ),
-                                                      hintText:
-                                                          'Where do you want to stay?',
-                                                      border: InputBorder.none,
-                                                    ),
-                                                    onChanged: (value) {
-                                                      // Show search button when user types
-                                                      if (value
-                                                          .trim()
-                                                          .isNotEmpty) {
-                                                        _showSearchButton();
-                                                      }
-                                                    },
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    vertical: 12,
                                                   ),
-                                              suggestionsBoxDecoration:
-                                                  SuggestionsBoxDecoration(
-                                                    constraints:
-                                                        BoxConstraints.expand(
-                                                          width:
-                                                              MediaQuery.of(
-                                                                context,
-                                                              ).size.width -
-                                                              60,
-                                                        ),
-                                                  ),
-                                              suggestionsCallback: (
-                                                pattern,
-                                              ) async {
-                                                if (pattern.isEmpty) return [];
-                                                return await _getSuggestions(
-                                                  pattern,
-                                                );
-                                              },
-                                              itemBuilder: (
-                                                context,
-                                                suggestion,
-                                              ) {
-                                                return ListTile(
-                                                  title: Text(
-                                                    suggestion['description']!,
-                                                  ),
-                                                  subtitle: Text(
-                                                    'State: ${_extractCityName(suggestion['description']!)}',
-                                                    style: TextStyle(
-                                                      fontSize: 12,
-                                                      color: Colors.grey[600],
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                              onSuggestionSelected: (
-                                                suggestion,
-                                              ) {
-                                                String
-                                                stateName = _extractCityName(
-                                                  suggestion['description']!,
-                                                );
-                                                locationController.text =
-                                                    stateName;
-                                                setState(() {
-                                                  editingLocation = false;
-                                                });
-                                                // Show search button when suggestion is selected
-                                                _showSearchButton();
-                                              },
-                                              noItemsFoundBuilder:
-                                                  (context) => const Padding(
-                                                    padding: EdgeInsets.all(
-                                                      8.0,
-                                                    ),
-                                                    child: Text(
-                                                      'No locations found',
-                                                    ),
-                                                  ),
+                                              child: Text(
+                                                locationController.text.isEmpty
+                                                    ? "Where do you want to stay?"
+                                                    : locationController.text,
+                                                style: TextStyle(
+                                                  color:
+                                                      locationController
+                                                              .text
+                                                              .isEmpty
+                                                          ? Colors.grey[600]
+                                                          : Colors.grey[800],
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ),
                                           ),
                                 ),
@@ -435,7 +313,6 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        // ✅ avoid overflow
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
@@ -503,6 +380,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
     );
   }
 
+  // The rest of your methods remain the same...
   Widget _buildDurationSection() {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),

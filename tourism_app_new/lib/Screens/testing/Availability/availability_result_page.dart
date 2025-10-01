@@ -1,4 +1,4 @@
-// room_availability_results.dart
+// room_availability_results.dart - Updated with Lat/Lng based searching
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
@@ -52,12 +52,12 @@ class _RoomAvailabilityResultsScreenState
     extends State<RoomAvailabilityResultsScreen> {
   bool _isMapExpanded = false;
   final themeColor = const Color(0xFF4ECDC4);
+  final double _searchRadius = 30.0; // Default search radius in km
 
-  // State variables for search results (not managed by provider)
+  // State variables for search results
   late RoomAvailability _currentAvailability;
   late List<HotelWithRoomDetails> _currentHotelWithRoomDetails;
-  late List<HotelWithRoomDetails>
-  _originalHotelWithRoomDetails; // Keep original for filtering
+  late List<HotelWithRoomDetails> _originalHotelWithRoomDetails;
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -68,13 +68,14 @@ class _RoomAvailabilityResultsScreenState
   @override
   void initState() {
     super.initState();
-    // Initialize with widget values
     _currentAvailability = widget.availability;
     _currentHotelWithRoomDetails = widget.hotelWithRoomDetails;
     _originalHotelWithRoomDetails = List.from(widget.hotelWithRoomDetails);
 
     final bookingState = Provider.of<BookingState>(context, listen: false);
-    if (bookingState.state.isEmpty) {
+
+    // If no search location is set, get current location
+    if (!bookingState.hasSearchLocation) {
       _fetchCurrentLocationAndUpdateState(bookingState);
     }
   }
@@ -88,14 +89,28 @@ class _RoomAvailabilityResultsScreenState
         position.latitude,
         position.longitude,
       );
+
+      String locationName = 'Current Location';
       if (placemarks.isNotEmpty) {
         final placemark = placemarks.first;
-        if (placemark.administrativeArea != null) {
-          bookingState.setState(placemark.administrativeArea!);
-        }
+        locationName =
+            placemark.locality ??
+            placemark.administrativeArea ??
+            'Current Location';
       }
+
+      bookingState.setSearchLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        locationName: locationName,
+        useCurrentLocation: true,
+      );
+
+      print(
+        "📍 Set current location: $locationName at (${position.latitude}, ${position.longitude})",
+      );
     } catch (e) {
-      // Handle location error, maybe show a snackbar
+      print("❌ Error getting current location: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
@@ -112,9 +127,11 @@ class _RoomAvailabilityResultsScreenState
     });
   }
 
-  // Function to handle search from SearchCardWithData
+  // Handle search with lat/lng
   Future<void> _handleSearch({
-    required String state,
+    required String locationName,
+    required double latitude,
+    required double longitude,
     required DateTime checkInDate,
     required TimeOfDay checkInTime,
     required int duration,
@@ -128,15 +145,19 @@ class _RoomAvailabilityResultsScreenState
     });
 
     try {
-      // Update provider state first
-      bookingState.setState(state);
+      // Update provider state
+      bookingState.setSearchLocation(
+        latitude: latitude,
+        longitude: longitude,
+        locationName: locationName,
+      );
       bookingState.setCheckInDate(checkInDate);
       bookingState.setCheckInTime(checkInTime);
       bookingState.setDuration(duration);
       bookingState.setGuests(adultCount: adults, childrenCount: children);
 
       // Calculate checkOutDate based on duration
-      final checkOutDate = checkInDate.add(Duration(days: duration));
+      final checkOutDate = checkInDate.add(Duration(hours: duration));
 
       // Format times for API
       final formattedCheckInTime =
@@ -144,16 +165,28 @@ class _RoomAvailabilityResultsScreenState
       final formattedCheckOutTime =
           '${checkInTime.hour.toString().padLeft(2, '0')}:${checkInTime.minute.toString().padLeft(2, '0')}:00';
 
-      // Call the availability API
+      print("🔍 Re-searching with parameters:");
+      print("  - Location: $locationName");
+      print("  - Coordinates: ($latitude, $longitude)");
+      print("  - Radius: $_searchRadius km");
+      print("  - Check-in: $checkInDate");
+      print("  - Duration: $duration hours");
+      print("  - Guests: $adults adults, $children children");
+
+      // Call the availability API with lat/lng
       final availability = await RoomAvailabilityService.searchAvailability(
         checkInDate: checkInDate,
         checkInTime: formattedCheckInTime,
         checkOutDate: checkOutDate,
         checkOutTime: formattedCheckOutTime,
-        state: state,
+        latitude: latitude,
+        longitude: longitude,
+        maxDistanceKm: _searchRadius,
         adultCount: adults,
         childrenCount: children,
       );
+
+      print("✅ Found ${availability.hotelIds.length} hotels");
 
       // Fetch hotel and room details
       final hotelWithRoomDetails = await _fetchHotelAndRoomDetails(
@@ -166,11 +199,22 @@ class _RoomAvailabilityResultsScreenState
         _originalHotelWithRoomDetails = List.from(hotelWithRoomDetails);
         _isLoading = false;
       });
+
+      if (availability.hotelIds.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No hotels found within $_searchRadius km of $locationName',
+            ),
+          ),
+        );
+      }
     } catch (e) {
       setState(() {
         _errorMessage = e.toString();
         _isLoading = false;
       });
+      print("❌ Re-search error: $e");
     }
   }
 
@@ -218,20 +262,15 @@ class _RoomAvailabilityResultsScreenState
     return hotelWithRoomDetailsList;
   }
 
-  // Format duration for display
-  String _formatDuration(int days) {
-    if (days == 1) {
-      return '$days day';
+  String _formatDuration(int hours) {
+    if (hours == 1) {
+      return '$hours hour';
+    } else if (hours < 24) {
+      return '$hours hours';
     } else {
-      return '$days days';
+      final days = hours ~/ 24;
+      return '$days ${days == 1 ? 'day' : 'days'}';
     }
-  }
-
-  TimeOfDay _parseTimeString(String timeString) {
-    final parts = timeString.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    return TimeOfDay(hour: hour, minute: minute);
   }
 
   Widget _buildResultsHeader() {
@@ -240,11 +279,9 @@ class _RoomAvailabilityResultsScreenState
       color: Colors.transparent,
       child: Column(
         children: [
-          // Filter and Sort buttons at the bottom
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Advanced filter button on the left
               InkWell(
                 onTap: () => _showAdvancedFilter(),
                 child: Row(
@@ -263,7 +300,6 @@ class _RoomAvailabilityResultsScreenState
                   ],
                 ),
               ),
-              // Sort by dropdown on the right
               InkWell(
                 onTap: () => _showSortOptions(),
                 child: Row(
@@ -375,7 +411,6 @@ class _RoomAvailabilityResultsScreenState
         break;
       case SortOption.recommended:
       default:
-        // Keep original order for recommended
         break;
     }
 
@@ -596,7 +631,7 @@ class _RoomAvailabilityResultsScreenState
                 child: InkWell(
                   onTap: () {
                     final searchParams = SearchParams(
-                      state: bookingState.state,
+                      state: bookingState.searchLocationName,
                       checkInDate: bookingState.checkInDate,
                       checkInTime: bookingState.checkInTime,
                       durationHours: bookingState.duration,
@@ -625,14 +660,14 @@ class _RoomAvailabilityResultsScreenState
     );
   }
 
-  String _formatTimeOfDay(TimeOfDay time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}:00';
-  }
-
   @override
   Widget build(BuildContext context) {
     final bookingState = Provider.of<BookingState>(context, listen: true);
     final resultsCount = _currentHotelWithRoomDetails.length;
+    final locationDisplay =
+        bookingState.searchLocationName.isNotEmpty
+            ? bookingState.searchLocationName
+            : 'your location';
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -650,7 +685,7 @@ class _RoomAvailabilityResultsScreenState
                             ExpandableMapWidget(
                               isExpanded: _isMapExpanded,
                               onToggle: _toggleMap,
-                              location: bookingState.state,
+                              location: bookingState.searchLocationName,
                             ),
                             Positioned(
                               top: 12,
@@ -672,11 +707,11 @@ class _RoomAvailabilityResultsScreenState
                           ],
                         ),
                         Padding(
-                          padding: const EdgeInsets.only(left: 16.0),
+                          padding: const EdgeInsets.only(left: 16.0, top: 8.0),
                           child: Align(
                             alignment: Alignment.bottomLeft,
                             child: Text(
-                              'Handpicked for you ($resultsCount ${resultsCount == 1 ? 'result' : 'results'})',
+                              'Hotels near $locationDisplay ($resultsCount ${resultsCount == 1 ? 'result' : 'results'})',
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -689,7 +724,7 @@ class _RoomAvailabilityResultsScreenState
                           padding: const EdgeInsets.all(16.0),
                           child: SearchCardWithData(
                             searchParams: SearchParams(
-                              state: bookingState.state,
+                              state: bookingState.searchLocationName,
                               checkInDate: bookingState.checkInDate,
                               checkInTime: bookingState.checkInTime,
                               durationHours: bookingState.duration,
@@ -697,21 +732,54 @@ class _RoomAvailabilityResultsScreenState
                               children: bookingState.children,
                               rooms: 1,
                             ),
-                            onSearchPressed: (searchParams) {
-                              _handleSearch(
-                                state: searchParams.state,
-                                checkInDate: searchParams.checkInDate,
-                                checkInTime: searchParams.checkInTime,
-                                duration: searchParams.durationHours,
-                                adults: searchParams.adults,
-                                children: searchParams.children,
-                                bookingState: bookingState,
-                              );
+                            onSearchPressed: (searchParams) async {
+                              // Get coordinates from location name
+                              try {
+                                double lat, lng;
+
+                                if (searchParams.state.isEmpty ||
+                                    searchParams.state.toLowerCase() ==
+                                        'current location') {
+                                  final position =
+                                      await LocationService.getCurrentPosition();
+                                  lat = position.latitude;
+                                  lng = position.longitude;
+                                } else {
+                                  // ✅ Use the lat/lng already set in SearchParams
+                                  if (searchParams.latitude != null &&
+                                      searchParams.longitude != null) {
+                                    lat = searchParams.latitude!;
+                                    lng = searchParams.longitude!;
+                                  } else {
+                                    throw Exception(
+                                      "Missing coordinates for ${searchParams.state}",
+                                    );
+                                  }
+                                }
+                                _handleSearch(
+                                  locationName: searchParams.state,
+                                  latitude: lat,
+                                  longitude: lng,
+                                  checkInDate: searchParams.checkInDate,
+                                  checkInTime: searchParams.checkInTime,
+                                  duration: searchParams.durationHours,
+                                  adults: searchParams.adults,
+                                  children: searchParams.children,
+                                  bookingState: bookingState,
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Could not find location: ${searchParams.state}',
+                                    ),
+                                  ),
+                                );
+                              }
                             },
                           ),
                         ),
 
-                        // Results count and filter/sort buttons
                         if (_currentAvailability.hasAvailableRooms() &&
                             !_isLoading &&
                             _errorMessage == null)
@@ -770,14 +838,14 @@ class _RoomAvailabilityResultsScreenState
                               ),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  Icon(
+                                children: [
+                                  const Icon(
                                     Icons.search_off,
                                     size: 60,
                                     color: Colors.grey,
                                   ),
-                                  SizedBox(height: 16),
-                                  Text(
+                                  const SizedBox(height: 16),
+                                  const Text(
                                     'No rooms available',
                                     style: TextStyle(
                                       fontSize: 18,
@@ -785,13 +853,23 @@ class _RoomAvailabilityResultsScreenState
                                       color: Colors.grey,
                                     ),
                                   ),
-                                  SizedBox(height: 8),
+                                  const SizedBox(height: 8),
                                   Text(
-                                    'Try adjusting your search criteria',
+                                    'No hotels found within $_searchRadius km of $locationDisplay',
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  const Text(
+                                    'Try adjusting your search criteria or location',
                                     style: TextStyle(
                                       fontSize: 14,
                                       color: Colors.grey,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ],
                               ),

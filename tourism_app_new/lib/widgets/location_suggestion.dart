@@ -80,23 +80,29 @@ class LocationSearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return TypeAheadField<LocationSuggestion>(
       textFieldConfiguration: TextFieldConfiguration(
         controller: controller,
         decoration: InputDecoration(
           hintText: "Where do you want to stay?",
-          prefixIcon: const Icon(Icons.search),
           border: InputBorder.none,
           filled: true,
           fillColor: Colors.grey.shade200,
-          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 8,
+            horizontal: 12,
+          ),
         ),
       ),
       suggestionsCallback: _getSuggestions,
       itemBuilder: (context, suggestion) {
         return ListTile(
-          leading: const Icon(Icons.location_on, color: Colors.redAccent),
-          title: Text(suggestion.description),
+          title: Text(
+            suggestion.description,
+            style: const TextStyle(fontSize: 12, color: Colors.black),
+          ),
         );
       },
       onSuggestionSelected: (suggestion) async {
@@ -109,6 +115,19 @@ class LocationSearchField extends StatelessWidget {
             padding: EdgeInsets.all(8.0),
             child: Text('No locations found'),
           ),
+
+      // 👇 Full screen dropdown with custom styling
+      suggestionsBoxDecoration: SuggestionsBoxDecoration(
+        color: Colors.grey.shade100, // dropdown background color
+        borderRadius: BorderRadius.circular(12), // rounded corners
+        elevation: 4,
+        constraints: BoxConstraints(
+          minWidth: screenWidth,
+          maxWidth: screenWidth,
+        ),
+      ),
+      suggestionsBoxVerticalOffset: 0,
+      hideOnLoading: false,
     );
   }
 }
