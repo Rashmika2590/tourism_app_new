@@ -287,7 +287,7 @@ class _HotelCardState extends State<HotelCard> {
                                 isFavourite
                                     ? Icons.favorite
                                     : Icons.favorite_border,
-                                color: AppColors.accent,
+                                color: isFavourite ? Colors.red : AppColors.accent,
                                 size: 24,
                               ),
                             ),
