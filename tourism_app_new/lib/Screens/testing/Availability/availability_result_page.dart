@@ -1,6 +1,7 @@
 // room_availability_results.dart
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
@@ -25,22 +26,28 @@ class HotelWithRoomDetails {
   final Hotel hotel;
   final List<Room> availableRooms;
   final Room cheapestRoom;
+  double distance; // Add distance property
 
   HotelWithRoomDetails({
     required this.hotel,
     required this.availableRooms,
     required this.cheapestRoom,
+    this.distance = 0.0, // Default distance
   });
 }
 
 class RoomAvailabilityResultsScreen extends StatefulWidget {
   final RoomAvailability availability;
   final List<HotelWithRoomDetails> hotelWithRoomDetails;
+  final double searchLatitude;
+  final double searchLongitude;
 
   const RoomAvailabilityResultsScreen({
     super.key,
     required this.availability,
     required this.hotelWithRoomDetails,
+    required this.searchLatitude,
+    required this.searchLongitude,
   });
 
   @override
@@ -56,54 +63,25 @@ class _RoomAvailabilityResultsScreenState
   // State variables for search results (not managed by provider)
   late RoomAvailability _currentAvailability;
   late List<HotelWithRoomDetails> _currentHotelWithRoomDetails;
-  late List<HotelWithRoomDetails>
-  _originalHotelWithRoomDetails; // Keep original for filtering
+  late List<HotelWithRoomDetails> _originalHotelWithRoomDetails; // Keep original for filtering
   bool _isLoading = false;
   String? _errorMessage;
 
   // Filter and Sort states
   FilterOptions _currentFilters = FilterOptions();
-  SortOption _currentSortOption = SortOption.recommended;
+  SortOption _currentSortOption = SortOption.distance; // Default to distance
 
   @override
   void initState() {
     super.initState();
-    // Initialize with widget values
+    // Initialize with widget values from the previous screen.
+    // The distances are already calculated.
     _currentAvailability = widget.availability;
     _currentHotelWithRoomDetails = widget.hotelWithRoomDetails;
     _originalHotelWithRoomDetails = List.from(widget.hotelWithRoomDetails);
 
-    final bookingState = Provider.of<BookingState>(context, listen: false);
-    if (bookingState.state.isEmpty) {
-      _fetchCurrentLocationAndUpdateState(bookingState);
-    }
-  }
-
-  Future<void> _fetchCurrentLocationAndUpdateState(
-    BookingState bookingState,
-  ) async {
-    try {
-      final position = await LocationService.getCurrentPosition();
-      final placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
-      if (placemarks.isNotEmpty) {
-        final placemark = placemarks.first;
-        if (placemark.administrativeArea != null) {
-          bookingState.setState(placemark.administrativeArea!);
-        }
-      }
-    } catch (e) {
-      // Handle location error, maybe show a snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not determine your location. Please enter one manually.',
-          ),
-        ),
-      );
-    }
+    // Apply the default sort option.
+    _applyFiltersAndSort();
   }
 
   void _toggleMap() {
@@ -128,29 +106,44 @@ class _RoomAvailabilityResultsScreenState
     });
 
     try {
-      // Update provider state first
+      double? latitude = bookingState.latitude;
+      double? longitude = bookingState.longitude;
+
+      // If lat/lng are not in provider, geocode the state
+      if (latitude == null || longitude == null) {
+        final locations = await locationFromAddress(state);
+        if (locations.isNotEmpty) {
+          latitude = locations.first.latitude;
+          longitude = locations.first.longitude;
+          bookingState.setCoordinates(latitude, longitude);
+        } else {
+          throw Exception("Could not find location: $state");
+        }
+      }
+
+      // Update provider state
       bookingState.setState(state);
       bookingState.setCheckInDate(checkInDate);
       bookingState.setCheckInTime(checkInTime);
       bookingState.setDuration(duration);
       bookingState.setGuests(adultCount: adults, childrenCount: children);
 
-      // Calculate checkOutDate based on duration
-      final checkOutDate = checkInDate.add(Duration(days: duration));
-
-      // Format times for API
+      // Calculate checkOutDate
+      final checkOutDate = checkInDate.add(Duration(hours: duration));
       final formattedCheckInTime =
           '${checkInTime.hour.toString().padLeft(2, '0')}:${checkInTime.minute.toString().padLeft(2, '0')}:00';
       final formattedCheckOutTime =
-          '${checkInTime.hour.toString().padLeft(2, '0')}:${checkInTime.minute.toString().padLeft(2, '0')}:00';
+          '${checkOutDate.hour.toString().padLeft(2, '0')}:${checkOutDate.minute.toString().padLeft(2, '0')}:00';
 
-      // Call the availability API
+      // Call the availability API with coordinates
       final availability = await RoomAvailabilityService.searchAvailability(
         checkInDate: checkInDate,
         checkInTime: formattedCheckInTime,
         checkOutDate: checkOutDate,
         checkOutTime: formattedCheckOutTime,
-        state: state,
+        latitude: latitude,
+        longitude: longitude,
+        maxDistanceKm: 10, // Or get from UI
         adultCount: adults,
         childrenCount: children,
       );
@@ -158,13 +151,15 @@ class _RoomAvailabilityResultsScreenState
       // Fetch hotel and room details
       final hotelWithRoomDetails = await _fetchHotelAndRoomDetails(
         availability,
+        latitude,
+        longitude,
       );
 
       setState(() {
         _currentAvailability = availability;
-        _currentHotelWithRoomDetails = hotelWithRoomDetails;
         _originalHotelWithRoomDetails = List.from(hotelWithRoomDetails);
         _isLoading = false;
+        _applyFiltersAndSort(); // Apply default sort
       });
     } catch (e) {
       setState(() {
@@ -176,6 +171,8 @@ class _RoomAvailabilityResultsScreenState
 
   Future<List<HotelWithRoomDetails>> _fetchHotelAndRoomDetails(
     RoomAvailability availability,
+    double searchLat,
+    double searchLon,
   ) async {
     if (availability.hotelIds.isEmpty) return [];
 
@@ -183,30 +180,35 @@ class _RoomAvailabilityResultsScreenState
 
     for (int hotelId in availability.hotelIds) {
       final availableRoomIds = availability.getRoomIdsForHotel(hotelId);
-
       if (availableRoomIds.isEmpty) continue;
 
       try {
         final hotelFuture = HotelApiService.getHotelById(hotelId);
-        final roomFutures = availableRoomIds.map(
-          (roomId) => RoomApiService.getRoomById(roomId),
-        );
+        final roomFutures =
+            availableRoomIds.map((id) => RoomApiService.getRoomById(id));
 
         final results = await Future.wait([hotelFuture, ...roomFutures]);
-
         final hotel = results[0] as Hotel;
         final rooms = results.skip(1).cast<Room>().toList();
 
         if (rooms.isNotEmpty) {
           final cheapestRoom = rooms.reduce(
-            (current, next) => current.price < next.price ? current : next,
+            (a, b) => a.price < b.price ? a : b,
           );
+          final distance = Geolocator.distanceBetween(
+                searchLat,
+                searchLon,
+                hotel.latitude,
+                hotel.longitude,
+              ) /
+              1000; // to km
 
           hotelWithRoomDetailsList.add(
             HotelWithRoomDetails(
               hotel: hotel,
               availableRooms: rooms,
               cheapestRoom: cheapestRoom,
+              distance: distance,
             ),
           );
         }
@@ -214,7 +216,6 @@ class _RoomAvailabilityResultsScreenState
         print('Error fetching details for hotel $hotelId: $e');
       }
     }
-
     return hotelWithRoomDetailsList;
   }
 
@@ -329,53 +330,53 @@ class _RoomAvailabilityResultsScreenState
   }
 
   void _applyFiltersAndSort() {
-    List<HotelWithRoomDetails> filteredResults = List.from(
-      _originalHotelWithRoomDetails,
-    );
+    List<HotelWithRoomDetails> filteredResults =
+        List.from(_originalHotelWithRoomDetails);
 
-    // Apply filters
+    // Apply filters (same as before)
     if (_currentFilters.minPrice != null || _currentFilters.maxPrice != null) {
-      filteredResults =
-          filteredResults.where((hotel) {
-            final price = hotel.cheapestRoom.price;
-            final minPrice = _currentFilters.minPrice ?? 0;
-            final maxPrice = _currentFilters.maxPrice ?? double.infinity;
-            return price >= minPrice && price <= maxPrice;
-          }).toList();
+      filteredResults = filteredResults.where((hotel) {
+        final price = hotel.cheapestRoom.price;
+        final minPrice = _currentFilters.minPrice ?? 0;
+        final maxPrice = _currentFilters.maxPrice ?? double.infinity;
+        return price >= minPrice && price <= maxPrice;
+      }).toList();
     }
-
     if (_currentFilters.selectedAmenities.isNotEmpty) {
-      filteredResults =
-          filteredResults.where((hotel) {
-            return _currentFilters.selectedAmenities.every(
-              (amenity) => hotel.cheapestRoom.amenities.contains(amenity),
-            );
-          }).toList();
+      filteredResults = filteredResults.where((hotel) {
+        return _currentFilters.selectedAmenities
+            .every((amenity) => hotel.cheapestRoom.amenities.contains(amenity));
+      }).toList();
     }
 
     // Apply sorting
     switch (_currentSortOption) {
+      case SortOption.distance:
+        filteredResults.sort((a, b) => a.distance.compareTo(b.distance));
+        break;
       case SortOption.priceLowToHigh:
         filteredResults.sort(
-          (a, b) => a.cheapestRoom.price.compareTo(b.cheapestRoom.price),
-        );
+            (a, b) => a.cheapestRoom.price.compareTo(b.cheapestRoom.price));
         break;
       case SortOption.priceHighToLow:
         filteredResults.sort(
-          (a, b) => b.cheapestRoom.price.compareTo(a.cheapestRoom.price),
-        );
+            (a, b) => b.cheapestRoom.price.compareTo(a.cheapestRoom.price));
         break;
       case SortOption.ratingHighToLow:
-        filteredResults.sort(
-          (a, b) => b.hotel.latitude.compareTo(a.hotel.latitude),
-        );
+        filteredResults.sort((a, b) => (b.hotel.rating ?? 0.0).compareTo(a.hotel.rating ?? 0.0));
         break;
       case SortOption.nameAZ:
         filteredResults.sort((a, b) => a.hotel.name.compareTo(b.hotel.name));
         break;
       case SortOption.recommended:
       default:
-        // Keep original order for recommended
+        // For recommended, we can sort by a combination of distance and rating
+        filteredResults.sort((a, b) {
+          // Simple scoring: lower is better.
+          final scoreA = a.distance * 0.7; // Weight distance
+          final scoreB = b.distance * 0.7;
+          return scoreA.compareTo(scoreB);
+        });
         break;
     }
 
@@ -490,7 +491,7 @@ class _RoomAvailabilityResultsScreenState
                           textAlign: TextAlign.right,
                         ),
                         Text(
-                          'in ${hotel.state}',
+                          '${hotelWithRooms.distance.toStringAsFixed(1)} km away',
                           style: const TextStyle(
                             color: AppColors.mainGreen,
                             fontSize: 18,
@@ -506,7 +507,7 @@ class _RoomAvailabilityResultsScreenState
                         const Icon(Icons.star, color: Colors.amber, size: 16),
                         const SizedBox(width: 4),
                         Text(
-                          '${hotel.latitude.toStringAsFixed(1)} (${hotel.longitude})',
+                          '${hotel.rating?.toStringAsFixed(1) ?? 'N/A'} Rating',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
