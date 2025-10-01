@@ -3,7 +3,6 @@ import 'package:tourism_app_new/Screens/Auth/forgot_password.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
 import 'package:tourism_app_new/Screens/notification.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
-import 'package:tourism_app_new/Screens/property_details_page.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
@@ -41,7 +40,6 @@ class AppRoutes {
 
     //propertylist: (context) => PropertyListPage(city: ''),
     notification: (context) => NotificationsScreen(),
-    property_details: (context) => PropertyDetailsPage(),
 
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),

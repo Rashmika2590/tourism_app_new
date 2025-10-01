@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:tourism_app_new/Screens/profile/profile_page.dart';
-import 'package:tourism_app_new/Screens/searching_page.dart';
 import 'package:tourism_app_new/Screens/testing/Availability/availability_search_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
