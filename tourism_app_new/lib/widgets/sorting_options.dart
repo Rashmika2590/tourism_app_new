@@ -5,7 +5,7 @@ enum SortOption {
   priceHighToLow,
   ratingHighToLow,
   nameAZ,
-  distanceNearToFar,
+  distance,
   popularityHighToLow,
   newest,
 }
@@ -23,7 +23,7 @@ extension SortOptionExtension on SortOption {
         return 'Rating: High to Low';
       case SortOption.nameAZ:
         return 'Name: A to Z';
-      case SortOption.distanceNearToFar:
+      case SortOption.distance:
         return 'Distance: Near to Far';
       case SortOption.popularityHighToLow:
         return 'Popularity: High to Low';
@@ -44,7 +44,7 @@ extension SortOptionExtension on SortOption {
         return 'rating_desc';
       case SortOption.nameAZ:
         return 'name_asc';
-      case SortOption.distanceNearToFar:
+      case SortOption.distance:
         return 'distance_asc';
       case SortOption.popularityHighToLow:
         return 'popularity_desc';
@@ -65,7 +65,7 @@ extension SortOptionExtension on SortOption {
         return 'Highest rated properties';
       case SortOption.nameAZ:
         return 'Alphabetical order';
-      case SortOption.distanceNearToFar:
+      case SortOption.distance:
         return 'Closest to your location';
       case SortOption.popularityHighToLow:
         return 'Most popular choices';

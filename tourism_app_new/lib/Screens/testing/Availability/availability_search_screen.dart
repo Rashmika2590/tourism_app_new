@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:flutter_typeahead/flutter_typeahead.dart';
@@ -197,6 +198,28 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         if (state != null) {
           _stateController.text = state;
         }
+      } else {
+        // If a location is typed, geocode it to get coordinates
+        try {
+          final locations = await locationFromAddress(state);
+          if (locations.isNotEmpty) {
+            latitude = locations.first.latitude;
+            longitude = locations.first.longitude;
+          } else {
+            // Handle case where location is not found
+            throw Exception("Location not found");
+          }
+        } catch (e) {
+          setState(() {
+            _errorMessage = "Could not find the location. Please try again.";
+            _isLoading = false;
+          });
+          return; // Stop the search
+        }
+      }
+
+      if (latitude != null && longitude != null) {
+        bookingState.setCoordinates(latitude, longitude);
       }
 
       // Calculate check-out date based on duration
@@ -215,7 +238,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
         checkInTime: checkInTime,
         checkOutDate: checkOutDate,
         checkOutTime: checkOutTime,
-        //state: state != '' ? state : null,
         latitude: latitude,
         longitude: longitude,
         maxDistanceKm: 10, // Default radius of 10km
@@ -231,15 +253,16 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
       bookingState.setState(state ?? '');
 
       if (availability.hotelIds.isNotEmpty) {
-        await _fetchHotelAndRoomDetails();
+        await _fetchHotelAndRoomDetails(latitude!, longitude!);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder:
-                (context) => RoomAvailabilityResultsScreen(
-                  availability: availability,
-                  hotelWithRoomDetails: _hotelWithRoomDetails,
-                ),
+            builder: (context) => RoomAvailabilityResultsScreen(
+              availability: availability,
+              hotelWithRoomDetails: _hotelWithRoomDetails,
+              searchLatitude: latitude,
+              searchLongitude: longitude,
+            ),
           ),
         );
       } else {
@@ -261,7 +284,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     }
   }
 
-  Future<void> _fetchHotelAndRoomDetails() async {
+  Future<void> _fetchHotelAndRoomDetails(double searchLat, double searchLon) async {
     if (_availability == null || _availability!.hotelIds.isEmpty) return;
 
     setState(() {});
@@ -289,11 +312,20 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
             (current, next) => current.price < next.price ? current : next,
           );
 
+          final distance = Geolocator.distanceBetween(
+                searchLat,
+                searchLon,
+                hotel.latitude,
+                hotel.longitude,
+              ) /
+              1000; // to km
+
           hotelWithRoomDetailsList.add(
             HotelWithRoomDetails(
               hotel: hotel,
               availableRooms: rooms,
               cheapestRoom: cheapestRoom,
+              distance: distance,
             ),
           );
         }
