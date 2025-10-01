@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/profile/profile_page.dart';
 import 'package:tourism_app_new/Screens/testing/Availability/availability_search_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
+import 'package:tourism_app_new/Services/Providers/favourite_provider.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:tourism_app_new/widgets/bottom_navbar.dart';
 
@@ -28,6 +30,10 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadTokenAndUser() async {
     final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Fetch favourites as soon as the user is loaded
+      Provider.of<FavouriteProvider>(context, listen: false).fetchFavourites();
+    }
     setState(() {
       _user = user;
     });

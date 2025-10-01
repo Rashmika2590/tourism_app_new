@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart'; // <-- ADD THIS IMPORT
+import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
+import 'package:tourism_app_new/Services/Providers/favourite_provider.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tourism_app_new/routs.dart';
@@ -18,10 +19,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      // <-- WRAP MaterialApp with this
-      create:
-          (context) => BookingState(), // Create your state management instance
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => BookingState()),
+        ChangeNotifierProvider(create: (context) => FavouriteProvider()),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
