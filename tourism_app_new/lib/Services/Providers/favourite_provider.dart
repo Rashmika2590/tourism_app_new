@@ -19,6 +19,7 @@ class FavouriteProvider with ChangeNotifier {
         throw Exception("User not logged in");
       }
       _favourites = await FavouriteApiService.getFavourites(user.uid);
+
       _error = null;
     } catch (e) {
       _error = e.toString();
@@ -60,6 +61,7 @@ class FavouriteProvider with ChangeNotifier {
 
   Future<void> _addFavourite(int hotelId, String userId) async {
     try {
+
       await FavouriteApiService.addFavourite(
         userId: userId,
         hotelId: hotelId,
@@ -75,8 +77,10 @@ class FavouriteProvider with ChangeNotifier {
   Future<void> _removeFavourite(int hotelId) async {
     try {
       await FavouriteApiService.removeFavouriteByHotelId(hotelId);
+
       await _refetchFavouritesData();
       notifyListeners(); // Update UI after refetch
+
     } catch (e) {
       _error = "Failed to remove favourite: $e";
       notifyListeners();
