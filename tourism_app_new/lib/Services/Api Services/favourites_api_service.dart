@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:tourism_app_new/models/favourite_model.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 
 class FavouriteApiService {
@@ -62,6 +63,32 @@ class FavouriteApiService {
     }
   }
 
+  // ====== GET ALL FAVOURITES FOR A USER ======
+  static Future<List<Favourite>> getFavourites(String userId) async {
+    return await _makeAuthenticatedRequest<List<Favourite>>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/favourite/user/$userId");
+
+        print("Fetching favourites for user: $userId");
+        final response = await http.get(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
+
+        print("Get favourites response: ${response.statusCode}");
+        if (response.statusCode == 200) {
+          final List<dynamic> data = jsonDecode(response.body)['favourites'];
+          return data.map((json) => Favourite.fromJson(json)).toList();
+        } else {
+          throw Exception("Failed to get favourites: ${response.body}");
+        }
+      },
+    );
+  }
+
   // ====== ADD FAVOURITE ======
   static Future<Map<String, dynamic>> addFavourite({
     required String userId,
@@ -92,13 +119,38 @@ class FavouriteApiService {
     );
   }
 
-  // ====== REMOVE FAVOURITE ======
-  static Future<bool> removeFavourite(int favouriteId) async {
+  // ====== REMOVE FAVOURITE BY FAVOURITE ID ======
+  static Future<bool> removeFavouriteById(int favouriteId) async {
     return await _makeAuthenticatedRequest<bool>(
       requestFunction: (token) async {
         final uri = Uri.parse("$baseUrl/favourite/$favouriteId");
 
         print("Removing favourite ID: $favouriteId");
+        final response = await http.delete(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
+
+        print("Remove favourite response: ${response.statusCode}");
+        if (response.statusCode == 200) {
+          return true;
+        } else {
+          throw Exception("Failed to remove favourite: ${response.body}");
+        }
+      },
+    );
+  }
+
+  // ====== REMOVE FAVOURITE BY HOTEL ID ======
+  static Future<bool> removeFavouriteByHotelId(int hotelId) async {
+    return await _makeAuthenticatedRequest<bool>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/favourite/hotel/$hotelId");
+
+        print("Removing favourite for hotel ID: $hotelId");
         final response = await http.delete(
           uri,
           headers: {

@@ -487,17 +487,25 @@ class _RoomAvailabilityResultsScreenState
             Positioned(
               top: 12,
               left: 12,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.favorite_border,
-                  color: Colors.white,
-                  size: 20,
-                ),
+              child: Consumer<FavouriteProvider>(
+                builder: (context, favouriteProvider, child) {
+                  final isFavourite = favouriteProvider.isFavourite(hotel.id);
+                  return GestureDetector(
+                    onTap: () => favouriteProvider.toggleFavourite(hotel.id),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.3),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isFavourite ? Icons.favorite : Icons.favorite_border,
+                        color: isFavourite ? Colors.red : Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             Positioned(
