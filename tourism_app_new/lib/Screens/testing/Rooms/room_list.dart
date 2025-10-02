@@ -1134,10 +1134,11 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    // ignore: unnecessary_null_comparison
                     widget.hotel != null
                         ? TermsConditionsWidget.buildTermsButton(
                           context: context,
-                          terms: widget.hotel!.terms,
+                          terms: widget.hotel.terms,
                           text: "Terms & Conditions Apply",
                         )
                         : GestureDetector(

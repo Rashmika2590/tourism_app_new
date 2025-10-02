@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
 

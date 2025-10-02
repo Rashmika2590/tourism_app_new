@@ -33,7 +33,6 @@ class FAQService {
     try {
       T response = await requestFunction(token);
 
-      // Only retry for http.Response
       if (response is http.Response) {
         print("Response status: ${response.statusCode}");
         if (response.statusCode == 401 && maxRetries > 0) {
@@ -63,6 +62,46 @@ class FAQService {
     } catch (e) {
       print("Request failed: $e");
       rethrow;
+    }
+  }
+
+  // ====== GET USER REACTION FOR FAQ ======
+  static Future<UserReaction?> getUserReaction(int faqId) async {
+    try {
+      return await _makeAuthenticatedRequest<UserReaction?>(
+        requestFunction: (token) async {
+          final uri = Uri.parse("$baseUrl/faq/$faqId/user_reaction");
+
+          print("Getting user reaction for FAQ: $faqId");
+
+          final response = await http.get(
+            uri,
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer $token",
+            },
+          );
+
+          print("Get user reaction response status: ${response.statusCode}");
+
+          if (response.statusCode == 200) {
+            final jsonData = jsonDecode(response.body);
+            return UserReaction.fromJson(jsonData);
+          } else if (response.statusCode == 404) {
+            // User hasn't reacted to this FAQ yet
+            print("No reaction found for FAQ: $faqId");
+            return null;
+          } else {
+            print(
+              "Get user reaction Error: ${response.statusCode} - ${response.body}",
+            );
+            throw Exception("Failed to get user reaction: ${response.body}");
+          }
+        },
+      );
+    } catch (e) {
+      print("Error getting user reaction: $e");
+      return null; // Return null if there's an error
     }
   }
 
@@ -189,5 +228,46 @@ class FAQService {
     );
 
     return await addReaction(faqId, request);
+  }
+}
+
+// ====== NEW MODEL FOR USER REACTION ======
+class UserReaction {
+  final int id;
+  final int faqId;
+  final String userId;
+  final bool reacted;
+  final bool isLike;
+  final DateTime createdDate;
+
+  UserReaction({
+    required this.id,
+    required this.faqId,
+    required this.userId,
+    required this.reacted,
+    required this.isLike,
+    required this.createdDate,
+  });
+
+  factory UserReaction.fromJson(Map<String, dynamic> json) {
+    return UserReaction(
+      id: json['id'] ?? 0,
+      faqId: json['faq_id'] ?? 0,
+      userId: json['user_id'] ?? '',
+      reacted: json['reacted'] ?? false,
+      isLike: json['is_like'] ?? false,
+      createdDate: DateTime.parse(json['created_date']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'faq_id': faqId,
+      'user_id': userId,
+      'reacted': reacted,
+      'is_like': isLike,
+      'created_date': createdDate.toIso8601String(),
+    };
   }
 }

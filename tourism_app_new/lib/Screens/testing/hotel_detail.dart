@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_creation.dart';
-import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
@@ -14,7 +13,7 @@ import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/widgets/FAQ_widget.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
-import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
+import 'package:tourism_app_new/widgets/nearest_places.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
 
@@ -68,7 +67,7 @@ class _EnhancedHotelDetailsScreenState
   @override
   void initState() {
     super.initState();
-    isFavorite = widget.hotel.isFavourite;
+    //isFavorite = widget.hotel.isFavourite;
     _searchParams =
         widget.searchParams ??
         SearchParams(
@@ -120,49 +119,49 @@ class _EnhancedHotelDetailsScreenState
     }
   }
 
-  Future<void> _toggleFavorite() async {
-    if (isUpdatingFavorite) return;
+  // Future<void> _toggleFavorite() async {
+  //   if (isUpdatingFavorite) return;
 
-    setState(() {
-      isUpdatingFavorite = true;
-    });
+  //   setState(() {
+  //     isUpdatingFavorite = true;
+  //   });
 
-    try {
-      if (isFavorite) {
-        await FavouriteApiService.removeFavourite(widget.hotel.id);
-      } else {
-        await FavouriteApiService.addFavourite(
-          userId: "current_user_id",
-          hotelId: widget.hotel.id,
-        );
-      }
+  //   try {
+  //     if (isFavorite) {
+  //       await FavouriteApiService.removeFavourite(widget.hotel.id);
+  //     } else {
+  //       await FavouriteApiService.addFavourite(
+  //         userId: "current_user_id",
+  //         hotelId: widget.hotel.id,
+  //       );
+  //     }
 
-      setState(() {
-        isFavorite = !isFavorite;
-      });
+  //     setState(() {
+  //       isFavorite = !isFavorite;
+  //     });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            isFavorite ? 'Added to favorites' : 'Removed from favorites',
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } catch (e) {
-      print('Error toggling favorite: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update favorites'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    } finally {
-      setState(() {
-        isUpdatingFavorite = false;
-      });
-    }
-  }
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text(
+  //           isFavorite ? 'Added to favorites' : 'Removed from favorites',
+  //         ),
+  //         duration: Duration(seconds: 2),
+  //       ),
+  //     );
+  //   } catch (e) {
+  //     print('Error toggling favorite: $e');
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('Failed to update favorites'),
+  //         duration: Duration(seconds: 2),
+  //       ),
+  //     );
+  //   } finally {
+  //     setState(() {
+  //       isUpdatingFavorite = false;
+  //     });
+  //   }
+  // }
 
   // Combined availability check and navigation function
   Future<void> _checkAvailabilityAndNavigate() async {
@@ -375,9 +374,10 @@ class _EnhancedHotelDetailsScreenState
     );
   }
 
-  // Simplified availability card without buttons
+  // FIXED: Completely rewritten availability card with proper layout
   Widget _buildCheckAvailabilityCard() {
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -390,248 +390,235 @@ class _EnhancedHotelDetailsScreenState
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.all(15),
-            child: Expanded(
-              child: SingleChildScrollView(
-                scrollDirection: Axis.vertical,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // First Row: Check-in and Check-out
-                    Row(
-                      children: const [
-                        Text(
-                          'Check-in',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        Spacer(),
-                        Text(
-                          'Check-out',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+          // Main card content - ALWAYS VISIBLE
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Check-in/Check-out labels
+                Row(
+                  children: const [
+                    Text(
+                      'Check-in',
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 8),
+                    Spacer(),
+                    Text(
+                      'Check-out',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
 
-                    Row(
-                      children: [
-                        // Check-in Date and Time
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                showDatePicker = !showDatePicker;
-                                showDurationDropdown = false;
-                                showGuestSelector = false;
-                                showCheckoutInfo = false;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: themeColor,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.calendar_today,
-                                    color: Colors.white,
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(
-                                      '${selectedDate.day.toString().padLeft(2, '0')}-'
-                                      '${selectedDate.month.toString().padLeft(2, '0')}-'
-                                      '${selectedDate.year}',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    selectedTime.format(context),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
+                // Date and Time Row
+                Row(
+                  children: [
+                    // Check-in Date and Time
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showDatePicker = !showDatePicker;
+                            showDurationDropdown = false;
+                            showGuestSelector = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
                           ),
-                        ),
-                        const SizedBox(width: 10),
-
-                        // Check-out Date and Time
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.calendar_today,
-                                  size: 16,
-                                  color: Color.fromARGB(255, 114, 114, 114),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    _formatCheckoutDate(),
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Color.fromARGB(255, 114, 114, 114),
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  _formatCheckoutTime(),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  '${selectedDate.day.toString().padLeft(2, '0')}-'
+                                  '${selectedDate.month.toString().padLeft(2, '0')}-'
+                                  '${selectedDate.year}',
+                                  overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
-                                    color: Color.fromARGB(255, 114, 114, 114),
+                                    color: Colors.white,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                selectedTime.format(context),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(width: 10),
 
-                    // Second Row: Duration and Guest/Room Info
-                    Row(
-                      children: [
-                        // Duration
-                        GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              showDurationDropdown = !showDurationDropdown;
-                              showDatePicker = false;
-                              showGuestSelector = false;
-                              showCheckoutInfo = false;
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 10,
+                    // Check-out Date and Time
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              size: 16,
+                              color: Color.fromARGB(255, 114, 114, 114),
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(20),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                _formatCheckoutDate(),
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color.fromARGB(255, 114, 114, 114),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
-                            child: Text(
-                              _formatDuration(selectedDurationHours),
+                            const SizedBox(width: 6),
+                            Text(
+                              _formatCheckoutTime(),
                               style: const TextStyle(
                                 color: Color.fromARGB(255, 114, 114, 114),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(width: 10),
-
-                        // Guest and Room Info
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                showGuestSelector = !showGuestSelector;
-                                showDatePicker = false;
-                                showDurationDropdown = false;
-                                showCheckoutInfo = false;
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: themeColor,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.people_outline,
-                                    size: 18,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Flexible(
-                                    child: Text(
-                                      '$adults Adults',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Flexible(
-                                    child: Text(
-                                      '$children Children',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Flexible(
-                                    child: Text(
-                                      '$rooms Room',
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 12),
+
+                // Duration and Guests Row
+                Row(
+                  children: [
+                    // Duration
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          showDurationDropdown = !showDurationDropdown;
+                          showDatePicker = false;
+                          showGuestSelector = false;
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _formatDuration(selectedDurationHours),
+                          style: const TextStyle(
+                            color: Color.fromARGB(255, 114, 114, 114),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+
+                    // Guest and Room Info
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            showGuestSelector = !showGuestSelector;
+                            showDatePicker = false;
+                            showDurationDropdown = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: themeColor,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.people_outline,
+                                size: 18,
+                                color: Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$adults Adults',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$children Children',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '$rooms Room',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
 
-          // Extended sections
+          // Extended sections - ONLY VISIBLE WHEN ACTIVATED
           if (showDatePicker) _buildDatePickerSection(),
           if (showDurationDropdown) _buildDurationSection(),
           if (showGuestSelector) _buildGuestSection(),
@@ -641,75 +628,76 @@ class _EnhancedHotelDetailsScreenState
   }
 
   Widget _buildDatePickerSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Select Check-in Date',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: Colors.grey[800],
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Select Check-in Date',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildCalendar(),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              const Text(
+                'Check-in Time',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _buildCalendar(),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Text(
-                  'Check-in Time',
+              const Spacer(),
+              GestureDetector(
+                onTap: () async {
+                  final TimeOfDay? time = await showTimePicker(
+                    context: context,
+                    initialTime: selectedTime,
+                    builder: (context, child) {
+                      return Theme(
+                        data: ThemeData(
+                          colorScheme: ColorScheme.light(primary: themeColor),
+                        ),
+                        child: child!,
+                      );
+                    },
+                  );
+                  if (time != null) {
+                    setState(() {
+                      selectedTime = time;
+                    });
+                  }
+                },
+                child: Text(
+                  selectedTime.format(context),
                   style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
+                    color: themeColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () async {
-                    final TimeOfDay? time = await showTimePicker(
-                      context: context,
-                      initialTime: selectedTime,
-                      builder: (context, child) {
-                        return Theme(
-                          data: ThemeData(
-                            colorScheme: ColorScheme.light(primary: themeColor),
-                          ),
-                          child: child!,
-                        );
-                      },
-                    );
-                    if (time != null) {
-                      setState(() {
-                        selectedTime = time;
-                      });
-                    }
-                  },
-                  child: Text(
-                    selectedTime.format(context),
-                    style: TextStyle(
-                      color: themeColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: ElevatedButton(
               onPressed: () {
                 setState(() {
                   showDatePicker = false;
@@ -725,55 +713,54 @@ class _EnhancedHotelDetailsScreenState
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDurationSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.access_time, color: Colors.grey[400], size: 22),
-                const SizedBox(width: 10),
-                Text(
-                  'Choose duration',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: SingleChildScrollView(
-                child: Column(
-                  children:
-                      durationOptions
-                          .map((hours) => _buildDurationOption(hours))
-                          .toList(),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.access_time, color: Colors.grey[400], size: 22),
+              const SizedBox(width: 10),
+              Text(
+                'Choose duration',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: ListView(
+              children:
+                  durationOptions
+                      .map((hours) => _buildDurationOption(hours))
+                      .toList(),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: ElevatedButton(
               onPressed: () {
                 setState(() {
                   showDurationDropdown = false;
@@ -789,8 +776,8 @@ class _EnhancedHotelDetailsScreenState
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -826,60 +813,61 @@ class _EnhancedHotelDetailsScreenState
   }
 
   Widget _buildGuestSection() {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      child: Container(
-        margin: const EdgeInsets.only(top: 12),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.grey[50],
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey[200]!),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
         ),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.people_outline, color: Colors.grey[400], size: 22),
-                const SizedBox(width: 10),
-                const Text(
-                  'No. of guests',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.people_outline, color: Colors.grey[400], size: 22),
+              const SizedBox(width: 10),
+              const Text(
+                'No. of guests',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _buildGuestCounter(
-              'Adults',
-              adults,
-              (value) => setState(() {
-                adults = value;
-              }),
-            ),
-            const SizedBox(height: 16),
-            _buildGuestCounter(
-              'Children',
-              children,
-              (value) => setState(() {
-                children = value;
-              }),
-            ),
-            const SizedBox(height: 16),
-            _buildGuestCounter(
-              'Rooms',
-              rooms,
-              (value) => setState(() {
-                rooms = value;
-              }),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildGuestCounter(
+            'Adults',
+            adults,
+            (value) => setState(() {
+              adults = value;
+            }),
+          ),
+          const SizedBox(height: 16),
+          _buildGuestCounter(
+            'Children',
+            children,
+            (value) => setState(() {
+              children = value;
+            }),
+          ),
+          const SizedBox(height: 16),
+          _buildGuestCounter(
+            'Rooms',
+            rooms,
+            (value) => setState(() {
+              rooms = value;
+            }),
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: ElevatedButton(
               onPressed: () {
                 setState(() {
                   showGuestSelector = false;
@@ -895,8 +883,8 @@ class _EnhancedHotelDetailsScreenState
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1060,39 +1048,39 @@ class _EnhancedHotelDetailsScreenState
               ),
             ),
             actions: [
-              Container(
-                margin: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  icon:
-                      isUpdatingFavorite
-                          ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.grey,
-                              ),
-                            ),
-                          )
-                          : Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : Colors.black,
-                          ),
-                  onPressed: isUpdatingFavorite ? null : _toggleFavorite,
-                ),
-              ),
+              // Container(
+              //   margin: const EdgeInsets.all(8),
+              //   decoration: BoxDecoration(
+              //     color: Colors.white,
+              //     borderRadius: BorderRadius.circular(12),
+              //     boxShadow: [
+              //       BoxShadow(
+              //         color: Colors.black.withOpacity(0.1),
+              //         blurRadius: 8,
+              //         offset: const Offset(0, 2),
+              //       ),
+              //     ],
+              //   ),
+              //   child: IconButton(
+              //     icon:
+              //         isUpdatingFavorite
+              //             ? const SizedBox(
+              //               width: 20,
+              //               height: 20,
+              //               child: CircularProgressIndicator(
+              //                 strokeWidth: 2,
+              //                 valueColor: AlwaysStoppedAnimation<Color>(
+              //                   Colors.grey,
+              //                 ),
+              //               ),
+              //             )
+              //             : Icon(
+              //               isFavorite ? Icons.favorite : Icons.favorite_border,
+              //               color: isFavorite ? Colors.red : Colors.black,
+              //             ),
+              //     onPressed: isUpdatingFavorite ? null : _toggleFavorite,
+              //   ),
+              // ),
               Container(
                 margin: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -1284,7 +1272,7 @@ class _EnhancedHotelDetailsScreenState
                       ],
                     ),
 
-                    // Simplified availability card without buttons
+                    // FIXED: Availability card
                     const SizedBox(height: 16),
                     _buildCheckAvailabilityCard(),
                     const SizedBox(height: 24),
@@ -1312,6 +1300,7 @@ class _EnhancedHotelDetailsScreenState
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
                             'What\'s Included in Your Stay',
@@ -1482,53 +1471,9 @@ class _EnhancedHotelDetailsScreenState
                     ),
 
                     const SizedBox(height: 24),
-                    const Text(
-                      'Nearest public facilities',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFacilityItem(
-                            Icons.local_gas_station,
-                            'Petrol station',
-                            '3.2km',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildFacilityItem(
-                            Icons.local_hospital,
-                            'Hospital',
-                            '1.5km',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildFacilityItem(
-                            Icons.restaurant,
-                            'Restaurants',
-                            '500m',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildFacilityItem(
-                            Icons.train,
-                            'Train station',
-                            '2.1km',
-                          ),
-                        ),
-                      ],
+                    NearestPlacesWidget(
+                      latitude: widget.hotel.latitude,
+                      longitude: widget.hotel.longitude,
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -1560,7 +1505,10 @@ class _EnhancedHotelDetailsScreenState
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const SizedBox(height: 350, child: ReviewCarousel()),
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.4,
+                      child: ReviewCarousel(),
+                    ),
 
                     const SizedBox(height: 16),
                     const Text(
@@ -1573,7 +1521,7 @@ class _EnhancedHotelDetailsScreenState
                     ),
                     const SizedBox(height: 16),
                     Container(
-                      height: 400,
+                      height: MediaQuery.of(context).size.height * 0.5,
                       child: FAQWidget(hotelId: widget.hotel.id),
                     ),
                     const SizedBox(height: 32),
@@ -1682,10 +1630,11 @@ class _EnhancedHotelDetailsScreenState
                             ),
                         ],
                       ),
+                      // ignore: unnecessary_null_comparison
                       widget.hotel != null
                           ? TermsConditionsWidget.buildTermsButton(
                             context: context,
-                            terms: widget.hotel!.terms,
+                            terms: widget.hotel.terms,
                             text: "Terms & Conditions Apply",
                           )
                           : GestureDetector(

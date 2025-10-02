@@ -1,9 +1,6 @@
 // widgets/post_searching_dropdowns.dart
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/widgets/location_suggestion.dart';
@@ -114,6 +111,7 @@ class _SearchCardWithDataState extends State<SearchCardWithData> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: unnecessary_null_comparison
     final hasNullDetails = widget.searchParams.checkInDate == null;
 
     return Container(

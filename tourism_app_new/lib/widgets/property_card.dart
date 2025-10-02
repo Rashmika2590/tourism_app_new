@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
-import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 
@@ -64,40 +63,40 @@ class _HotelCardState extends State<HotelCard> {
     }
   }
 
-  Future<void> _toggleFavourite() async {
-    try {
-      if (isFavourite && favouriteId != null) {
-        // Remove favourite
-        final success = await FavouriteApiService.removeFavourite(favouriteId!);
-        if (success) {
-          setState(() {
-            isFavourite = false;
-            favouriteId = null;
-          });
-        }
-      } else {
-        const userId = "5F7pFXlyQcfTWJp69hOTU5bSrph1"; // replace with real user
-        final response = await FavouriteApiService.addFavourite(
-          userId: userId,
-          hotelId: widget.hotel.id,
-        );
+  // Future<void> _toggleFavourite() async {
+  //   try {
+  //     if (isFavourite && favouriteId != null) {
+  //       // Remove favourite
+  //       final success = await FavouriteApiService.removeFavourite(favouriteId!);
+  //       if (success) {
+  //         setState(() {
+  //           isFavourite = false;
+  //           favouriteId = null;
+  //         });
+  //       }
+  //     } else {
+  //       const userId = "5F7pFXlyQcfTWJp69hOTU5bSrph1"; // replace with real user
+  //       final response = await FavouriteApiService.addFavourite(
+  //         userId: userId,
+  //         hotelId: widget.hotel.id,
+  //       );
 
-        setState(() {
-          isFavourite = true;
-          favouriteId = response["id"];
-        });
-      }
-    } catch (e) {
-      final error = e.toString();
-      if (error.contains("Already marked as favourite")) {
-        setState(() {
-          isFavourite = true;
-        });
-      } else {
-        print("Favourite toggle error: $e");
-      }
-    }
-  }
+  //       setState(() {
+  //         isFavourite = true;
+  //         favouriteId = response["id"];
+  //       });
+  //     }
+  //   } catch (e) {
+  //     final error = e.toString();
+  //     if (error.contains("Already marked as favourite")) {
+  //       setState(() {
+  //         isFavourite = true;
+  //       });
+  //     } else {
+  //       print("Favourite toggle error: $e");
+  //     }
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -295,28 +294,28 @@ class _HotelCardState extends State<HotelCard> {
                     ),
 
                     // Top-left favorite icon
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      child: GestureDetector(
-                        onTap: _toggleFavourite,
-                        child: Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Icon(
-                            isFavourite
-                                ? Icons.favorite
-                                : Icons.favorite_border,
-                            color: AppColors.accent,
-                            size: 24,
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Positioned(
+                    //   top: 0,
+                    //   left: 0,
+                    //   child: GestureDetector(
+                    //     onTap: _toggleFavourite,
+                    //     child: Container(
+                    //       width: 40,
+                    //       height: 40,
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.white.withOpacity(0.2),
+                    //         borderRadius: BorderRadius.circular(20),
+                    //       ),
+                    //       child: Icon(
+                    //         isFavourite
+                    //             ? Icons.favorite
+                    //             : Icons.favorite_border,
+                    //         color: AppColors.accent,
+                    //         size: 24,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),

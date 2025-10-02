@@ -38,7 +38,6 @@ class BookingScreen extends StatefulWidget {
 }
 
 class _BookingScreenState extends State<BookingScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -803,7 +802,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       onTap: () {
                         TermsConditionsWidget.showTermsAndConditions(
                           context: context,
-                          terms: widget.hotel?.terms ?? [],
+                          terms: widget.hotel.terms,
                           title: "Terms & Conditions",
                         );
                       },
@@ -1002,8 +1001,9 @@ class _BookingScreenState extends State<BookingScreen> {
                                         TermsConditionsWidget.showTermsAndConditions(
                                           context: context,
                                           terms:
-                                              widget.hotel?.terms ??
-                                              [], // 👈 pass hotel terms list
+                                              widget
+                                                  .hotel
+                                                  .terms, // 👈 pass hotel terms list
                                           title: "Terms & Conditions",
                                         );
                                       },

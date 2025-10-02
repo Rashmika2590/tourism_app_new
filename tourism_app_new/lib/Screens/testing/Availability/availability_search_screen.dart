@@ -1,10 +1,6 @@
 // Enhanced room_availability_screen.dart with Lat/Lng based searching
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import 'package:flutter_typeahead/flutter_typeahead.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Availability/availability_result_page.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -67,12 +63,6 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
     _stateController.dispose();
     _tabController.dispose();
     super.dispose();
-  }
-
-  void _updateCheckOutDate(BookingState bookingState) {
-    final checkOutDate = bookingState.checkInDate.add(
-      Duration(hours: bookingState.duration),
-    );
   }
 
   Future<void> _selectDateTime(BookingState bookingState) async {

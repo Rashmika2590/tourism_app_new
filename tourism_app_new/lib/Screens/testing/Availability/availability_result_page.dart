@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
-import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
@@ -260,17 +259,6 @@ class _RoomAvailabilityResultsScreenState
     }
 
     return hotelWithRoomDetailsList;
-  }
-
-  String _formatDuration(int hours) {
-    if (hours == 1) {
-      return '$hours hour';
-    } else if (hours < 24) {
-      return '$hours hours';
-    } else {
-      final days = hours ~/ 24;
-      return '$days ${days == 1 ? 'day' : 'days'}';
-    }
   }
 
   Widget _buildResultsHeader() {

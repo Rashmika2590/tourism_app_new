@@ -16,10 +16,11 @@ class _FAQWidgetState extends State<FAQWidget> {
   final TextEditingController _questionController = TextEditingController();
   bool _isLoading = false;
   bool _showQuestionInput = false;
-  bool _showAllFAQs = false; // 🆕 Added to control showing all FAQs
+  bool _showAllFAQs = false;
 
-  // Track user reactions locally (fallback if backend doesn't provide userReaction)
-  Map<int, String?> localUserReactions = {}; // faqId -> 'like'/'dislike'/null
+  // Store user reactions fetched from backend
+  Map<int, UserReaction?> userReactions = {}; // faqId -> UserReaction object
+  bool _isLoadingReactions = false;
 
   @override
   void initState() {
@@ -30,6 +31,34 @@ class _FAQWidgetState extends State<FAQWidget> {
   void _loadFAQs() {
     setState(() {
       _faqsFuture = FAQService.getFAQsForHotel(widget.hotelId);
+    });
+    // Load reactions after FAQs are fetched
+    _faqsFuture.then((response) => _loadUserReactions(response.faqs));
+  }
+
+  Future<void> _loadUserReactions(List<FAQ> faqs) async {
+    setState(() {
+      _isLoadingReactions = true;
+    });
+
+    // Fetch user reaction for each FAQ
+    for (var faq in faqs) {
+      try {
+        final reaction = await FAQService.getUserReaction(faq.id);
+        setState(() {
+          userReactions[faq.id] = reaction;
+        });
+      } catch (e) {
+        print('Error loading reaction for FAQ ${faq.id}: $e');
+        // Set to null if error - means no reaction
+        setState(() {
+          userReactions[faq.id] = null;
+        });
+      }
+    }
+
+    setState(() {
+      _isLoadingReactions = false;
     });
   }
 
@@ -72,25 +101,50 @@ class _FAQWidgetState extends State<FAQWidget> {
 
   Future<void> _handleReaction(int faqId, bool isLike) async {
     try {
+      // Check if user already reacted the same way
+      final currentReaction = userReactions[faqId];
+      if (currentReaction != null &&
+          currentReaction.reacted &&
+          currentReaction.isLike == isLike) {
+        // User clicked the same reaction again - do nothing or show message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('You already reacted to this FAQ'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+        return;
+      }
+
+      // Add the reaction
       if (isLike) {
         await FAQService.likeFAQ(faqId);
-        setState(() {
-          localUserReactions[faqId] = 'like';
-        });
       } else {
         await FAQService.dislikeFAQ(faqId);
-        setState(() {
-          localUserReactions[faqId] = 'dislike';
-        });
       }
-      _loadFAQs(); // Refresh to get updated counts
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Reaction recorded!')));
+
+      // Fetch updated reaction from backend
+      final updatedReaction = await FAQService.getUserReaction(faqId);
+      setState(() {
+        userReactions[faqId] = updatedReaction;
+      });
+
+      // Refresh FAQ list to get updated counts
+      _loadFAQs();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reaction recorded!'),
+          duration: Duration(seconds: 1),
+        ),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to record reaction: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to record reaction: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -127,7 +181,6 @@ class _FAQWidgetState extends State<FAQWidget> {
               if (hasFAQs)
                 Expanded(child: _buildFAQsList(faqs))
               else
-                // Empty state with question input
                 Expanded(
                   child: Padding(
                     padding: EdgeInsets.all(16),
@@ -155,33 +208,33 @@ class _FAQWidgetState extends State<FAQWidget> {
   }
 
   Widget _buildFAQsList(List<FAQ> allFAQs) {
-    // Show only first 3 FAQs initially, or all if _showAllFAQs is true
     final List<FAQ> faqsToShow =
         _showAllFAQs ? allFAQs : allFAQs.take(3).toList();
     final bool hasMoreFAQs = allFAQs.length > 3;
 
     return ListView.builder(
       padding: EdgeInsets.all(16),
-      itemCount:
-          faqsToShow.length +
-          (hasMoreFAQs && !_showAllFAQs
-              ? 2
-              : 1), // +1 for question input, +1 for "See more" if needed
+      itemCount: faqsToShow.length + (hasMoreFAQs && !_showAllFAQs ? 2 : 1),
       itemBuilder: (context, index) {
-        // Show FAQ items
         if (index < faqsToShow.length) {
           final faq = faqsToShow[index];
-          // Use model's userReaction if available, otherwise use local state
-          final userReaction = faq.userReaction ?? localUserReactions[faq.id];
+          final reaction = userReactions[faq.id];
+
+          // Determine user reaction state
+          String? userReactionState;
+          if (reaction != null && reaction.reacted) {
+            userReactionState = reaction.isLike ? 'like' : 'dislike';
+          }
+
           return _FAQItem(
             faq: faq,
-            userReaction: userReaction,
+            userReaction: userReactionState,
             onLike: () => _handleReaction(faq.id, true),
             onDislike: () => _handleReaction(faq.id, false),
+            isLoadingReaction: _isLoadingReactions,
           );
         }
 
-        // Show "See more" button if there are more FAQs and not showing all
         if (hasMoreFAQs && !_showAllFAQs && index == faqsToShow.length) {
           return Padding(
             padding: EdgeInsets.symmetric(vertical: 8),
@@ -195,10 +248,10 @@ class _FAQWidgetState extends State<FAQWidget> {
                 child: Text(
                   'See more',
                   style: TextStyle(
-                    color: Colors.blue,
+                    color: AppColors.mainGreen,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
+                    //decoration: TextDecoration.underline,
                   ),
                 ),
               ),
@@ -206,7 +259,6 @@ class _FAQWidgetState extends State<FAQWidget> {
           );
         }
 
-        // Show question input section (always last item)
         return Column(children: [SizedBox(height: 16), _buildQuestionInput()]);
       },
     );
@@ -269,7 +321,6 @@ class _FAQWidgetState extends State<FAQWidget> {
             ),
           ),
 
-          // Expandable question input field
           if (_showQuestionInput) ...[
             SizedBox(height: 16),
             TextField(
@@ -277,22 +328,19 @@ class _FAQWidgetState extends State<FAQWidget> {
               decoration: InputDecoration(
                 hintText: 'Type your question here...',
                 hintStyle: TextStyle(color: Colors.grey[600], fontSize: 13),
-                isDense: true, // makes the field more compact
+                isDense: true,
                 enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(
-                    color: Colors.grey[400]!, // normal underline color
-                    width: 1.0, // underline thickness
-                  ),
+                  borderSide: BorderSide(color: Colors.grey[400]!, width: 1.0),
                 ),
                 focusedBorder: UnderlineInputBorder(
                   borderSide: BorderSide(
-                    color: AppColors.mainGreen, // focused underline color
-                    width: 2.0, // thicker when focused
+                    color: AppColors.mainGreen,
+                    width: 2.0,
                   ),
                 ),
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 0,
-                  vertical: 6, // reduces height
+                  vertical: 6,
                 ),
               ),
               maxLines: 3,
@@ -345,13 +393,20 @@ class _FAQWidgetState extends State<FAQWidget> {
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _questionController.dispose();
+    super.dispose();
+  }
 }
 
 class _FAQItem extends StatelessWidget {
   final FAQ faq;
-  final String? userReaction; // 'like', 'dislike', or null
+  final String? userReaction;
   final VoidCallback onLike;
   final VoidCallback onDislike;
+  final bool isLoadingReaction;
 
   const _FAQItem({
     Key? key,
@@ -359,6 +414,7 @@ class _FAQItem extends StatelessWidget {
     this.userReaction,
     required this.onLike,
     required this.onDislike,
+    this.isLoadingReaction = false,
   }) : super(key: key);
 
   @override
@@ -376,7 +432,6 @@ class _FAQItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Question
           Text(
             faq.question,
             style: TextStyle(
@@ -387,7 +442,6 @@ class _FAQItem extends StatelessWidget {
           ),
           SizedBox(height: 8),
 
-          // Answer
           if (faq.answer != null)
             Text(
               faq.answer!,
@@ -409,26 +463,25 @@ class _FAQItem extends StatelessWidget {
 
           SizedBox(height: 16),
 
-          // Reaction buttons
           Row(
             children: [
-              // Helpful button
               GestureDetector(
-                onTap: onLike,
+                onTap: isLoadingReaction ? null : onLike,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
                       size: 16,
-                      color: hasLiked ? Colors.green : Colors.grey[600],
+                      color: hasLiked ? AppColors.mainGreen : Colors.grey[600],
                     ),
                     SizedBox(width: 6),
                     Text(
                       'Helpful (${faq.likeCount})',
                       style: TextStyle(
                         fontSize: 12,
-                        color: hasLiked ? Colors.green : Colors.grey[600],
+                        color:
+                            hasLiked ? AppColors.mainGreen : Colors.grey[600],
                         fontWeight:
                             hasLiked ? FontWeight.w600 : FontWeight.normal,
                       ),
@@ -439,9 +492,8 @@ class _FAQItem extends StatelessWidget {
 
               SizedBox(width: 24),
 
-              // Unhelpful button
               GestureDetector(
-                onTap: onDislike,
+                onTap: isLoadingReaction ? null : onDislike,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
