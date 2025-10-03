@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_detail.dart';
+import 'package:tourism_app_new/Services/Providers/favourite_provider.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
 import 'package:tourism_app_new/Services/Location/location_service.dart';
@@ -14,6 +15,7 @@ import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
 import 'package:tourism_app_new/models/room_model.dart';
 import 'package:tourism_app_new/widgets/expandable_map_widget.dart';
+import 'package:tourism_app_new/widgets/favourite_widget.dart';
 import 'package:tourism_app_new/widgets/filtering%20option.dart';
 import 'package:tourism_app_new/widgets/post_searching_dropdowns.dart';
 import 'package:tourism_app_new/widgets/filter_bottom_sheet.dart';
@@ -472,19 +474,44 @@ class _RoomAvailabilityResultsScreenState
                 ),
               ),
             ),
+            // Main tap area for navigation - Use GestureDetector with HitTestBehavior
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onTap: () {
+                  final searchParams = SearchParams(
+                    state: bookingState.searchLocationName,
+                    checkInDate: bookingState.checkInDate,
+                    checkInTime: bookingState.checkInTime,
+                    durationHours: bookingState.duration,
+                    adults: bookingState.adults,
+                    children: bookingState.children,
+                    rooms: 1,
+                  );
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:
+                          (_) => EnhancedHotelDetailsScreen(
+                            hotel: hotelWithRooms.hotel,
+                            searchParams: searchParams,
+                          ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            // Favourite Icon - Positioned AFTER GestureDetector to be on top
             Positioned(
-              top: 12,
-              left: 12,
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.favorite_border,
-                  color: Colors.white,
-                  size: 20,
+              top: 8,
+              left: 8,
+              child: IgnorePointer(
+                ignoring: false, // Allow this widget to receive taps
+                child: Consumer<FavouriteService>(
+                  builder: (context, favouriteService, child) {
+                    favouriteService.isFavourite(hotel.id);
+                    return FavouriteIcon(hotelId: hotel.id, size: 25);
+                  },
                 ),
               ),
             ),
@@ -493,152 +520,128 @@ class _RoomAvailabilityResultsScreenState
               bottom: 0,
               left: 0,
               right: 5,
-              child: Padding(
-                padding: const EdgeInsets.all(10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          '${hotel.name}',
-                          style: const TextStyle(
-                            color: AppColors.mainGreen,
-                            fontSize: 28,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.right,
-                        ),
-                        Text(
-                          'in ${hotel.state}',
-                          style: const TextStyle(
-                            color: AppColors.mainGreen,
-                            fontSize: 18,
-                            height: 0.3,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        const Icon(Icons.star, color: Colors.amber, size: 16),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${hotel.latitude.toStringAsFixed(1)} (${hotel.longitude})',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'LKR ',
-                                style: TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              TextSpan(
-                                text:
-                                    '${cheapestRoom.price.toStringAsFixed(0)}',
-                                style: TextStyle(
-                                  color: AppColors.accent,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '/ onwards',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Text(
-                      '(all inclusive)',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    const SizedBox(height: 15),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children:
-                          displayAmenities.map((amenity) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20.0,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.circle,
-                                    size: 4,
-                                    color: Colors.white,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    amenity.trim(),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    final searchParams = SearchParams(
-                      state: bookingState.searchLocationName,
-                      checkInDate: bookingState.checkInDate,
-                      checkInTime: bookingState.checkInTime,
-                      durationHours: bookingState.duration,
-                      adults: bookingState.adults,
-                      children: bookingState.children,
-                      rooms: 1,
-                    );
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder:
-                            (_) => EnhancedHotelDetailsScreen(
-                              hotel: hotelWithRooms.hotel,
-                              searchParams: searchParams,
+              child: IgnorePointer(
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${hotel.name}',
+                            style: const TextStyle(
+                              color: AppColors.mainGreen,
+                              fontSize: 28,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.right,
+                          ),
+                          Text(
+                            'in ${hotel.state}',
+                            style: const TextStyle(
+                              color: AppColors.mainGreen,
+                              fontSize: 18,
+                              height: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                  splashColor: Colors.white24,
+                      const SizedBox(height: 15),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${hotel.latitude.toStringAsFixed(1)} (${hotel.longitude})',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'LKR ',
+                                  style: TextStyle(
+                                    color: AppColors.accent,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text:
+                                      '${cheapestRoom.price.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    color: AppColors.accent,
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '/ onwards',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.8),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Text(
+                        '(all inclusive)',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      const SizedBox(height: 15),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children:
+                              displayAmenities.map((amenity) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20.0,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(
+                                        Icons.circle,
+                                        size: 4,
+                                        color: Colors.white,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        amenity.trim(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

@@ -1,115 +1,68 @@
-// import 'package:flutter/material.dart';
-// import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
+import 'package:flutter/foundation.dart';
+import 'package:tourism_app_new/Models/hotel_model.dart';
+import 'package:tourism_app_new/Services/Api%20Services/favourites_api_service.dart';
 
-// class FavouriteProvider extends ChangeNotifier {
-//   // Map of hotelId -> favouriteId (backend ID)
-//   final Map<int, int> _favouriteIds = {};
+class FavouriteService with ChangeNotifier {
+  List<Hotel> _favouriteHotels = [];
+  Set<int> _favouriteHotelIds = {};
 
-//   // Set of hotel IDs that are favourited
-//   final Set<int> _favouritedHotels = {};
+  List<Hotel> get favouriteHotels => _favouriteHotels;
+  Set<int> get favouriteHotelIds => _favouriteHotelIds;
 
-//   // Loading states for individual hotels
-//   final Map<int, bool> _loadingStates = {};
+  // Check if a hotel is favourite
+  bool isFavourite(int hotelId) {
+    return _favouriteHotelIds.contains(hotelId);
+  }
 
-//   bool isFavourite(int hotelId) => _favouritedHotels.contains(hotelId);
+  // Load user favourites
+  Future<void> loadUserFavourites() async {
+    try {
+      final favourites = await FavouriteApiService.getUserFavourites();
+      _favouriteHotels = favourites;
+      _favouriteHotelIds = Set<int>.from(favourites.map((hotel) => hotel.id));
+      notifyListeners();
+    } catch (e) {
+      print('Error loading favourites: $e');
+      rethrow;
+    }
+  }
 
-//   bool isLoading(int hotelId) => _loadingStates[hotelId] ?? false;
+  // Toggle favourite status
+  Future<void> toggleFavourite(int hotelId, bool currentlyFavourite) async {
+    try {
+      final newStatus = await FavouriteApiService.toggleFavourite(
+        hotelId,
+        currentlyFavourite,
+      );
 
-//   int? getFavouriteId(int hotelId) => _favouriteIds[hotelId];
+      if (newStatus) {
+        // Added to favourites
+        _favouriteHotelIds.add(hotelId);
+      } else {
+        // Removed from favourites
+        _favouriteHotelIds.remove(hotelId);
+        _favouriteHotels.removeWhere((hotel) => hotel.id == hotelId);
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error toggling favourite: $e');
+      rethrow;
+    }
+  }
 
-//   // Initialize favourite status from hotel data
-//   void setFavouriteStatus(int hotelId, bool isFavourite, {int? favouriteId}) {
-//     if (isFavourite) {
-//       _favouritedHotels.add(hotelId);
-//       if (favouriteId != null) {
-//         _favouriteIds[hotelId] = favouriteId;
-//       }
-//     } else {
-//       _favouritedHotels.remove(hotelId);
-//       _favouriteIds.remove(hotelId);
-//     }
-//     notifyListeners();
-//   }
+  // Add hotel to favourites list (when you have full hotel data)
+  void addFavouriteHotel(Hotel hotel) {
+    if (!_favouriteHotelIds.contains(hotel.id)) {
+      _favouriteHotelIds.add(hotel.id);
+      _favouriteHotels.add(hotel);
+      notifyListeners();
+    }
+  }
 
-//   // Toggle favourite status
-//   Future<bool> toggleFavourite({
-//     required int hotelId,
-//     required String userId,
-//   }) async {
-//     // Prevent multiple simultaneous requests for the same hotel
-//     if (_loadingStates[hotelId] == true) {
-//       return false;
-//     }
-
-//     _loadingStates[hotelId] = true;
-//     notifyListeners();
-
-//     try {
-//       if (_favouritedHotels.contains(hotelId)) {
-//         // Remove favourite
-//         final favouriteId = _favouriteIds[hotelId];
-//         if (favouriteId == null) {
-//           throw Exception("Favourite ID not found for hotel $hotelId");
-//         }
-
-//         final success = await FavouriteApiService.removeFavourite(favouriteId);
-
-//         if (success) {
-//           _favouritedHotels.remove(hotelId);
-//           _favouriteIds.remove(hotelId);
-//           _loadingStates[hotelId] = false;
-//           notifyListeners();
-//           return true;
-//         }
-//       } else {
-//         // Add favourite
-//         final response = await FavouriteApiService.addFavourite(
-//           userId: userId,
-//           hotelId: hotelId,
-//         );
-
-//         _favouritedHotels.add(hotelId);
-//         _favouriteIds[hotelId] = response["id"];
-//         _loadingStates[hotelId] = false;
-//         notifyListeners();
-//         return true;
-//       }
-//     } catch (e) {
-//       print("Error toggling favourite: $e");
-
-//       // Handle "already favourite" case
-//       if (e.toString().contains("Already marked as favourite")) {
-//         _favouritedHotels.add(hotelId);
-//       }
-//     } finally {
-//       _loadingStates[hotelId] = false;
-//       notifyListeners();
-//     }
-
-//     return false;
-//   }
-
-//   // Bulk update from hotel list (for initial load)
-//   void updateFromHotelList(List<dynamic> hotels) {
-//     for (var hotel in hotels) {
-//       if (hotel is Map && hotel.containsKey('id')) {
-//         final hotelId = hotel['id'] as int;
-//         final isFav = hotel['is_favourite'] as bool? ?? false;
-
-//         if (isFav) {
-//           _favouritedHotels.add(hotelId);
-//         } else {
-//           _favouritedHotels.remove(hotelId);
-//         }
-//       }
-//     }
-//     notifyListeners();
-//   }
-
-//   void clear() {
-//     _favouriteIds.clear();
-//     _favouritedHotels.clear();
-//     _loadingStates.clear();
-//     notifyListeners();
-//   }
-// }
+  // Clear all favourites (for logout)
+  void clearFavourites() {
+    _favouriteHotels.clear();
+    _favouriteHotelIds.clear();
+    notifyListeners();
+  }
+}

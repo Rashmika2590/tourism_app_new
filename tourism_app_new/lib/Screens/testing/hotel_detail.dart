@@ -13,6 +13,7 @@ import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/widgets/FAQ_widget.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
+import 'package:tourism_app_new/widgets/favourite_widget.dart';
 import 'package:tourism_app_new/widgets/nearest_places.dart';
 import 'package:tourism_app_new/widgets/reviewCard.dart';
 import 'package:tourism_app_new/widgets/terms_condition_widget.dart';
@@ -330,41 +331,6 @@ class _EnhancedHotelDetailsScreenState
                 Text(
                   subtitle,
                   style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFacilityItem(IconData icon, String name, String distance) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                  ),
-                ),
-                Text(
-                  distance,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 11),
                 ),
               ],
             ),
@@ -1258,6 +1224,12 @@ class _EnhancedHotelDetailsScreenState
                                   ],
                                 ),
                               ),
+                            ),
+                            Spacer(),
+                            FavouriteIcon(
+                              hotelId: widget.hotel.id,
+                              //isFavourite: widget.hotel.isFavourite,
+                              size: 30,
                             ),
                           ],
                         ),

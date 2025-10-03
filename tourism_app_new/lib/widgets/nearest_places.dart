@@ -261,7 +261,7 @@ class _NearestPlacesWidgetState extends State<NearestPlacesWidget> {
             const SizedBox(width: 12),
             Expanded(
               child: _buildFacilityItem(
-                Icons.local_hospital,
+                Icons.local_hospital_outlined,
                 'Hospital',
                 _nearestPlaces['hospital']?.formattedDistance ?? 'Not found',
                 _nearestPlaces['hospital']?.name,
@@ -310,35 +310,55 @@ class _NearestPlacesWidgetState extends State<NearestPlacesWidget> {
         border: Border.all(color: Colors.grey[200]!),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 25, color: AppColors.mainGreen),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-            textAlign: TextAlign.center,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Single Icon aligned with both Type + Distance
+              Padding(
+                padding: const EdgeInsets.only(top: 10), // fine-tune alignment
+                child: Icon(icon, size: 32, color: AppColors.mainGreen),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Type + Distance stacked
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    distance,
+                    style: TextStyle(
+                      color: Colors.grey[800],
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            distance,
-            style: TextStyle(
-              color: Colors.grey[800],
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+
           if (placeName != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              placeName,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                placeName!,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ],

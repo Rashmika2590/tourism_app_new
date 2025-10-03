@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart'; // <-- ADD THIS IMPORT
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
+import 'package:tourism_app_new/Services/Providers/favourite_provider.dart';
 import 'package:tourism_app_new/Services/utils/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:tourism_app_new/routs.dart';
@@ -14,7 +15,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => BookingState()),
-        //ChangeNotifierProvider(create: (_) => FavouritesProvider()),
+        ChangeNotifierProvider(create: (_) => FavouriteService()),
       ],
       child: const MyApp(),
     ),
