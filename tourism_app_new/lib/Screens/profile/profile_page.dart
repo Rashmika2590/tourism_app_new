@@ -174,7 +174,7 @@ class ProfilePage extends StatelessWidget {
                 context,
                 Icons.favorite_border,
                 "Favorites",
-                AppRoutes.profile_settings,
+                AppRoutes.favourites, // Changed from profile_settings
               ),
               buildMenuItem(
                 context,

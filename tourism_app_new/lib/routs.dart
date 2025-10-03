@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/Auth/forgot_password.dart';
 import 'package:tourism_app_new/Screens/Auth/register.dart';
 import 'package:tourism_app_new/Screens/notification.dart';
+import 'package:tourism_app_new/Screens/profile/favourits_list.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
@@ -24,6 +25,8 @@ class AppRoutes {
   static const String notification = '/notification';
 
   static const String profile_settings = '/Profile_settings';
+  static const String favourites = '/favourites';
+
   static const String debug = '/debug';
 
   static const String hotelcreation = '/create-hotel';
@@ -43,6 +46,7 @@ class AppRoutes {
 
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),
+    favourites: (context) => FavouriteHotelsPage(),
     debug: (context) => DebugUserStatusScreen(),
 
     hotelcreation: (context) => HotelCreationScreen(),

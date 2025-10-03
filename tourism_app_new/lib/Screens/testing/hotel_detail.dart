@@ -34,7 +34,7 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 }
 
 class _EnhancedHotelDetailsScreenState
-    extends State<EnhancedHotelDetailsScreen> {
+  extends State<EnhancedHotelDetailsScreen> {
   late SearchParams _searchParams;
   late bool isFavorite;
   int currentImageIndex = 0;
