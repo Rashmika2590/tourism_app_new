@@ -353,7 +353,7 @@ class _NearestPlacesWidgetState extends State<NearestPlacesWidget> {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                placeName!,
+                placeName,
                 style: TextStyle(color: Colors.grey[600], fontSize: 12),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

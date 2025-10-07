@@ -34,7 +34,7 @@ class EnhancedHotelDetailsScreen extends StatefulWidget {
 }
 
 class _EnhancedHotelDetailsScreenState
-  extends State<EnhancedHotelDetailsScreen> {
+    extends State<EnhancedHotelDetailsScreen> {
   late SearchParams _searchParams;
   late bool isFavorite;
   int currentImageIndex = 0;
@@ -118,6 +118,138 @@ class _EnhancedHotelDetailsScreenState
         isLoadingRooms = false;
       });
     }
+  }
+
+  Widget _buildAmenitiesGrid() {
+    // Remove duplicates and create a unique list
+    final uniqueAmenities = allAmenities.toSet().toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        shrinkWrap: true,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, // Two columns
+          crossAxisSpacing: 50,
+          mainAxisSpacing: 10,
+          childAspectRatio:
+              4.0, // Adjust this value to control item width/height ratio
+        ),
+        itemCount: uniqueAmenities.length,
+        itemBuilder: (context, index) {
+          final amenity = uniqueAmenities[index];
+          return _buildAmenityItem(amenity);
+        },
+      ),
+    );
+  }
+
+  Widget _buildAmenityItem(String amenity) {
+    return Container(
+      child: Row(
+        children: [
+          const SizedBox(width: 12),
+          Icon(_getAmenityIcon(amenity), color: AppColors.mainGreen, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              amenity,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method to get appropriate icons for common amenities
+  IconData _getAmenityIcon(String amenity) {
+    final amenityLower = amenity.toLowerCase();
+
+    if (amenityLower.contains('wifi') || amenityLower.contains('internet')) {
+      return Icons.wifi;
+    } else if (amenityLower.contains('parking')) {
+      return Icons.local_parking;
+    } else if (amenityLower.contains('pool') ||
+        amenityLower.contains('swimming')) {
+      return Icons.pool;
+    } else if (amenityLower.contains('breakfast')) {
+      return Icons.restaurant;
+    } else if (amenityLower.contains('gym') ||
+        amenityLower.contains('fitness')) {
+      return Icons.fitness_center;
+    } else if (amenityLower.contains('spa')) {
+      return Icons.spa;
+    } else if (amenityLower.contains('air conditioning') ||
+        amenityLower.contains('ac')) {
+      return Icons.ac_unit;
+    } else if (amenityLower.contains('tv') ||
+        amenityLower.contains('television')) {
+      return Icons.tv;
+    } else if (amenityLower.contains('kitchen')) {
+      return Icons.kitchen;
+    } else if (amenityLower.contains('balcony')) {
+      return Icons.landscape;
+    } else if (amenityLower.contains('bath') ||
+        amenityLower.contains('shower')) {
+      return Icons.shower;
+    } else if (amenityLower.contains('bed')) {
+      return Icons.hotel;
+    } else if (amenityLower.contains('security') ||
+        amenityLower.contains('safe')) {
+      return Icons.security;
+    } else if (amenityLower.contains('elevator') ||
+        amenityLower.contains('lift')) {
+      return Icons.elevator;
+    } else if (amenityLower.contains('laundry')) {
+      return Icons.local_laundry_service;
+    } else if (amenityLower.contains('pet') ||
+        amenityLower.contains('animal')) {
+      return Icons.pets;
+    } else if (amenityLower.contains('smoking')) {
+      return Icons.smoking_rooms;
+    } else if (amenityLower.contains('non-smoking')) {
+      return Icons.smoke_free;
+    } else if (amenityLower.contains('wheelchair') ||
+        amenityLower.contains('accessible')) {
+      return Icons.accessible;
+    } else if (amenityLower.contains('business') ||
+        amenityLower.contains('meeting')) {
+      return Icons.business_center;
+    } else if (amenityLower.contains('concierge')) {
+      return Icons.help_outline;
+    } else if (amenityLower.contains('room service')) {
+      return Icons.room_service;
+    } else if (amenityLower.contains('minibar')) {
+      return Icons.kitchen;
+    } else if (amenityLower.contains('refrigerator') ||
+        amenityLower.contains('fridge')) {
+      return Icons.kitchen;
+    } else if (amenityLower.contains('microwave')) {
+      return Icons.microwave;
+    } else if (amenityLower.contains('coffee') ||
+        amenityLower.contains('tea')) {
+      return Icons.coffee;
+    } else if (amenityLower.contains('beach') ||
+        amenityLower.contains('ocean')) {
+      return Icons.beach_access;
+    } else if (amenityLower.contains('garden')) {
+      return Icons.nature;
+    } else if (amenityLower.contains('terrace')) {
+      return Icons.deck;
+    }
+
+    // Default icon
+    return Icons.check_circle;
   }
 
   // Future<void> _toggleFavorite() async {
@@ -301,43 +433,6 @@ class _EnhancedHotelDetailsScreenState
     );
     TimeOfDay checkoutTime = TimeOfDay.fromDateTime(checkoutDate);
     return checkoutTime.format(context);
-  }
-
-  Widget _buildIncludedItem(String title, String subtitle) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(
-              color: AppColors.mainGreen,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   // FIXED: Completely rewritten availability card with proper layout
@@ -1262,43 +1357,38 @@ class _EnhancedHotelDetailsScreenState
                     ExclusiveAddonsWidget(),
                     const SizedBox(height: 16),
 
-                    // Combined Amenities and What's Included Section
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[300]!),
+                    // Updated Amenities Section with Double Column and No Duplicates
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0,
+                        vertical: 8.0,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
                         children: [
                           const Text(
-                            'What\'s Included in Your Stay',
+                            'Whats inclued in your stay',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                               color: Colors.black87,
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          _buildIncludedItem(
-                            'Free Cancellation',
-                            'Cancel up to 24 hours before',
-                          ),
-                          _buildIncludedItem(
-                            'Breakfast',
-                            'Complimentary breakfast included',
-                          ),
-                          _buildIncludedItem(
-                            'WiFi',
-                            'Free high-speed internet',
-                          ),
-                          _buildIncludedItem(
-                            'Parking',
-                            'Free parking available',
-                          ),
+
+                          if (allAmenities.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16.0),
+                              child: Text(
+                                "No amenities available",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            )
+                          else
+                            _buildAmenitiesGrid(),
                         ],
                       ),
                     ),

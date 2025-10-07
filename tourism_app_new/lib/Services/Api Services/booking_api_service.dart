@@ -90,27 +90,27 @@ class BookingApiService {
   }
 
   // ====== GET BOOKING BY ID ======
-  static Future<BookingResponse> getBookingById(int bookingId) async {
-    return await _makeAuthenticatedRequest<BookingResponse>(
-      requestFunction: (token) async {
-        final uri = Uri.parse("$baseUrl$bookingEndpoint$bookingId/");
-        final response = await http.get(
-          uri,
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer $token",
-          },
-        );
+  // static Future<BookingResponse> getBookingById(int bookingId) async {
+  //   return await _makeAuthenticatedRequest<BookingResponse>(
+  //     requestFunction: (token) async {
+  //       final uri = Uri.parse("$baseUrl$bookingEndpoint$bookingId/");
+  //       final response = await http.get(
+  //         uri,
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //           "Authorization": "Bearer $token",
+  //         },
+  //       );
 
-        print("Get booking response: ${response.statusCode}");
-        if (response.statusCode == 200) {
-          return BookingResponse.fromJson(jsonDecode(response.body));
-        } else {
-          throw Exception("Failed to get booking: ${response.body}");
-        }
-      },
-    );
-  }
+  //       print("Get booking response: ${response.statusCode}");
+  //       if (response.statusCode == 200) {
+  //         return BookingResponse.fromJson(jsonDecode(response.body));
+  //       } else {
+  //         throw Exception("Failed to get booking: ${response.body}");
+  //       }
+  //     },
+  //   );
+  // }
 
   // ====== UPDATE BOOKING STATUS ======
   static Future<BookingResponse> updateBookingStatus(

@@ -45,35 +45,6 @@ class _FavouriteHotelsPageState extends State<FavouriteHotelsPage> {
     }
   }
 
-  Future<void> _removeFavourite(int hotelId) async {
-    try {
-      await Provider.of<FavouriteService>(
-        context,
-        listen: false,
-      ).toggleFavourite(hotelId, true);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Removed from favourites'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to remove: $e'),
-            duration: const Duration(seconds: 2),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -279,15 +250,6 @@ class _FavouriteHotelsPageState extends State<FavouriteHotelsPage> {
     );
   }
 
-  Widget _buildPlaceholderImage() {
-    return Container(
-      height: 200,
-      width: double.infinity,
-      color: Colors.grey[300],
-      child: const Icon(Icons.hotel, size: 80, color: Colors.grey),
-    );
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -381,42 +343,6 @@ class _FavouriteHotelsPageState extends State<FavouriteHotelsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showRemoveDialog(Hotel hotel) {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Remove from Favourites?'),
-            content: Text('Remove "${hotel.name}" from your favourites?'),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _removeFavourite(hotel.id);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Remove',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
     );
   }
 }
