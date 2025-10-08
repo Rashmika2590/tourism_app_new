@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart'; // For kDebugMode
-import 'package:tourism_app_new/constants/colors.dart';
+import 'package:flutter/foundation.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/Services/utils/user_shared_prefernce.dart';
+import 'package:tourism_app_new/constants/colors.dart';
+import 'package:tourism_app_new/models/user_model.dart';
 import 'package:tourism_app_new/routs.dart';
 
 class ProfileSettingsPage extends StatefulWidget {
@@ -12,10 +14,13 @@ class ProfileSettingsPage extends StatefulWidget {
 }
 
 class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
-  final _fullNameController = TextEditingController(text: "Amantha Nirmal");
-  final _emailController = TextEditingController(text: "amantha@email.com");
-  final _phoneController = TextEditingController(text: "+94 77 123 4567");
   final AuthService _authService = AuthService();
+  User? _currentUser;
+  bool _isLoading = true;
+
+  late TextEditingController _fullNameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
 
   bool pushNotifications = false;
   bool emailAlerts = false;
@@ -24,7 +29,66 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
   String selectedCurrency = '🇱🇰';
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final user = await SharedPrefUser.getUser();
+      setState(() {
+        _currentUser = user;
+        _fullNameController = TextEditingController(text: user?.name ?? "User");
+        _emailController = TextEditingController(
+          text: user?.email ?? "No email",
+        );
+        _phoneController = TextEditingController(
+          text: user?.phone ?? "+94 77 123 4567",
+        );
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading user data: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    if (_currentUser == null) return;
+
+    try {
+      final updatedUser = _currentUser!.copyWith(
+        name: _fullNameController.text.trim(),
+        phone: _phoneController.text.trim(),
+      );
+
+      await SharedPrefUser.saveUser(updatedUser);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update profile: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -35,6 +99,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         backgroundColor: Colors.white,
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            onPressed: _updateProfile,
+            tooltip: 'Save Changes',
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -44,27 +115,27 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             // Profile Header
             Row(
               children: [
-                const CircleAvatar(
+                CircleAvatar(
                   radius: 30,
-                  backgroundImage: AssetImage(
-                    "assets/images/forgot_password.png",
-                  ),
+                  backgroundImage:
+                      const AssetImage("assets/images/forgot_password.png")
+                          as ImageProvider,
                 ),
                 const SizedBox(width: 12),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
-                      "Amantha Nirmal",
-                      style: TextStyle(
+                      _currentUser?.name ?? "User",
+                      style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      "amantha@email.com",
-                      style: TextStyle(color: Colors.grey),
+                      _currentUser?.email ?? "No email",
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   ],
                 ),
@@ -73,9 +144,14 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
 
             const SizedBox(height: 30),
             _sectionHeader("Edit Personal Info"),
-            _buildInputField("Full Name", _fullNameController),
-            _buildInputField("Email address", _emailController),
-            _buildInputField("Phone number", _phoneController),
+            _buildInputField("Full Name", _fullNameController, Icons.person),
+            _buildInputField(
+              "Email address",
+              _emailController,
+              Icons.email,
+              enabled: false,
+            ),
+            _buildInputField("Phone number", _phoneController, Icons.phone),
 
             const SizedBox(height: 30),
             _sectionHeader("Security Settings"),
@@ -154,6 +230,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
                 "Clear all stored data",
                 () => _showResetConfirmation(),
               ),
+              _buildDebugTile(
+                Icons.info,
+                "User Info",
+                "UID: ${_currentUser?.uid ?? 'N/A'}",
+                () => _showUserInfo(),
+              ),
             ],
 
             const SizedBox(height: 30),
@@ -214,7 +296,12 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
     );
   }
 
-  Widget _buildInputField(String label, TextEditingController controller) {
+  Widget _buildInputField(
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    bool enabled = true,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -231,9 +318,11 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
           const SizedBox(height: 8),
           TextFormField(
             controller: controller,
+            enabled: enabled,
             decoration: InputDecoration(
+              prefixIcon: Icon(icon, color: Colors.grey),
               filled: true,
-              fillColor: Colors.grey.shade100,
+              fillColor: enabled ? Colors.grey.shade100 : Colors.grey.shade300,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
                 vertical: 14,
@@ -245,6 +334,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: const BorderSide(color: Colors.orange, width: 1.5),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade400),
               ),
             ),
           ),
@@ -352,12 +445,10 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
             Switch(
               value: value,
               onChanged: onChanged,
-              activeColor: Colors.white, // Thumb when ON
-              activeTrackColor: AppColors.buttonColor, // Track when ON
-              inactiveThumbColor: Colors.white, // Thumb when OFF
-              inactiveTrackColor: AppColors.mainGreen.withOpacity(
-                0.3,
-              ), // Track when OFF
+              activeColor: Colors.white,
+              activeTrackColor: AppColors.buttonColor,
+              inactiveThumbColor: Colors.white,
+              inactiveTrackColor: AppColors.mainGreen.withOpacity(0.3),
               splashRadius: 60,
             ),
           ],
@@ -392,6 +483,39 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         ),
         const Divider(height: 1),
       ],
+    );
+  }
+
+  void _showUserInfo() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('User Information'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('UID: ${_currentUser?.uid ?? 'N/A'}'),
+                Text('Email: ${_currentUser?.email ?? 'N/A'}'),
+                Text('Name: ${_currentUser?.name ?? 'N/A'}'),
+                Text('Phone: ${_currentUser?.phone ?? 'N/A'}'),
+                //Text('Points: ${_currentUser?.points ?? 0}'),
+                //Text('Level: ${_currentUser?.level ?? 'N/A'}'),
+                //if (_currentUser?.photoURL != null)
+                //Text('Photo URL: ${_currentUser!.photoURL}'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -521,5 +645,13 @@ class _ProfileSettingsPageState extends State<ProfileSettingsPage> {
         context,
       ).showSnackBar(SnackBar(content: Text('Reset failed: $e')));
     }
+  }
+
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    super.dispose();
   }
 }
