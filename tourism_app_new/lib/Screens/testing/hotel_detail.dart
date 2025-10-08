@@ -11,6 +11,7 @@ import 'package:tourism_app_new/models/availability_model.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_list.dart';
 import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
 import 'package:tourism_app_new/constants/colors.dart';
+import 'package:tourism_app_new/widgets/Calender/calender_widget.dart';
 import 'package:tourism_app_new/widgets/FAQ_widget.dart';
 import 'package:tourism_app_new/widgets/activity_row.dart';
 import 'package:tourism_app_new/widgets/favourite_widget.dart';
@@ -1288,44 +1289,38 @@ class _EnhancedHotelDetailsScreenState
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: widget.hotel.name,
-                                      style: const TextStyle(
-                                        fontSize: 28,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.black87,
-                                      ),
+                            RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: widget.hotel.name,
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
                                     ),
-                                    const TextSpan(
-                                      text: ' in ',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black54,
-                                        fontWeight: FontWeight.normal,
-                                      ),
+                                  ),
+                                  const TextSpan(
+                                    text: '  in  ',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.black54,
+                                      fontWeight: FontWeight.normal,
                                     ),
-                                    TextSpan(
-                                      text: widget.hotel.state,
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black87,
-                                      ),
+                                  ),
+                                  TextSpan(
+                                    text: widget.hotel.state,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black87,
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                             Spacer(),
-                            FavouriteIcon(
-                              hotelId: widget.hotel.id,
-                              //isFavourite: widget.hotel.isFavourite,
-                              size: 30,
-                            ),
+                            FavouriteIcon(hotelId: widget.hotel.id, size: 30),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -1342,7 +1337,17 @@ class _EnhancedHotelDetailsScreenState
                     // FIXED: Availability card
                     const SizedBox(height: 16),
                     _buildCheckAvailabilityCard(),
-                    const SizedBox(height: 24),
+                    //const SizedBox(height: 24),
+                    BookingCalendarWidget(
+                      hotelId: widget.hotel.id,
+                      onDateSelected: (availableRooms, selectedDate) {
+                        setState(() {
+                          selectedDate;
+                          availableRooms;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
 
                     // Exclusive Add-ons Widget
                     const Text(

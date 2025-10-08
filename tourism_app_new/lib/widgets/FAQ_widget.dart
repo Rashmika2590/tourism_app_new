@@ -212,55 +212,63 @@ class _FAQWidgetState extends State<FAQWidget> {
         _showAllFAQs ? allFAQs : allFAQs.take(3).toList();
     final bool hasMoreFAQs = allFAQs.length > 3;
 
-    return ListView.builder(
-      padding: EdgeInsets.all(16),
-      itemCount: faqsToShow.length + (hasMoreFAQs && !_showAllFAQs ? 2 : 1),
-      itemBuilder: (context, index) {
-        if (index < faqsToShow.length) {
-          final faq = faqsToShow[index];
-          final reaction = userReactions[faq.id];
+    return Scrollbar(
+      thumbVisibility: true, // Always show the scrollbar
+      trackVisibility: true, // Show track as well
+      thickness: 6.0, // Custom thickness
+      radius: Radius.circular(3), // Rounded edges
+      child: ListView.builder(
+        padding: EdgeInsets.all(16),
+        itemCount: faqsToShow.length + (hasMoreFAQs && !_showAllFAQs ? 2 : 1),
+        itemBuilder: (context, index) {
+          if (index < faqsToShow.length) {
+            final faq = faqsToShow[index];
+            final reaction = userReactions[faq.id];
 
-          // Determine user reaction state
-          String? userReactionState;
-          if (reaction != null && reaction.reacted) {
-            userReactionState = reaction.isLike ? 'like' : 'dislike';
+            // Determine user reaction state
+            String? userReactionState;
+            if (reaction != null && reaction.reacted) {
+              userReactionState = reaction.isLike ? 'like' : 'dislike';
+            }
+
+            return _FAQItem(
+              faq: faq,
+              userReaction: userReactionState,
+              onLike: () => _handleReaction(faq.id, true),
+              onDislike: () => _handleReaction(faq.id, false),
+              isLoadingReaction: _isLoadingReactions,
+            );
           }
 
-          return _FAQItem(
-            faq: faq,
-            userReaction: userReactionState,
-            onLike: () => _handleReaction(faq.id, true),
-            onDislike: () => _handleReaction(faq.id, false),
-            isLoadingReaction: _isLoadingReactions,
-          );
-        }
-
-        if (hasMoreFAQs && !_showAllFAQs && index == faqsToShow.length) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _showAllFAQs = true;
-                  });
-                },
-                child: Text(
-                  'See more',
-                  style: TextStyle(
-                    color: AppColors.mainGreen,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    //decoration: TextDecoration.underline,
+          if (hasMoreFAQs && !_showAllFAQs && index == faqsToShow.length) {
+            return Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _showAllFAQs = true;
+                    });
+                  },
+                  child: Text(
+                    'See more',
+                    style: TextStyle(
+                      color: AppColors.mainGreen,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      //decoration: TextDecoration.underline,
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        }
+            );
+          }
 
-        return Column(children: [SizedBox(height: 16), _buildQuestionInput()]);
-      },
+          return Column(
+            children: [SizedBox(height: 16), _buildQuestionInput()],
+          );
+        },
+      ),
     );
   }
 
