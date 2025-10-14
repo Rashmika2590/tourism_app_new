@@ -5,6 +5,7 @@ import 'package:tourism_app_new/Screens/notification.dart';
 import 'package:tourism_app_new/Screens/profile/favourits_list.dart';
 import 'package:tourism_app_new/Screens/profile/pfofile_setting.dart';
 import 'package:tourism_app_new/Screens/splash_screen.dart';
+import 'package:tourism_app_new/Screens/testing/Booking/user_booking_list.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_create.dart';
 import 'package:tourism_app_new/Screens/testing/hotel_search_page.dart';
 import 'package:tourism_app_new/Services/Authentication/debug_user_status.dart';
@@ -26,6 +27,7 @@ class AppRoutes {
 
   static const String profile_settings = '/Profile_settings';
   static const String favourites = '/favourites';
+  static const String user_bookings = '/user-bookings';
 
   static const String debug = '/debug';
 
@@ -47,6 +49,7 @@ class AppRoutes {
     //components: (context) => HotelBookingScreen(),
     profile_settings: (context) => ProfileSettingsPage(),
     favourites: (context) => FavouriteHotelsPage(),
+    user_bookings: (context) => UserBookingsScreen(),
     debug: (context) => DebugUserStatusScreen(),
 
     hotelcreation: (context) => HotelCreationScreen(),

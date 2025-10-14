@@ -15,6 +15,12 @@ class BookingRequest {
   final String promoCode;
   final String bookingTime;
 
+  // Guest booking fields
+  final String? guestName;
+  final String? guestEmail;
+  final String? guestPhone;
+  final String? relationshipToUser;
+
   BookingRequest({
     required this.roomId,
     this.status = 'pending',
@@ -30,6 +36,10 @@ class BookingRequest {
     this.paymentReference = '',
     this.promoCode = '',
     required this.bookingTime,
+    this.guestName,
+    this.guestEmail,
+    this.guestPhone,
+    this.relationshipToUser,
   });
 
   Map<String, dynamic> toJson() {
@@ -48,6 +58,10 @@ class BookingRequest {
       'payment_reference': paymentReference,
       'promo_code': promoCode,
       'booking_time': bookingTime,
+      'guestName': guestName,
+      'guestEmail': guestEmail,
+      'guestPhone': guestPhone,
+      'relationshipToUser': relationshipToUser,
     };
   }
 }
@@ -70,6 +84,13 @@ class BookingResponse {
   final String bookingTime;
   final String? createdAt;
   final String? updatedAt;
+  final String? userId;
+
+  // Guest booking fields
+  final String? guestName;
+  final String? guestEmail;
+  final String? guestPhone;
+  final String? relationshipToUser;
 
   BookingResponse({
     this.id,
@@ -89,6 +110,11 @@ class BookingResponse {
     required this.bookingTime,
     this.createdAt,
     this.updatedAt,
+    this.userId,
+    this.guestName,
+    this.guestEmail,
+    this.guestPhone,
+    this.relationshipToUser,
   });
 
   factory BookingResponse.fromJson(Map<String, dynamic> json) {
@@ -110,6 +136,11 @@ class BookingResponse {
       bookingTime: json['booking_time'] ?? '',
       createdAt: json['created_at'],
       updatedAt: json['updated_at'],
+      userId: json['user_id'],
+      guestName: json['guestName'],
+      guestEmail: json['guestEmail'],
+      guestPhone: json['guestPhone'],
+      relationshipToUser: json['relationshiptoUser'],
     );
   }
 }

@@ -1,4 +1,3 @@
-// Services/Providers/booking_state.dart - Enhanced with search location context
 import 'package:flutter/material.dart';
 
 class BookingState extends ChangeNotifier {
@@ -12,12 +11,20 @@ class BookingState extends ChangeNotifier {
   double? _latitude;
   double? _longitude;
 
-  // New location-based search properties
+  // Location-based search properties
   double? _searchLatitude;
   double? _searchLongitude;
-  double _searchRadius = 20.0; // Default radius in km
+  double _searchRadius = 20.0;
   String _searchLocationName = '';
   bool _useCurrentLocation = true;
+
+  // Guest booking properties
+  bool _isBookingForSomeoneElse = false;
+  String _guestName = '';
+  String _guestEmail = '';
+  String _guestPhone = '';
+  String _relationshipToUser = '';
+  String _specialRequest = '';
 
   // Getters for existing properties
   DateTime get checkInDate => _checkInDate;
@@ -29,18 +36,24 @@ class BookingState extends ChangeNotifier {
   double? get latitude => _latitude;
   double? get longitude => _longitude;
 
-  // Getters for new location properties
+  // Getters for location properties
   double? get searchLatitude => _searchLatitude;
   double? get searchLongitude => _searchLongitude;
   double get searchRadius => _searchRadius;
   String get searchLocationName => _searchLocationName;
   bool get useCurrentLocation => _useCurrentLocation;
-
-  // Check if search location is set
   bool get hasSearchLocation =>
       _searchLatitude != null && _searchLongitude != null;
 
-  // Existing setters
+  // Getters for guest booking
+  bool get isBookingForSomeoneElse => _isBookingForSomeoneElse;
+  String get guestName => _guestName;
+  String get guestEmail => _guestEmail;
+  String get guestPhone => _guestPhone;
+  String get relationshipToUser => _relationshipToUser;
+  String get specialRequest => _specialRequest;
+
+  // Setters for existing properties
   void setCheckInDate(DateTime date) {
     _checkInDate = date;
     notifyListeners();
@@ -67,7 +80,7 @@ class BookingState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // New location-based setters
+  // Setters for location properties
   void setSearchLocation({
     required double latitude,
     required double longitude,
@@ -105,7 +118,37 @@ class BookingState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Helper method to get search location display name
+  // Setters for guest booking
+  void setBookingForSomeoneElse(bool value) {
+    _isBookingForSomeoneElse = value;
+    if (!value) {
+      _guestName = '';
+      _guestEmail = '';
+      _guestPhone = '';
+      _relationshipToUser = '';
+    }
+    notifyListeners();
+  }
+
+  void setGuestDetails({
+    required String name,
+    required String email,
+    required String phone,
+    required String relationship,
+  }) {
+    _guestName = name;
+    _guestEmail = email;
+    _guestPhone = phone;
+    _relationshipToUser = relationship;
+    notifyListeners();
+  }
+
+  void setSpecialRequest(String request) {
+    _specialRequest = request;
+    notifyListeners();
+  }
+
+  // Helper methods
   String getSearchLocationDisplayName() {
     if (_searchLocationName.isNotEmpty) {
       return _searchLocationName;
@@ -118,7 +161,6 @@ class BookingState extends ChangeNotifier {
     }
   }
 
-  // Method to copy current search context (useful for passing to result screens)
   Map<String, dynamic> getSearchContext() {
     return {
       'latitude': _searchLatitude,
@@ -134,7 +176,6 @@ class BookingState extends ChangeNotifier {
     };
   }
 
-  // Reset all booking data
   void reset() {
     _checkInDate = DateTime.now();
     _checkInTime = TimeOfDay.now();
@@ -147,6 +188,12 @@ class BookingState extends ChangeNotifier {
     _searchRadius = 20.0;
     _searchLocationName = '';
     _useCurrentLocation = true;
+    _isBookingForSomeoneElse = false;
+    _guestName = '';
+    _guestEmail = '';
+    _guestPhone = '';
+    _relationshipToUser = '';
+    _specialRequest = '';
     notifyListeners();
   }
 }

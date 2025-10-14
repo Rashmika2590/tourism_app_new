@@ -3,6 +3,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:tourism_app_new/Screens/testing/Rooms/room_creation.dart';
 import 'package:tourism_app_new/Services/Api%20Services/availablility_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
 import 'package:tourism_app_new/models/search_params_model.dart';
 import 'package:tourism_app_new/Services/Providers/booking_state.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
@@ -1607,6 +1608,14 @@ class _EnhancedHotelDetailsScreenState
                       },
                       child: Text('add room'),
                     ),
+                    ElevatedButton(
+                      onPressed: _deleteHotel,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text("Delete Hotel"),
+                    ),
                   ],
                 ),
               ),
@@ -1770,6 +1779,44 @@ class _EnhancedHotelDetailsScreenState
         ),
       ),
     );
+  }
+
+  void _deleteHotel() async {
+    // Show confirmation dialog
+    bool confirm = await showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text("Delete Hotel?"),
+            content: Text("Are you sure you want to delete this hotel?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text("Delete", style: TextStyle(color: Colors.red)),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm != true) return;
+
+    // Show loading
+    bool success = await HotelApiService.deleteHotel(widget.hotel.id);
+
+    if (success) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Hotel deleted successfully")));
+      Navigator.pop(context); // Go back to previous screen
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to delete hotel")));
+    }
   }
 }
 

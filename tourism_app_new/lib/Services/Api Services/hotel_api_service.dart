@@ -82,6 +82,7 @@ class HotelApiService {
     required bool enableShortStay,
     required bool enableLongStay,
     required String description,
+    required double cancellationPercentage, // Add this parameter
   }) async {
     return await _makeAuthenticatedRequest<Map<String, dynamic>>(
       requestFunction: (token) async {
@@ -99,8 +100,13 @@ class HotelApiService {
           "enable_short_stay": enableShortStay,
           "enable_long_stay": enableLongStay,
           "description": description,
+          'cancellation_percentage': cancellationPercentage, // Add this field
         };
-        print("Creating hotel: $name");
+
+        print("=== HOTEL CREATION DEBUG ===");
+        print("Sending cancellation percentage: $cancellationPercentage");
+        print("Full request body: $requestBody");
+
         final response = await http.post(
           uri,
           headers: {
@@ -109,12 +115,49 @@ class HotelApiService {
           },
           body: jsonEncode(requestBody),
         );
-        print("Hotel creation response status: ${response.statusCode}");
+
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+        // In hotel_api_service.dart - createHotel method
+        print("=== HOTEL CREATION VERIFICATION ===");
+        print("Request cancellation_percentage: $cancellationPercentage");
+        print("Full request body: $requestBody");
+
+        print("Response status: ${response.statusCode}");
+        print("Response body: ${response.body}");
+
         if (response.statusCode == 200 || response.statusCode == 201) {
-          return jsonDecode(response.body);
+          final responseData = jsonDecode(response.body);
+          print("✅ Hotel creation successful");
+          print("✅ Returned hotel data: $responseData");
+
+          // Verify cancellation percentage in response
+          if (responseData['cancellation_percentage'] != null) {
+            print(
+              "✅ Cancellation percentage in response: ${responseData['cancellation_percentage']}",
+            );
+          } else {
+            print("❌ WARNING: Cancellation percentage NOT in response!");
+          }
+          return responseData;
+        }
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final responseData = jsonDecode(response.body);
+          print("Hotel creation successful");
+          print("Returned hotel data: $responseData");
+          // Check if cancellation percentage is in the response
+          if (responseData['cancellation_percentage'] != null) {
+            print(
+              "Cancellation percentage in response: ${responseData['cancellation_percentage']}",
+            );
+          } else {
+            print("⚠️ WARNING: Cancellation percentage NOT in response!");
+          }
+          return responseData;
         } else {
           print(
-            'Hotel Creation Error: ${response.statusCode} - ${response.body}',
+            '❌ Hotel Creation Error: ${response.statusCode} - ${response.body}',
           );
           throw Exception('Failed to create hotel: ${response.body}');
         }
@@ -168,11 +211,13 @@ class HotelApiService {
   }
 
   // ====== GET HOTEL BY ID ======
+  // Check if your getHotelById method is properly fetching cancellation percentage
   static Future<Hotel> getHotelById(int hotelId) async {
     return await _makeAuthenticatedRequest<Hotel>(
       requestFunction: (token) async {
-        final uri = Uri.parse('$baseUrl/hotel/$hotelId');
+        final uri = Uri.parse("$baseUrl/hotel/$hotelId");
         print("Getting hotel details for ID: $hotelId");
+
         final response = await http.get(
           uri,
           headers: {
@@ -180,12 +225,18 @@ class HotelApiService {
             "Authorization": "Bearer $token",
           },
         );
+
         print("Get hotel response status: ${response.statusCode}");
         if (response.statusCode == 200) {
-          return Hotel.fromJson(jsonDecode(response.body));
+          final hotelData = jsonDecode(response.body);
+          print("Hotel API Response: $hotelData"); // Add this debug
+          print(
+            "Cancellation percentage in API response: ${hotelData['cancellation_percentage']}",
+          );
+          return Hotel.fromJson(hotelData);
         } else {
-          print('Get Hotel Error: ${response.statusCode} - ${response.body}');
-          throw Exception('Failed to get hotel details: ${response.body}');
+          print("Get Hotel Error: ${response.statusCode} - ${response.body}");
+          throw Exception("Failed to get hotel details: ${response.body}");
         }
       },
     );
@@ -392,6 +443,37 @@ class HotelApiService {
           throw Exception(
             "Failed to upload verification files: ${response.statusCode} ${response.body}",
           );
+        }
+      },
+    );
+  }
+
+  // ====== DELETE HOTEL ======
+  static Future<bool> deleteHotel(int hotelId) async {
+    return await _makeAuthenticatedRequest<bool>(
+      requestFunction: (token) async {
+        final uri = Uri.parse('$baseUrl/hotel/$hotelId');
+        print("Deleting hotel with ID: $hotelId");
+
+        final response = await http.delete(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
+
+        print("Delete hotel response status: ${response.statusCode}");
+        print("Delete hotel response body: ${response.body}");
+
+        if (response.statusCode == 200 || response.statusCode == 204) {
+          print("✅ Hotel deleted successfully");
+          return true;
+        } else {
+          print(
+            '❌ Hotel Deletion Error: ${response.statusCode} - ${response.body}',
+          );
+          throw Exception('Failed to delete hotel: ${response.body}');
         }
       },
     );

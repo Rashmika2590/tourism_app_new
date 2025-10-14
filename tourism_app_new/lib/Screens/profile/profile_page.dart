@@ -220,7 +220,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         context,
                         Icons.book_online,
                         "My Bookings",
-                        AppRoutes.profile_settings,
+                        AppRoutes.user_bookings,
                       ),
                       buildMenuItem(
                         context,

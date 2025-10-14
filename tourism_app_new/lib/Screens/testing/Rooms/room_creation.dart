@@ -19,6 +19,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   final _occupancyController = TextEditingController();
   final _amenitiesController = TextEditingController();
   final _numberOfRoomsController = TextEditingController(text: "1");
+  final _descriptionController = TextEditingController();
 
   bool _loading = false;
   bool _isBatchCreation = false;
@@ -26,6 +27,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   List<File> _selectedImages = [];
   List<String> _uploadedImageUrls = [];
   bool _uploadingImages = false;
+  bool _allowFreeCancellation = false;
 
   Future<void> _pickImagesFromGallery() async {
     try {
@@ -86,11 +88,13 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     try {
       if (_isBatchCreation) {
         // Batch room creation (no images)
-        final result = await RoomApiService.createRoomsBatch(
+        // In single room creation section
+        final result = await RoomApiService.createRoom(
           hotelId: widget.hotelId,
-          numberOfRooms: int.tryParse(_numberOfRoomsController.text) ?? 1,
           name: _nameController.text,
           type: _typeController.text,
+          description: _descriptionController.text,
+          freeCancellation: _allowFreeCancellation, // Add this line
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxOccupancy: int.tryParse(_occupancyController.text) ?? 0,
           amenities:
@@ -110,6 +114,8 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
           hotelId: widget.hotelId,
           name: _nameController.text,
           type: _typeController.text,
+          description: _descriptionController.text,
+          freeCancellation: _allowFreeCancellation,
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxOccupancy: int.tryParse(_occupancyController.text) ?? 0,
           amenities:
@@ -340,6 +346,18 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
               SizedBox(height: 10),
 
               TextFormField(
+                controller: _descriptionController,
+                decoration: InputDecoration(
+                  labelText: "Description",
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) => v!.isEmpty ? "Enter description" : null,
+              ),
+              SizedBox(height: 10),
+
+              _buildFreeCancellationToggle(),
+
+              TextFormField(
                 controller: _occupancyController,
                 decoration: InputDecoration(
                   labelText: "Max Occupancy",
@@ -484,5 +502,48 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     _amenitiesController.dispose();
     _numberOfRoomsController.dispose();
     super.dispose();
+  }
+
+  Widget _buildFreeCancellationToggle() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Cancellation Policy',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text("Allow Free Cancellation:"),
+                const Spacer(),
+                Switch(
+                  value: _allowFreeCancellation,
+                  onChanged: (value) {
+                    setState(() => _allowFreeCancellation = value);
+                  },
+                  activeColor: Colors.green,
+                ),
+              ],
+            ),
+            if (_allowFreeCancellation)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'This room will have free cancellation. Price will be adjusted.',
+                  style: TextStyle(fontSize: 12, color: Colors.green),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

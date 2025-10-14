@@ -197,8 +197,10 @@ class RoomApiService {
     required String name,
     required String type,
     required double price,
+    required String description,
     required int maxOccupancy,
     required List<String> amenities,
+    required bool freeCancellation, // Add this parameter
   }) async {
     return await _makeAuthenticatedRequest<Map<String, dynamic>>(
       requestFunction: (token) async {
@@ -208,8 +210,10 @@ class RoomApiService {
           "name": name,
           "type": type,
           "price": price,
+          "type_description": description,
           "max_occupancy": maxOccupancy,
           "amenities": amenities,
+          'free_cancellation': freeCancellation, // Add this field
         });
 
         print("Creating room for hotel: $hotelId");
@@ -299,6 +303,39 @@ class RoomApiService {
         print("Get rooms response status: ${response.statusCode}");
         if (response.statusCode == 200) {
           final List<dynamic> data = jsonDecode(response.body);
+
+          // First, get hotel details to get cancellation percentage
+          try {
+            final hotelResponse = await http.get(
+              Uri.parse("$baseUrl/hotel/$hotelId"),
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer $token",
+              },
+            );
+
+            if (hotelResponse.statusCode == 200) {
+              final hotelData = jsonDecode(hotelResponse.body);
+              final double? cancellationPercentage =
+                  hotelData['cancellation_percentage']?.toDouble();
+
+              print("=== INJECTING HOTEL CANCELLATION PERCENTAGE ===");
+              print("Hotel ID: $hotelId");
+              print("Cancellation Percentage: $cancellationPercentage");
+
+              // Inject hotel cancellation percentage into each room
+              return data.map((roomJson) {
+                final room = Room.fromJson(roomJson);
+                return room.copyWith(
+                  hotelCancellationPercentage: cancellationPercentage,
+                );
+              }).toList();
+            }
+          } catch (e) {
+            print("Error fetching hotel details: $e");
+          }
+
+          // Fallback: return rooms without cancellation percentage if hotel fetch fails
           return data.map((room) => Room.fromJson(room)).toList();
         } else {
           print("Get Rooms Error: ${response.statusCode} - ${response.body}");
@@ -325,7 +362,40 @@ class RoomApiService {
 
         print("Get room response status: ${response.statusCode}");
         if (response.statusCode == 200) {
-          return Room.fromJson(jsonDecode(response.body));
+          final roomData = jsonDecode(response.body);
+          final room = Room.fromJson(roomData);
+
+          // Get hotel details to inject cancellation percentage
+          try {
+            final hotelId = room.hotelId;
+            final hotelResponse = await http.get(
+              Uri.parse("$baseUrl/hotel/$hotelId"),
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer $token",
+              },
+            );
+
+            if (hotelResponse.statusCode == 200) {
+              final hotelData = jsonDecode(hotelResponse.body);
+              final double? cancellationPercentage =
+                  hotelData['cancellation_percentage']?.toDouble();
+
+              print(
+                "=== INJECTING CANCELLATION PERCENTAGE FOR ROOM $roomId ===",
+              );
+              print("Hotel ID: $hotelId");
+              print("Cancellation Percentage: $cancellationPercentage");
+
+              return room.copyWith(
+                hotelCancellationPercentage: cancellationPercentage,
+              );
+            }
+          } catch (e) {
+            print("Error fetching hotel details for room $roomId: $e");
+          }
+
+          return room;
         } else {
           print("Get Room Error: ${response.statusCode} - ${response.body}");
           throw Exception("Failed to get room details: ${response.body}");

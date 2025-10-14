@@ -1,13 +1,14 @@
-// Services/Api Services/Authentication/booking_api_service.dart
+// Services/Api Services/booking_api_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:tourism_app_new/models/booking_model.dart';
 import 'package:tourism_app_new/Services/Authentication/auth_service..dart';
+import 'package:tourism_app_new/models/booking_model.dart';
 
 class BookingApiService {
   static const String baseUrl =
       "https://crabi-go-backend.t7gbzs75g5tc2.ap-southeast-1.cs.amazonlightsail.com";
   static const String bookingEndpoint = "/booking/";
+  static const String userBookingsEndpoint = "/user/bookings";
   static final AuthService _authService = AuthService();
 
   // ====== TOKEN HANDLING ======
@@ -89,28 +90,31 @@ class BookingApiService {
     );
   }
 
-  // ====== GET BOOKING BY ID ======
-  // static Future<BookingResponse> getBookingById(int bookingId) async {
-  //   return await _makeAuthenticatedRequest<BookingResponse>(
-  //     requestFunction: (token) async {
-  //       final uri = Uri.parse("$baseUrl$bookingEndpoint$bookingId/");
-  //       final response = await http.get(
-  //         uri,
-  //         headers: {
-  //           "Content-Type": "application/json",
-  //           "Authorization": "Bearer $token",
-  //         },
-  //       );
+  // ====== GET USER BOOKINGS ======
+  static Future<List<BookingResponse>> getUserBookings() async {
+    return await _makeAuthenticatedRequest<List<BookingResponse>>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl$userBookingsEndpoint");
+        final response = await http.get(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
 
-  //       print("Get booking response: ${response.statusCode}");
-  //       if (response.statusCode == 200) {
-  //         return BookingResponse.fromJson(jsonDecode(response.body));
-  //       } else {
-  //         throw Exception("Failed to get booking: ${response.body}");
-  //       }
-  //     },
-  //   );
-  // }
+        print("Get user bookings response: ${response.statusCode}");
+        if (response.statusCode == 200) {
+          final List<dynamic> jsonList = jsonDecode(response.body);
+          return jsonList
+              .map((json) => BookingResponse.fromJson(json))
+              .toList();
+        } else {
+          throw Exception("Failed to get user bookings: ${response.body}");
+        }
+      },
+    );
+  }
 
   // ====== UPDATE BOOKING STATUS ======
   static Future<BookingResponse> updateBookingStatus(

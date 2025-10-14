@@ -92,6 +92,17 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   @override
   void initState() {
     super.initState();
+
+    print("=== HOTEL DATA IN ROOMS LIST ===");
+    print("Hotel ID: ${widget.hotel.id}");
+    print("Hotel Name: ${widget.hotel.name}");
+    print(
+      "Hotel Cancellation Percentage: ${widget.hotel.cancellationPercentage}",
+    );
+    print(
+      "Hotel cancellationPercentage is NULL: ${widget.hotel.cancellationPercentage == null}",
+    );
+    print("================================");
     _dataFuture = _fetchRoomsAndAvailability();
     _dataFuture.then((data) {
       final allRooms = data[0] as List<Room>;
@@ -136,7 +147,44 @@ class _RoomsListScreenState extends State<RoomsListScreen>
       childrenCount: widget.childrenCount!,
       state: '', // Not needed for room list screen
     );
-    return Future.wait([roomsFuture, availabilityFuture]);
+
+    final results = await Future.wait([roomsFuture, availabilityFuture]);
+    final List<Room> rooms = results[0] as List<Room>;
+    final RoomAvailability availability = results[1] as RoomAvailability;
+
+    // Debug prints
+    print("=== HOTEL CANCELLATION DEBUG ===");
+    print("Hotel ID: ${widget.hotel.id}");
+    print(
+      "Hotel cancellation percentage from widget: ${widget.hotel.cancellationPercentage}",
+    );
+    print("Number of rooms: ${rooms.length}");
+
+    // Ensure rooms have the cancellation percentage
+    final updatedRooms =
+        rooms.map((room) {
+          print(
+            "Before - Room ${room.id}: freeCancellation=${room.freeCancellation}, cancellationPercentage=${room.hotelCancellationPercentage}",
+          );
+
+          // Use the hotel's cancellation percentage from the widget
+          final updatedRoom = room.copyWith(
+            hotelCancellationPercentage: widget.hotel.cancellationPercentage,
+          );
+
+          print(
+            "After - Room ${updatedRoom.id}: freeCancellation=${updatedRoom.freeCancellation}, cancellationPercentage=${updatedRoom.hotelCancellationPercentage}",
+          );
+          print(
+            "Effective price for room ${updatedRoom.id}: ${updatedRoom.effectivePrice}",
+          );
+
+          return updatedRoom;
+        }).toList();
+
+    print("================================");
+
+    return [updatedRooms, availability];
   }
 
   void _onTabChanged() {
@@ -204,6 +252,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
               adultCount: widget.adultCount!,
               childrenCount: widget.childrenCount!,
               hotel: widget.hotel,
+              totalprice: _calculateTotal(),
             ),
       ),
     );
@@ -262,20 +311,36 @@ class _RoomsListScreenState extends State<RoomsListScreen>
 
     Duration duration = widget.checkOutDate!.difference(widget.checkInDate!);
     int hours = duration.inHours;
-
-    // Ensure at least 1 hour
     if (hours <= 0) hours = 1;
 
-    double roomTotal = _selectedRoom!.price * hours;
-    double serviceCharge = roomTotal * 0.1; // 10% service charge
+    // Debug prints
+    print("=== PRICE CALCULATION DEBUG ===");
+    print("Base price: ${_selectedRoom!.price}");
+    print("Free cancellation: ${_selectedRoom!.freeCancellation}");
+    print(
+      "Cancellation percentage: ${_selectedRoom!.hotelCancellationPercentage}",
+    );
+    print("Effective price: ${_selectedRoom!.effectivePrice}");
+    print("Hours: $hours");
 
-    // Add selected add-ons prices
+    double roomTotal = _selectedRoom!.effectivePrice * hours;
+    double serviceCharge = roomTotal * 0.0;
+
+    print("Room total: $roomTotal");
+    print("Service charge: $serviceCharge");
+
     double addOnsTotal = 0.0;
     for (String addOnTitle in _selectedAddOns) {
-      addOnsTotal += _getAddOnPrice(addOnTitle);
+      double addOnPrice = _getAddOnPrice(addOnTitle);
+      addOnsTotal += addOnPrice;
+      print("Add-on '$addOnTitle': $addOnPrice");
     }
 
-    return roomTotal + serviceCharge + addOnsTotal;
+    double total = roomTotal + serviceCharge + addOnsTotal;
+    print("Final total: $total");
+    print("===============================");
+
+    return total;
   }
 
   List<Map<String, dynamic>> _buildMySelections() {
@@ -287,7 +352,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
       int hours = duration.inHours;
       if (hours <= 0) hours = 1;
 
-      double roomTotal = _selectedRoom!.price * hours;
+      double roomTotal = _selectedRoom!.effectivePrice * hours;
 
       selections.add({
         "type": "${_selectedRoom!.type} Room",
@@ -508,7 +573,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
 
                                     if (_selectedRoom == null) {
                                       // Before any room is selected, just show base price
-                                      return "≈ ${room.price.toInt()} LKR";
+                                      return "≈ ${room.effectivePrice.toInt()} LKR";
                                     }
 
                                     final priceDiff =
@@ -621,7 +686,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                               Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: Text(
-                                  "- ${_selectedRoom!.name} - Extra comfort, and premium touches for a relaxed stay.",
+                                  "- ${_selectedRoom!.name} - ${_selectedRoom!.description} ",
                                   style: const TextStyle(
                                     color: Colors.grey,
                                     fontSize: 14,

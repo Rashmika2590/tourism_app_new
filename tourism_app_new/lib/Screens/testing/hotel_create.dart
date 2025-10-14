@@ -26,6 +26,7 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
   final _emailController = TextEditingController();
   final _mobileController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _cancellationPercentageController = TextEditingController();
 
   bool _enableShortStay = false;
   bool _enableLongStay = false;
@@ -124,6 +125,46 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
     });
   }
 
+  Widget _buildCancellationPolicySection() => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Cancellation Policy',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Set the percentage to be added to room prices when free cancellation is enabled',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _cancellationPercentageController,
+            decoration: const InputDecoration(
+              labelText: 'Free Cancellation Fee (%)',
+              hintText: 'e.g., 10 for 10%',
+              suffixText: '%',
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Enter cancellation percentage';
+              }
+              final percentage = double.tryParse(value);
+              if (percentage == null || percentage < 0 || percentage > 100) {
+                return 'Enter valid percentage (0-100)';
+              }
+              return null;
+            },
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+          ),
+        ],
+      ),
+    ),
+  );
+
   Future<void> _createHotel() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -143,6 +184,9 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
         rules: _rules,
         email: _emailController.text.trim(),
         mobile: _mobileController.text.trim(),
+        cancellationPercentage: double.parse(
+          _cancellationPercentageController.text.trim(),
+        ),
         enableShortStay: _enableShortStay,
         enableLongStay: _enableLongStay,
         description: _descriptionController.text.trim(),
@@ -257,6 +301,8 @@ class _HotelCreationScreenState extends State<HotelCreationScreen> {
             _buildLocationSection(),
             const SizedBox(height: 24),
             _buildContactSection(),
+            const SizedBox(height: 24),
+            _buildCancellationPolicySection(),
             const SizedBox(height: 24),
             _buildStayOptionsSection(),
             const SizedBox(height: 24),

@@ -1,6 +1,4 @@
 // Screens/booking_screen.dart
-// Screens/booking_screen.dart
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
@@ -20,6 +18,7 @@ class BookingScreen extends StatefulWidget {
   final int adultCount;
   final int childrenCount;
   final Hotel hotel;
+  final double totalprice;
 
   const BookingScreen({
     Key? key,
@@ -31,6 +30,7 @@ class BookingScreen extends StatefulWidget {
     required this.adultCount,
     required this.childrenCount,
     required this.hotel,
+    required this.totalprice,
   }) : super(key: key);
 
   @override
@@ -43,20 +43,20 @@ class _BookingScreenState extends State<BookingScreen> {
   final _phoneController = TextEditingController();
   final _specialRequestController = TextEditingController();
   final _promoCodeController = TextEditingController();
+  final _relationshipController = TextEditingController();
 
   String _selectedPaymentMethod = 'Card Payment';
-  TimeOfDay _estimatedArrival = const TimeOfDay(hour: 8, minute: 0);
   bool _isBooking = false;
   bool _agreeToTerms = false;
   bool _isBookingForSomeoneElse = false;
   double _totalPrice = 0.0;
-  double _serviceFee = 5.0;
+  //double _serviceFee = 5.0;
   User? _currentUser;
 
   @override
   void initState() {
     super.initState();
-    _calculateTotalPrice();
+    _totalPrice = widget.totalprice;
     _loadUserData();
   }
 
@@ -67,7 +67,21 @@ class _BookingScreenState extends State<BookingScreen> {
     _phoneController.dispose();
     _specialRequestController.dispose();
     _promoCodeController.dispose();
+    _relationshipController.dispose();
     super.dispose();
+  }
+
+  Widget _buildFreeCancellationBadge() {
+    if (widget.room.hasFreeCancellation == false) {
+      return const SizedBox.shrink();
+    }
+
+    return Center(
+      child: const Text(
+        '*Free cancellation within 24 hours of booking',
+        style: TextStyle(color: AppColors.mainGreen, fontSize: 12),
+      ),
+    );
   }
 
   Future<void> _loadUserData() async {
@@ -79,14 +93,6 @@ class _BookingScreenState extends State<BookingScreen> {
     } catch (e) {
       print('Error loading user data: $e');
     }
-  }
-
-  void _calculateTotalPrice() {
-    final duration = widget.checkOutDate.difference(widget.checkInDate);
-    final hours = duration.inHours > 0 ? duration.inHours : 1;
-    final roomPrice = widget.room.price * hours;
-    _serviceFee = roomPrice * 0.1; // 10% service charge
-    _totalPrice = roomPrice + _serviceFee;
   }
 
   String _formatDate(DateTime date) {
@@ -103,12 +109,6 @@ class _BookingScreenState extends State<BookingScreen> {
     return '$hours ${hours == 1 ? 'hour' : 'hours'}';
   }
 
-  double _getRoomPrice() {
-    final duration = widget.checkOutDate.difference(widget.checkInDate);
-    final hours = duration.inHours > 0 ? duration.inHours : 1;
-    return widget.room.price * hours;
-  }
-
   Future<void> _submitBooking() async {
     // Debug print to check if method is called
     print('Submit booking called');
@@ -121,6 +121,18 @@ class _BookingScreenState extends State<BookingScreen> {
     if (_currentUser == null) {
       _showErrorDialog('User data not available. Please try again.');
       return;
+    }
+
+    // Validate guest details if booking for someone else
+    if (_isBookingForSomeoneElse) {
+      if (_nameController.text.isEmpty ||
+          _emailController.text.isEmpty ||
+          _phoneController.text.isEmpty) {
+        _showErrorDialog(
+          'Please fill all guest details for booking someone else',
+        );
+        return;
+      }
     }
 
     setState(() => _isBooking = true);
@@ -143,6 +155,12 @@ class _BookingScreenState extends State<BookingScreen> {
         paymentReference: '',
         promoCode: _promoCodeController.text,
         bookingTime: DateTime.now().toIso8601String(),
+        // Add guest information for booking someone else
+        guestName: _isBookingForSomeoneElse ? _nameController.text : null,
+        guestEmail: _isBookingForSomeoneElse ? _emailController.text : null,
+        guestPhone: _isBookingForSomeoneElse ? _phoneController.text : null,
+        //relationshiptoUser:
+        //_isBookingForSomeoneElse ? _relationshipController.text : null,
       );
 
       print('Sending booking request...');
@@ -181,6 +199,8 @@ class _BookingScreenState extends State<BookingScreen> {
                 Text('Room: ${widget.room.name}'),
                 Text('Status: ${booking.status}'),
                 Text('Total Price: LKR ${_totalPrice.toStringAsFixed(0)}'),
+                if (_isBookingForSomeoneElse && booking.guestName != null)
+                  Text('Guest: ${booking.guestName}'),
                 const SizedBox(height: 8),
                 const Text(
                   'You will receive a confirmation email shortly.',
@@ -210,8 +230,8 @@ class _BookingScreenState extends State<BookingScreen> {
       builder:
           (context) => AlertDialog(
             icon: const Icon(Icons.error, color: Colors.red, size: 60),
-            title: const Text('Booking Failed, Not available'),
-            content: Text("error"),
+            title: const Text('Booking Failed'),
+            content: Text(error),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -282,6 +302,35 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() {
       _isBookingForSomeoneElse = !_isBookingForSomeoneElse;
     });
+  }
+
+  void _showRelationshipDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Relationship to You'),
+            content: TextFormField(
+              controller: _relationshipController,
+              decoration: const InputDecoration(
+                hintText: 'E.g., Friend, Family, Colleague, etc.',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
@@ -491,7 +540,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                   ),
 
-                  // Expandable form fields
+                  // Expandable form fields for booking someone else
                   AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -517,7 +566,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                     child: TextField(
                                       controller: _nameController,
                                       decoration: const InputDecoration(
-                                        labelText: 'Full Name',
+                                        labelText: 'Guest Full Name *',
                                         prefixIcon: Icon(Icons.person_outline),
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.symmetric(
@@ -543,7 +592,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                       controller: _emailController,
                                       keyboardType: TextInputType.emailAddress,
                                       decoration: const InputDecoration(
-                                        labelText: 'Email Address',
+                                        labelText: 'Guest Email *',
                                         prefixIcon: Icon(Icons.email_outlined),
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.symmetric(
@@ -569,12 +618,62 @@ class _BookingScreenState extends State<BookingScreen> {
                                       controller: _phoneController,
                                       keyboardType: TextInputType.phone,
                                       decoration: const InputDecoration(
-                                        labelText: 'Phone Number',
+                                        labelText: 'Guest Phone *',
                                         prefixIcon: Icon(Icons.phone_outlined),
                                         border: InputBorder.none,
                                         contentPadding: EdgeInsets.symmetric(
                                           horizontal: 16,
                                           vertical: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 12),
+
+                                  // Relationship field
+                                  GestureDetector(
+                                    onTap: _showRelationshipDialog,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: Colors.grey.shade300,
+                                        ),
+                                      ),
+                                      child: ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                              vertical: 4,
+                                            ),
+                                        leading: const Icon(
+                                          Icons.people_outline,
+                                          color: Colors.grey,
+                                        ),
+                                        title: Text(
+                                          _relationshipController.text.isEmpty
+                                              ? 'Relationship to You'
+                                              : _relationshipController.text,
+                                          style: TextStyle(
+                                            color:
+                                                _relationshipController
+                                                        .text
+                                                        .isEmpty
+                                                    ? Colors.grey
+                                                    : Colors.black,
+                                          ),
+                                        ),
+                                        subtitle:
+                                            _relationshipController.text.isEmpty
+                                                ? const Text(
+                                                  'Tap to select relationship',
+                                                )
+                                                : null,
+                                        trailing: const Icon(
+                                          Icons.arrow_drop_down,
+                                          color: Colors.grey,
                                         ),
                                       ),
                                     ),
@@ -587,12 +686,12 @@ class _BookingScreenState extends State<BookingScreen> {
                 ],
               ),
             ),
-            const Text(
-              '*Free cancellation within 24 hours of booking',
-              style: TextStyle(color: AppColors.mainGreen, fontSize: 12),
-            ),
 
-            // Guest details form
+            _buildFreeCancellationBadge(),
+
+            const SizedBox(height: 16),
+
+            // Guest details form (shows current user OR guest details)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -606,24 +705,54 @@ class _BookingScreenState extends State<BookingScreen> {
                       : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDetailRow("Name", _currentUser!.name),
-                          const SizedBox(height: 12),
-                          _buildDetailRow("E-mail", _currentUser!.email),
-                          const SizedBox(height: 12),
-                          _buildDetailRow("Phone", _currentUser!.phone),
+                          Text(
+                            _isBookingForSomeoneElse
+                                ? 'Guest Details'
+                                : 'Your Details',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           _buildDetailRow(
-                            "Country",
-                            _currentUser!.role == 'user'
-                                ? 'Sri Lanka'
-                                : 'Sri Lanka',
+                            "Name",
+                            _isBookingForSomeoneElse &&
+                                    _nameController.text.isNotEmpty
+                                ? _nameController.text
+                                : _currentUser!.name,
                           ),
+                          const SizedBox(height: 12),
+                          _buildDetailRow(
+                            "E-mail",
+                            _isBookingForSomeoneElse &&
+                                    _emailController.text.isNotEmpty
+                                ? _emailController.text
+                                : _currentUser!.email,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDetailRow(
+                            "Phone",
+                            _isBookingForSomeoneElse &&
+                                    _phoneController.text.isNotEmpty
+                                ? _phoneController.text
+                                : _currentUser!.phone,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildDetailRow("Country", 'Sri Lanka'),
+                          if (_isBookingForSomeoneElse &&
+                              _relationshipController.text.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            _buildDetailRow(
+                              "Relationship",
+                              _relationshipController.text,
+                            ),
+                          ],
                         ],
                       ),
             ),
 
-            // ... rest of your existing UI code remains the same ...
-            // Price details section, Payment methods, etc.
+            // Price details section - UPDATED FOR CANCELLATION FEE
             const SizedBox(height: 16),
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -641,6 +770,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Room base price
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -649,7 +779,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                       Text(
-                        'LKR${_getRoomPrice().toStringAsFixed(0)}',
+                        'LKR ${_getRoomBasePrice().toStringAsFixed(0)}',
                         style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ],
@@ -657,22 +787,49 @@ class _BookingScreenState extends State<BookingScreen> {
 
                   const SizedBox(height: 8),
 
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Service fee',
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                      Text(
-                        'LKR${_serviceFee.toStringAsFixed(0)}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
+                  // Cancellation fee (only show if applicable)
+                  if (_hasCancellationFee()) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Cancellation Fee',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'LKR ${_getCancellationFee().toStringAsFixed(0)}',
+                          style: TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+
+                  // Add-ons (only show if applicable)
+                  if (_hasAddOns()) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Add-ons',
+                          style: TextStyle(color: Colors.grey.shade600),
+                        ),
+                        Text(
+                          'LKR ${_getAddOnsTotal().toStringAsFixed(0)}',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
 
                   const Divider(height: 24),
 
+                  // Total price
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -684,7 +841,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                       ),
                       Text(
-                        'LKR${_totalPrice.toStringAsFixed(0)}',
+                        'LKR ${_totalPrice.toStringAsFixed(0)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -822,7 +979,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                   ),
 
-                  //const SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
                   // Special requests
                   Container(
@@ -874,163 +1031,11 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
 
                   const SizedBox(height: 12),
-
-                  // Estimated arrival time
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Estimated Arrival time',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 12),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '${_estimatedArrival.hour.toString().padLeft(2, '0')}:${_estimatedArrival.minute.toString().padLeft(2, '0')}',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade300,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text('AM'),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text('PM'),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 16),
-
-            // Terms text
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '• Free cancellation if you cancel within 24 hours of booking',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  Text(
-                    '• A security deposit of LKR 5,000 will be collected at check-in',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  Text(
-                    '• Late check-out charges may apply after 11:00 AM',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  Text(
-                    '• Prices shown include service fees and taxes (if applicable)',
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Checkbox(
-                        activeColor: AppColors.mainGreen,
-                        value: _agreeToTerms,
-                        onChanged: (value) {
-                          setState(() {
-                            _agreeToTerms = value ?? false;
-                          });
-                        },
-                        visualDensity: VisualDensity.compact,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: RichText(
-                          text: TextSpan(
-                            style: const TextStyle(
-                              color: Colors.black,
-                            ), // base style
-                            children: [
-                              const TextSpan(text: 'I agree to the '),
-                              TextSpan(
-                                text: 'Terms & Conditions',
-                                style: const TextStyle(
-                                  color: AppColors.mainGreen,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer:
-                                    TapGestureRecognizer()
-                                      ..onTap = () {
-                                        TermsConditionsWidget.showTermsAndConditions(
-                                          context: context,
-                                          terms:
-                                              widget
-                                                  .hotel
-                                                  .terms, // 👈 pass hotel terms list
-                                          title: "Terms & Conditions",
-                                        );
-                                      },
-                              ),
-                              const TextSpan(text: ' and '),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: const TextStyle(
-                                  color: AppColors.mainGreen,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer:
-                                    TapGestureRecognizer()
-                                      ..onTap = () {
-                                        // 👉 show Privacy Policy page or bottom sheet here
-                                      },
-                              ),
-                              const TextSpan(text: '.'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
 
             const SizedBox(height: 100), // Space for floating button
           ],
@@ -1115,5 +1120,35 @@ class _BookingScreenState extends State<BookingScreen> {
         ],
       ),
     );
+  }
+
+  // Add these helper methods to calculate different price components
+  double _getRoomBasePrice() {
+    final duration = widget.checkOutDate.difference(widget.checkInDate);
+    final hours = duration.inHours > 0 ? duration.inHours : 1;
+    return widget.room.price * hours;
+  }
+
+  double _getCancellationFee() {
+    // Calculate cancellation fee based on the room's cancellation percentage
+    final roomBasePrice = _getRoomBasePrice();
+    final cancellationPercentage =
+        widget.room.hotelCancellationPercentage ?? 0.0;
+    return roomBasePrice * (cancellationPercentage / 100);
+  }
+
+  double _getAddOnsTotal() {
+    // Since we don't have direct access to add-ons in BookingScreen,
+    // we'll calculate it from the total price
+    final roomTotal = _getRoomBasePrice() + _getCancellationFee();
+    return widget.totalprice - roomTotal;
+  }
+
+  bool _hasCancellationFee() {
+    return _getCancellationFee() > 0;
+  }
+
+  bool _hasAddOns() {
+    return _getAddOnsTotal() > 0;
   }
 }
