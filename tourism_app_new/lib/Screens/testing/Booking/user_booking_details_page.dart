@@ -79,21 +79,49 @@ class BookingDetailScreen extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Booking #${booking.id}',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                          // Text(
+                          //   'Booking #${booking.id}',
+                          //   style: TextStyle(
+                          //     fontSize: 20,
+                          //     fontWeight: FontWeight.bold,
+                          //   ),
+                          // ),
                           SizedBox(height: 8),
-                          Text(
-                            'Room #${booking.roomId}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                booking.hotelName != null &&
+                                        booking.hotelName!.isNotEmpty
+                                    ? booking.hotelName!
+                                    : 'Hotel Not Found',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Text(
+                                booking.hotelAddress != null &&
+                                        booking.hotelAddress!.isNotEmpty
+                                    ? booking.hotelAddress!
+                                    : 'Address Not Found',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[700],
+                                ),
+                              ),
+                            ],
                           ),
+                          SizedBox(height: 6),
+
+                          SizedBox(height: 6),
+                          // Text(
+                          //   'Booking #${booking.id}',
+                          //   style: TextStyle(
+                          //     fontSize: 13,
+                          //     color: Colors.grey[500],
+                          //   ),
+                          // ),
                         ],
                       ),
                       Container(
@@ -141,6 +169,13 @@ class BookingDetailScreen extends StatelessWidget {
                         'Time',
                         booking.ciTime,
                         Icons.access_time,
+                      ),
+                      _buildDetailRow(
+                        'Room',
+                        booking.roomName != null && booking.roomName!.isNotEmpty
+                            ? booking.roomName!
+                            : 'Room Not Found',
+                        Icons.hotel,
                       ),
                     ],
                   ),

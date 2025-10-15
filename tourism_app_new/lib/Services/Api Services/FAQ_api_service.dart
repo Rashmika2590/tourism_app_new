@@ -101,7 +101,7 @@ class FAQService {
       );
     } catch (e) {
       print("Error getting user reaction: $e");
-      return null; // Return null if there's an error
+      return null;
     }
   }
 
@@ -163,6 +163,38 @@ class FAQService {
             "Add reaction Error: ${response.statusCode} - ${response.body}",
           );
           throw Exception("Failed to add reaction: ${response.body}");
+        }
+      },
+    );
+  }
+
+  // ====== DELETE REACTION FROM FAQ ======
+  static Future<void> deleteReaction(int faqId) async {
+    return await _makeAuthenticatedRequest<void>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/faq/$faqId/reaction");
+
+        print("Deleting reaction for FAQ: $faqId");
+
+        final response = await http.delete(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+        );
+
+        print("Delete reaction response status: ${response.statusCode}");
+        if (response.statusCode == 200 ||
+            response.statusCode == 204 ||
+            response.statusCode == 204) {
+          print("Reaction deleted successfully");
+          return;
+        } else {
+          print(
+            "Delete reaction Error: ${response.statusCode} - ${response.body}",
+          );
+          throw Exception("Failed to delete reaction: ${response.body}");
         }
       },
     );

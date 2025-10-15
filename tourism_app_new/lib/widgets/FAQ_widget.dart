@@ -19,7 +19,7 @@ class _FAQWidgetState extends State<FAQWidget> {
   bool _showAllFAQs = false;
 
   // Store user reactions fetched from backend
-  Map<int, UserReaction?> userReactions = {}; // faqId -> UserReaction object
+  Map<int, UserReaction?> userReactions = {};
   bool _isLoadingReactions = false;
 
   @override
@@ -32,7 +32,6 @@ class _FAQWidgetState extends State<FAQWidget> {
     setState(() {
       _faqsFuture = FAQService.getFAQsForHotel(widget.hotelId);
     });
-    // Load reactions after FAQs are fetched
     _faqsFuture.then((response) => _loadUserReactions(response.faqs));
   }
 
@@ -41,7 +40,6 @@ class _FAQWidgetState extends State<FAQWidget> {
       _isLoadingReactions = true;
     });
 
-    // Fetch user reaction for each FAQ
     for (var faq in faqs) {
       try {
         final reaction = await FAQService.getUserReaction(faq.id);
@@ -50,7 +48,6 @@ class _FAQWidgetState extends State<FAQWidget> {
         });
       } catch (e) {
         print('Error loading reaction for FAQ ${faq.id}: $e');
-        // Set to null if error - means no reaction
         setState(() {
           userReactions[faq.id] = null;
         });
@@ -78,7 +75,7 @@ class _FAQWidgetState extends State<FAQWidget> {
       setState(() {
         _showQuestionInput = false;
       });
-      _loadFAQs(); // Refresh the list
+      _loadFAQs();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Question submitted successfully!'),
@@ -101,12 +98,10 @@ class _FAQWidgetState extends State<FAQWidget> {
 
   Future<void> _handleReaction(int faqId, bool isLike) async {
     try {
-      // Check if user already reacted the same way
       final currentReaction = userReactions[faqId];
       if (currentReaction != null &&
           currentReaction.reacted &&
           currentReaction.isLike == isLike) {
-        // User clicked the same reaction again - do nothing or show message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('You already reacted to this FAQ'),
@@ -116,20 +111,17 @@ class _FAQWidgetState extends State<FAQWidget> {
         return;
       }
 
-      // Add the reaction
       if (isLike) {
         await FAQService.likeFAQ(faqId);
       } else {
         await FAQService.dislikeFAQ(faqId);
       }
 
-      // Fetch updated reaction from backend
       final updatedReaction = await FAQService.getUserReaction(faqId);
       setState(() {
         userReactions[faqId] = updatedReaction;
       });
 
-      // Refresh FAQ list to get updated counts
       _loadFAQs();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -142,6 +134,33 @@ class _FAQWidgetState extends State<FAQWidget> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to record reaction: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteReaction(int faqId) async {
+    try {
+      await FAQService.deleteReaction(faqId);
+
+      setState(() {
+        userReactions[faqId] = null;
+      });
+
+      _loadFAQs();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reaction removed!'),
+          duration: Duration(seconds: 1),
+          backgroundColor: AppColors.mainGreen,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to remove reaction: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -177,7 +196,6 @@ class _FAQWidgetState extends State<FAQWidget> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // FAQ List or Empty State
               if (hasFAQs)
                 Expanded(child: _buildFAQsList(faqs))
               else
@@ -213,10 +231,10 @@ class _FAQWidgetState extends State<FAQWidget> {
     final bool hasMoreFAQs = allFAQs.length > 3;
 
     return Scrollbar(
-      thumbVisibility: true, // Always show the scrollbar
-      trackVisibility: true, // Show track as well
-      thickness: 6.0, // Custom thickness
-      radius: Radius.circular(3), // Rounded edges
+      thumbVisibility: true,
+      trackVisibility: true,
+      thickness: 6.0,
+      radius: Radius.circular(3),
       child: ListView.builder(
         padding: EdgeInsets.all(16),
         itemCount: faqsToShow.length + (hasMoreFAQs && !_showAllFAQs ? 2 : 1),
@@ -225,7 +243,6 @@ class _FAQWidgetState extends State<FAQWidget> {
             final faq = faqsToShow[index];
             final reaction = userReactions[faq.id];
 
-            // Determine user reaction state
             String? userReactionState;
             if (reaction != null && reaction.reacted) {
               userReactionState = reaction.isLike ? 'like' : 'dislike';
@@ -236,6 +253,8 @@ class _FAQWidgetState extends State<FAQWidget> {
               userReaction: userReactionState,
               onLike: () => _handleReaction(faq.id, true),
               onDislike: () => _handleReaction(faq.id, false),
+              onDoubleTapLike: () => _deleteReaction(faq.id),
+              onDoubleTapDislike: () => _deleteReaction(faq.id),
               isLoadingReaction: _isLoadingReactions,
             );
           }
@@ -256,7 +275,6 @@ class _FAQWidgetState extends State<FAQWidget> {
                       color: AppColors.mainGreen,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      //decoration: TextDecoration.underline,
                     ),
                   ),
                 ),
@@ -328,7 +346,6 @@ class _FAQWidgetState extends State<FAQWidget> {
               ],
             ),
           ),
-
           if (_showQuestionInput) ...[
             SizedBox(height: 16),
             TextField(
@@ -414,6 +431,8 @@ class _FAQItem extends StatelessWidget {
   final String? userReaction;
   final VoidCallback onLike;
   final VoidCallback onDislike;
+  final VoidCallback onDoubleTapLike;
+  final VoidCallback onDoubleTapDislike;
   final bool isLoadingReaction;
 
   const _FAQItem({
@@ -422,6 +441,8 @@ class _FAQItem extends StatelessWidget {
     this.userReaction,
     required this.onLike,
     required this.onDislike,
+    required this.onDoubleTapLike,
+    required this.onDoubleTapDislike,
     this.isLoadingReaction = false,
   }) : super(key: key);
 
@@ -449,7 +470,6 @@ class _FAQItem extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8),
-
           if (faq.answer != null)
             Text(
               faq.answer!,
@@ -468,61 +488,92 @@ class _FAQItem extends StatelessWidget {
                 color: Colors.grey[500],
               ),
             ),
-
           SizedBox(height: 16),
-
           Row(
             children: [
               GestureDetector(
                 onTap: isLoadingReaction ? null : onLike,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
-                      size: 16,
-                      color: hasLiked ? AppColors.mainGreen : Colors.grey[600],
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'Helpful (${faq.likeCount})',
-                      style: TextStyle(
-                        fontSize: 12,
+                onDoubleTap:
+                    hasLiked && !isLoadingReaction ? onDoubleTapLike : null,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  // decoration: BoxDecoration(
+                  //   color:
+                  //       hasLiked
+                  //           ? AppColors.mainGreen.withOpacity(0.1)
+                  //           : Colors.transparent,
+                  //   borderRadius: BorderRadius.circular(16),
+                  //   border:
+                  //       hasLiked
+                  //           ? Border.all(color: AppColors.mainGreen, width: 1.5)
+                  //           : null,
+                  // ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        hasLiked ? Icons.thumb_up : Icons.thumb_up_outlined,
+                        size: 16,
                         color:
                             hasLiked ? AppColors.mainGreen : Colors.grey[600],
-                        fontWeight:
-                            hasLiked ? FontWeight.w600 : FontWeight.normal,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 6),
+                      Text(
+                        'Helpful (${faq.likeCount})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color:
+                              hasLiked ? AppColors.mainGreen : Colors.grey[600],
+                          fontWeight:
+                              hasLiked ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-
-              SizedBox(width: 24),
-
+              SizedBox(width: 12),
               GestureDetector(
                 onTap: isLoadingReaction ? null : onDislike,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      hasDisliked
-                          ? Icons.thumb_down
-                          : Icons.thumb_down_outlined,
-                      size: 16,
-                      color: hasDisliked ? Colors.red : Colors.grey[600],
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      'Unhelpful (${faq.dislikeCount})',
-                      style: TextStyle(
-                        fontSize: 12,
+                onDoubleTap:
+                    hasDisliked && !isLoadingReaction
+                        ? onDoubleTapDislike
+                        : null,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  // decoration: BoxDecoration(
+                  //   color:
+                  //       hasDisliked
+                  //           ? Colors.red.withOpacity(0.1)
+                  //           : Colors.transparent,
+                  //   borderRadius: BorderRadius.circular(16),
+                  //   border:
+                  //       hasDisliked
+                  //           ? Border.all(color: Colors.red, width: 1.5)
+                  //           : null,
+                  // ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        hasDisliked
+                            ? Icons.thumb_down
+                            : Icons.thumb_down_outlined,
+                        size: 16,
                         color: hasDisliked ? Colors.red : Colors.grey[600],
-                        fontWeight:
-                            hasDisliked ? FontWeight.w600 : FontWeight.normal,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: 6),
+                      Text(
+                        'Unhelpful (${faq.dislikeCount})',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: hasDisliked ? Colors.red : Colors.grey[600],
+                          fontWeight:
+                              hasDisliked ? FontWeight.w600 : FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],

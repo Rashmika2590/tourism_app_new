@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/Screens/testing/Booking/user_booking_details_page.dart';
+import 'package:tourism_app_new/Services/Api%20Services/hotel_api_service.dart';
+import 'package:tourism_app_new/Services/Api%20Services/room_api_service.dart';
+import 'package:tourism_app_new/constants/colors.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
 import 'package:tourism_app_new/Services/Api\ Services/booking_api_service.dart';
 import 'package:intl/intl.dart';
@@ -15,14 +18,35 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> {
   @override
   void initState() {
     super.initState();
-    _bookingsFuture = BookingApiService.getUserBookings();
+    _bookingsFuture = _fetchBookingsWithHotelNames();
+  }
+
+  Future<List<BookingResponse>> _fetchBookingsWithHotelNames() async {
+    final bookings = await BookingApiService.getUserBookings();
+
+    // Fetch hotel + room names for each booking
+    for (var booking in bookings) {
+      try {
+        final room = await RoomApiService.getRoomById(booking.roomId);
+        booking.roomName = room.type;
+        final hotel = await HotelApiService.getHotelById(room.hotelId);
+        booking.hotelName = hotel.name;
+        booking.hotelAddress = hotel.state;
+      } catch (e) {
+        print("Error fetching room/hotel info: $e");
+        booking.roomName = "Room ${booking.roomId}";
+        booking.hotelName = "Unknown Hotel";
+      }
+    }
+
+    return bookings;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Bookings'),
+        title: Text('Booking History'),
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -139,125 +163,137 @@ class BookingListCard extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      case 'completed':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Card(
-        margin: EdgeInsets.only(bottom: 12),
-        elevation: 1,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
+      child: Center(
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.1650, // reduced width
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFD9F3F2),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Header row with booking ID and status
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Booking #${booking.id}',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Room #${booking.roomId}',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(booking.status).withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      booking.status.toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 11,
+              // LEFT SIDE — Hotel info + dates
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      booking.hotelName ?? 'Hotel not found',
+                      style: const TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: _getStatusColor(booking.status),
+                        color: Colors.black87,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Divider(height: 1),
-              SizedBox(height: 12),
-              // Date info
-              Row(
-                children: [
-                  Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
-                  SizedBox(width: 8),
-                  Text(
-                    '${_formatDate(booking.ciDate)} - ${_formatDate(booking.coDate)}',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              // Guests and price
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.people, size: 16, color: Colors.grey[600]),
-                      SizedBox(width: 8),
-                      Text(
-                        '${booking.adultCount} Adult${booking.adultCount != 1 ? 's' : ''}',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    'Rs. ${booking.price.toStringAsFixed(0)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.green[700],
+                    const SizedBox(height: 6),
+                    // Location
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on_outlined,
+                          size: 14,
+                          color: Colors.black54,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            booking.hotelAddress ?? 'Location not found',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              // View details button
-              SizedBox(
-                width: double.infinity,
-                height: 36,
-                child: OutlinedButton(
-                  onPressed: onTap,
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 12),
+
+                    // Check-in
+                    Row(
+                      children: [
+                        const SizedBox(width: 4),
+                        Text(
+                          'Che-in: ${_formatDate(booking.ciDate)} ${booking.ciTime}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ],
                     ),
-                  ),
-                  child: Text('View Details'),
+                    const SizedBox(height: 4),
+
+                    // Check-out
+                    Row(
+                      children: [
+                        const SizedBox(width: 4),
+                        Text(
+                          'Ch-out: ${_formatDate(booking.coDate)}  ${booking.coTime}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                 ),
+              ),
+
+              // RIGHT SIDE — Booking ID + price + button
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '#${booking.id}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'LKR ${booking.price.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: onTap,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.buttonColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                    ),
+                    child: const Text(
+                      'View Details',
+                      style: TextStyle(color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

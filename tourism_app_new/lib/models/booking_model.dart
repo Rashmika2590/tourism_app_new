@@ -85,6 +85,9 @@ class BookingResponse {
   final String? createdAt;
   final String? updatedAt;
   final String? userId;
+  String? hotelName;
+  String? roomName;
+  String? hotelAddress;
 
   // Guest booking fields
   final String? guestName;
@@ -115,6 +118,9 @@ class BookingResponse {
     this.guestEmail,
     this.guestPhone,
     this.relationshipToUser,
+    this.hotelName,
+    this.roomName,
+    this.hotelAddress,
   });
 
   factory BookingResponse.fromJson(Map<String, dynamic> json) {
@@ -141,6 +147,9 @@ class BookingResponse {
       guestEmail: json['guestEmail'],
       guestPhone: json['guestPhone'],
       relationshipToUser: json['relationshiptoUser'],
+      hotelName: json['hotelName'],
+      roomName: json['roomName'],
+      hotelAddress: json['hotelAddress'],
     );
   }
 }
