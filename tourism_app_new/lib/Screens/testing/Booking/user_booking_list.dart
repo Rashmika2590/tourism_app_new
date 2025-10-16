@@ -29,16 +29,19 @@ class _UserBookingsScreenState extends State<UserBookingsScreen> {
       try {
         final room = await RoomApiService.getRoomById(booking.roomId);
         booking.roomName = room.type;
+
+        // Check if room has hotelId before proceeding
         final hotel = await HotelApiService.getHotelById(room.hotelId);
         booking.hotelName = hotel.name;
         booking.hotelAddress = hotel.state;
+        booking.hotelId = hotel.id; // This should now work
       } catch (e) {
         print("Error fetching room/hotel info: $e");
         booking.roomName = "Room ${booking.roomId}";
         booking.hotelName = "Unknown Hotel";
+        booking.hotelId = 0; // Provide a default value
       }
     }
-
     return bookings;
   }
 

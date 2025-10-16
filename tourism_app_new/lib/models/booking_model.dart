@@ -88,6 +88,7 @@ class BookingResponse {
   String? hotelName;
   String? roomName;
   String? hotelAddress;
+  int? hotelId; // Change to nullable
 
   // Guest booking fields
   final String? guestName;
@@ -121,6 +122,7 @@ class BookingResponse {
     this.hotelName,
     this.roomName,
     this.hotelAddress,
+    this.hotelId, // Make optional in constructor
   });
 
   factory BookingResponse.fromJson(Map<String, dynamic> json) {
@@ -150,6 +152,7 @@ class BookingResponse {
       hotelName: json['hotelName'],
       roomName: json['roomName'],
       hotelAddress: json['hotelAddress'],
+      hotelId: json['hotel_id'],
     );
   }
 }

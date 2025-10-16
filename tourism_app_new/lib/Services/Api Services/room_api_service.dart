@@ -36,8 +36,6 @@ class RoomApiService {
 
     try {
       T response = await requestFunction(token);
-
-      // Only retry for http.Response
       if (response is http.Response) {
         print("Response status: ${response.statusCode}");
         if (response.statusCode == 401 && maxRetries > 0) {
@@ -62,7 +60,6 @@ class RoomApiService {
           }
         }
       }
-
       return response;
     } catch (e) {
       print("Request failed: $e");
@@ -70,7 +67,128 @@ class RoomApiService {
     }
   }
 
-  // ====== UPLOAD IMAGE TO S3 ======
+  // ====== UPLOAD ROOM TYPE IMAGES ======
+  static Future<Map<String, dynamic>> uploadRoomTypeImages({
+    required int hotelId,
+    required String roomType,
+    required List<File> imageFiles,
+  }) async {
+    return await _makeAuthenticatedRequest<Map<String, dynamic>>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/room/$hotelId/$roomType/images");
+
+        print('=== UPLOAD DEBUG INFO ===');
+        print('Endpoint: $uri');
+        print('Hotel ID: $hotelId');
+        print('Room Type: $roomType');
+        print('Number of images: ${imageFiles.length}');
+        print('Method: PUT');
+        print('========================');
+
+        var request = http.MultipartRequest('PUT', uri); // Changed to PUT
+        request.headers['Authorization'] = 'Bearer $token';
+
+        // Add all image files
+        for (var imageFile in imageFiles) {
+          var stream = http.ByteStream(imageFile.openRead());
+          var length = await imageFile.length();
+          var multipartFile = http.MultipartFile(
+            'images',
+            stream,
+            length,
+            filename: path.basename(imageFile.path),
+          );
+          request.files.add(multipartFile);
+        }
+
+        print(
+          "Uploading ${imageFiles.length} images for room type '$roomType' in hotel $hotelId",
+        );
+
+        var streamedResponse = await request.send();
+        var response = await http.Response.fromStream(streamedResponse);
+
+        print(
+          "Upload room type images response status: ${response.statusCode}",
+        );
+        print("Response body: ${response.body}");
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          final result = jsonDecode(response.body);
+          print('✅ Upload successful: $result');
+          return result;
+        } else {
+          print(
+            "Upload Room Type Images Error: ${response.statusCode} - ${response.body}",
+          );
+          throw Exception(
+            "Failed to upload room type images: ${response.body}",
+          );
+        }
+      },
+    );
+  }
+
+  // ====== NEW: UPDATE ROOM TYPE ATTRIBUTES ======
+  static Future<Map<String, dynamic>> updateRoomTypeAttributes({
+    required int hotelId,
+    required String roomType,
+    String? typeDescription,
+    double? price,
+    int? maxOccupancy,
+    String? name,
+    List<String>? amenities,
+    bool? freeCancellation,
+    bool? enableShortStay,
+    bool? enableLongStay,
+  }) async {
+    return await _makeAuthenticatedRequest<Map<String, dynamic>>(
+      requestFunction: (token) async {
+        final uri = Uri.parse("$baseUrl/room/$hotelId/$roomType");
+
+        // Build request body with only provided fields
+        Map<String, dynamic> bodyData = {};
+        if (typeDescription != null)
+          bodyData['type_description'] = typeDescription;
+        if (price != null) bodyData['price'] = price;
+        if (maxOccupancy != null) bodyData['max_occupancy'] = maxOccupancy;
+        if (name != null) bodyData['name'] = name;
+        if (amenities != null) bodyData['amenities'] = amenities;
+        if (freeCancellation != null)
+          bodyData['free_cancellation'] = freeCancellation;
+        if (enableShortStay != null)
+          bodyData['enable_short_stay'] = enableShortStay;
+        if (enableLongStay != null)
+          bodyData['enable_long_stay'] = enableLongStay;
+
+        final body = jsonEncode(bodyData);
+
+        print("Updating room type '$roomType' in hotel $hotelId");
+
+        final response = await http.put(
+          uri,
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer $token",
+          },
+          body: body,
+        );
+
+        print("Update room type response status: ${response.statusCode}");
+
+        if (response.statusCode == 200 || response.statusCode == 201) {
+          return jsonDecode(response.body);
+        } else {
+          print(
+            "Update Room Type Error: ${response.statusCode} - ${response.body}",
+          );
+          throw Exception("Failed to update room type: ${response.body}");
+        }
+      },
+    );
+  }
+
+  // ====== UPLOAD IMAGE TO S3 (Legacy - kept for backward compatibility) ======
   static Future<String> uploadImageToS3(File imageFile) async {
     try {
       final token = await _getValidToken();
@@ -78,37 +196,29 @@ class RoomApiService {
         throw Exception("Authentication failed - no valid token available");
       }
 
-      // Create multipart request
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse(
-          '$baseUrl/upload/image',
-        ), // Adjust this endpoint to your S3 upload endpoint
+        Uri.parse('$baseUrl/upload/image'),
       );
 
-      // Add headers
       request.headers['Authorization'] = 'Bearer $token';
 
-      // Add image file
       var stream = http.ByteStream(imageFile.openRead());
       var length = await imageFile.length();
-
       var multipartFile = http.MultipartFile(
         'image',
         stream,
         length,
         filename: path.basename(imageFile.path),
       );
-
       request.files.add(multipartFile);
 
-      // Send request
       var response = await request.send();
       final responseString = await response.stream.bytesToString();
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(responseString);
-        return responseData['imageUrl']; // Assuming your API returns the image URL
+        return responseData['imageUrl'];
       } else {
         throw Exception('Failed to upload image: $responseString');
       }
@@ -127,7 +237,6 @@ class RoomApiService {
         maxHeight: 1800,
         imageQuality: 85,
       );
-
       if (pickedFile != null) {
         return File(pickedFile.path);
       }
@@ -135,6 +244,21 @@ class RoomApiService {
     } catch (e) {
       print('Error picking image from gallery: $e');
       throw Exception('Failed to pick image from gallery: $e');
+    }
+  }
+
+  // ====== PICK MULTIPLE IMAGES FROM GALLERY ======
+  static Future<List<File>> pickMultipleImagesFromGallery() async {
+    try {
+      final List<XFile> pickedFiles = await _imagePicker.pickMultiImage(
+        maxWidth: 1800,
+        maxHeight: 1800,
+        imageQuality: 85,
+      );
+      return pickedFiles.map((xFile) => File(xFile.path)).toList();
+    } catch (e) {
+      print('Error picking multiple images from gallery: $e');
+      throw Exception('Failed to pick multiple images from gallery: $e');
     }
   }
 
@@ -147,7 +271,6 @@ class RoomApiService {
         maxHeight: 1800,
         imageQuality: 85,
       );
-
       if (pickedFile != null) {
         return File(pickedFile.path);
       }
@@ -158,7 +281,7 @@ class RoomApiService {
     }
   }
 
-  // ====== ADD ROOM IMAGES ======
+  // ====== ADD ROOM IMAGES (Legacy endpoint) ======
   static Future<Map<String, dynamic>> addRoomImages({
     required int roomId,
     required List<String> imageUrls,
@@ -167,7 +290,6 @@ class RoomApiService {
       requestFunction: (token) async {
         final uri = Uri.parse("$baseUrl/room/$roomId/images");
         final body = jsonEncode({"room_id": roomId, "images": imageUrls});
-
         print("Adding images to room: $roomId");
         final response = await http.post(
           uri,
@@ -177,7 +299,6 @@ class RoomApiService {
           },
           body: body,
         );
-
         print("Add room images response status: ${response.statusCode}");
         if (response.statusCode == 200 || response.statusCode == 201) {
           return jsonDecode(response.body);
@@ -200,7 +321,9 @@ class RoomApiService {
     required String description,
     required int maxOccupancy,
     required List<String> amenities,
-    required bool freeCancellation, // Add this parameter
+    required bool freeCancellation,
+    bool? enableShortStay,
+    bool? enableLongStay,
   }) async {
     return await _makeAuthenticatedRequest<Map<String, dynamic>>(
       requestFunction: (token) async {
@@ -213,9 +336,10 @@ class RoomApiService {
           "type_description": description,
           "max_occupancy": maxOccupancy,
           "amenities": amenities,
-          'free_cancellation': freeCancellation, // Add this field
+          'free_cancellation': freeCancellation,
+          if (enableShortStay != null) 'enable_short_stay': enableShortStay,
+          if (enableLongStay != null) 'enable_long_stay': enableLongStay,
         });
-
         print("Creating room for hotel: $hotelId");
         final response = await http.post(
           uri,
@@ -225,7 +349,6 @@ class RoomApiService {
           },
           body: body,
         );
-
         print("Room creation response status: ${response.statusCode}");
         if (response.statusCode == 200 || response.statusCode == 201) {
           return jsonDecode(response.body);
@@ -261,7 +384,6 @@ class RoomApiService {
           "name": name,
           "amenities": amenities,
         });
-
         print("Creating $numberOfRooms rooms in batch for hotel: $hotelId");
         final response = await http.post(
           uri,
@@ -271,7 +393,6 @@ class RoomApiService {
           },
           body: body,
         );
-
         print("Batch room creation response status: ${response.statusCode}");
         if (response.statusCode == 200 || response.statusCode == 201) {
           return jsonDecode(response.body);
@@ -291,7 +412,6 @@ class RoomApiService {
       requestFunction: (token) async {
         final uri = Uri.parse("$baseUrl/hotel/$hotelId/rooms");
         print("Getting rooms for hotel ID: $hotelId");
-
         final response = await http.get(
           uri,
           headers: {
@@ -299,12 +419,9 @@ class RoomApiService {
             "Authorization": "Bearer $token",
           },
         );
-
         print("Get rooms response status: ${response.statusCode}");
         if (response.statusCode == 200) {
           final List<dynamic> data = jsonDecode(response.body);
-
-          // First, get hotel details to get cancellation percentage
           try {
             final hotelResponse = await http.get(
               Uri.parse("$baseUrl/hotel/$hotelId"),
@@ -313,17 +430,13 @@ class RoomApiService {
                 "Authorization": "Bearer $token",
               },
             );
-
             if (hotelResponse.statusCode == 200) {
               final hotelData = jsonDecode(hotelResponse.body);
               final double? cancellationPercentage =
                   hotelData['cancellation_percentage']?.toDouble();
-
               print("=== INJECTING HOTEL CANCELLATION PERCENTAGE ===");
               print("Hotel ID: $hotelId");
               print("Cancellation Percentage: $cancellationPercentage");
-
-              // Inject hotel cancellation percentage into each room
               return data.map((roomJson) {
                 final room = Room.fromJson(roomJson);
                 return room.copyWith(
@@ -334,8 +447,6 @@ class RoomApiService {
           } catch (e) {
             print("Error fetching hotel details: $e");
           }
-
-          // Fallback: return rooms without cancellation percentage if hotel fetch fails
           return data.map((room) => Room.fromJson(room)).toList();
         } else {
           print("Get Rooms Error: ${response.statusCode} - ${response.body}");
@@ -351,7 +462,6 @@ class RoomApiService {
       requestFunction: (token) async {
         final uri = Uri.parse("$baseUrl/room/$roomId");
         print("Getting room details for ID: $roomId");
-
         final response = await http.get(
           uri,
           headers: {
@@ -359,13 +469,10 @@ class RoomApiService {
             "Authorization": "Bearer $token",
           },
         );
-
         print("Get room response status: ${response.statusCode}");
         if (response.statusCode == 200) {
           final roomData = jsonDecode(response.body);
           final room = Room.fromJson(roomData);
-
-          // Get hotel details to inject cancellation percentage
           try {
             final hotelId = room.hotelId;
             final hotelResponse = await http.get(
@@ -375,18 +482,15 @@ class RoomApiService {
                 "Authorization": "Bearer $token",
               },
             );
-
             if (hotelResponse.statusCode == 200) {
               final hotelData = jsonDecode(hotelResponse.body);
               final double? cancellationPercentage =
                   hotelData['cancellation_percentage']?.toDouble();
-
               print(
                 "=== INJECTING CANCELLATION PERCENTAGE FOR ROOM $roomId ===",
               );
               print("Hotel ID: $hotelId");
               print("Cancellation Percentage: $cancellationPercentage");
-
               return room.copyWith(
                 hotelCancellationPercentage: cancellationPercentage,
               );
@@ -394,7 +498,6 @@ class RoomApiService {
           } catch (e) {
             print("Error fetching hotel details for room $roomId: $e");
           }
-
           return room;
         } else {
           print("Get Room Error: ${response.statusCode} - ${response.body}");

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:tourism_app_new/Screens/profile/add_review_page.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
 
 class BookingDetailScreen extends StatelessWidget {
@@ -319,6 +320,7 @@ class BookingDetailScreen extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: 20),
+
                   // Price summary
                   Container(
                     width: double.infinity,
@@ -364,6 +366,45 @@ class BookingDetailScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+      // Add this to the Scaffold in the build method
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _navigateToCreateReview(context),
+        icon: Icon(Icons.rate_review),
+        label: Text('Write Review'),
+        backgroundColor: Colors.blue,
+        foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  void _navigateToCreateReview(BuildContext context) {
+    print('=== DEBUG INFO ===');
+    print('Booking ID: ${booking.id}');
+    print('Room ID: ${booking.roomId}');
+    print('Hotel ID: ${booking.hotelId}');
+    print('Hotel Name: ${booking.hotelName}');
+    print('==================');
+
+    if (booking.hotelId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Unable to create review: Hotel information not available. Please try again later.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => CreateReviewPage(
+              hotelId: booking.hotelId!,
+              hotelName: booking.hotelName ?? 'Unknown Hotel',
+            ),
       ),
     );
   }

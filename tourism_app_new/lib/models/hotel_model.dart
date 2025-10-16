@@ -17,8 +17,8 @@ class Hotel {
   final HotelVerification? verification;
   final List<String> terms;
   final double? cancellationPercentage;
-  final double? reviewRating; // For search API
-  final double? averageRating; // For details API
+  //final double? reviewRating;
+  final double? averageRating;
   final int? totalReviews;
   final bool isFavourite;
 
@@ -41,14 +41,14 @@ class Hotel {
     this.verification,
     required this.terms,
     this.cancellationPercentage,
-    this.reviewRating,
+    //this.reviewRating,
     this.averageRating,
     this.totalReviews,
     required this.isFavourite,
   });
 
   // Get the appropriate rating (prioritize averageRating for details, fallback to reviewRating)
-  double? get rating => averageRating ?? reviewRating;
+  double? get rating => averageRating;
 
   factory Hotel.fromJson(Map<String, dynamic> json) {
     return Hotel(
@@ -69,9 +69,9 @@ class Hotel {
       userUid: json['user_uid'] ?? '',
       terms: List<String>.from(json['terms'] ?? []),
       cancellationPercentage: json['cancellation_percentage']?.toDouble(),
-      reviewRating: json['review_rating']?.toDouble(),
+      //reviewRating: json['review_rating']?.toDouble(),
       averageRating: json['average_rating']?.toDouble(),
-      totalReviews: json['total_reviews'],
+      totalReviews: json['total_reviews'] ?? 0,
       isFavourite: json['is_favourite'] ?? false,
       verification:
           json['verification'] != null
@@ -100,7 +100,7 @@ class Hotel {
       'verification': verification?.toJson(),
       'terms': terms,
       'cancellation_percentage': cancellationPercentage,
-      'review_rating': reviewRating,
+      //'review_rating': reviewRating,
       'average_rating': averageRating,
       'total_reviews': totalReviews,
       'is_favourite': isFavourite,
@@ -150,7 +150,7 @@ class Hotel {
       terms: terms ?? this.terms,
       cancellationPercentage:
           cancellationPercentage ?? this.cancellationPercentage,
-      reviewRating: reviewRating ?? this.reviewRating,
+      //reviewRating: reviewRating ?? this.reviewRating,
       averageRating: averageRating ?? this.averageRating,
       totalReviews: totalReviews ?? this.totalReviews,
       isFavourite: isFavourite ?? this.isFavourite,

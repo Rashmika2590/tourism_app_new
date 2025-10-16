@@ -417,6 +417,43 @@ class _RoomAvailabilityResultsScreenState
     final cheapestRoom = hotelWithRooms.cheapestRoom;
     final displayAmenities = cheapestRoom.amenities.take(4).toList();
 
+    // Helper methods for ratings
+    String _getRatingDisplay() {
+      final rating =
+          hotel.rating; // Uses the getter that prioritizes averageRating
+      final totalReviews = hotel.totalReviews;
+
+      if (rating == null || rating == 0.0) {
+        return 'No ratings';
+      }
+
+      // Format the rating to 1 decimal place if needed
+      final formattedRating =
+          rating % 1 == 0
+              ? rating.toInt().toString()
+              : rating.toStringAsFixed(1);
+
+      // Handle null or zero totalReviews
+      if (totalReviews == null || totalReviews == 0) {
+        return formattedRating;
+      }
+
+      return '$formattedRating ($totalReviews)';
+    }
+
+    Color _getRatingColor() {
+      final rating = hotel.rating ?? 0;
+
+      if (rating >= 4.5) return Colors.green;
+      if (rating >= 4.0) return Colors.lightGreen;
+      if (rating >= 3.0) return Colors.amber;
+      if (rating >= 2.0) return Colors.orange;
+      return Colors.red;
+    }
+
+    final hasRatings = hotel.rating != null && hotel.rating! > 0;
+    final ratingDisplay = _getRatingDisplay();
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -551,18 +588,35 @@ class _RoomAvailabilityResultsScreenState
                         ],
                       ),
                       const SizedBox(height: 15),
+                      // Updated Rating Section
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
-                          const Icon(Icons.star, color: Colors.amber, size: 16),
+                          Icon(
+                            Icons.star,
+                            color: hasRatings ? _getRatingColor() : Colors.grey,
+                            size: 16,
+                          ),
                           const SizedBox(width: 4),
                           Text(
-                            '${hotel.latitude.toStringAsFixed(1)} (${hotel.longitude})',
-                            style: const TextStyle(
-                              color: Colors.white,
+                            ratingDisplay,
+                            style: TextStyle(
+                              color: hasRatings ? Colors.white : Colors.grey,
                               fontSize: 13,
                             ),
                           ),
+                          // Show info icon if we have ratings but no review count
+                          if (hasRatings &&
+                              (hotel.totalReviews == null ||
+                                  hotel.totalReviews == 0))
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Icon(
+                                Icons.info_outline,
+                                color: Colors.white.withOpacity(0.7),
+                                size: 12,
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -645,6 +699,30 @@ class _RoomAvailabilityResultsScreenState
                 ),
               ),
             ),
+            // Optional: Show "New" badge if no reviews yet
+            // if (!hasRatings)
+            //   Positioned(
+            //     top: 8,
+            //     right: 8,
+            //     child: Container(
+            //       padding: const EdgeInsets.symmetric(
+            //         horizontal: 8,
+            //         vertical: 4,
+            //       ),
+            //       decoration: BoxDecoration(
+            //         color: Colors.blue.withOpacity(0.8),
+            //         borderRadius: BorderRadius.circular(12),
+            //       ),
+            //       child: const Text(
+            //         'New',
+            //         style: TextStyle(
+            //           color: Colors.white,
+            //           fontSize: 10,
+            //           fontWeight: FontWeight.bold,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
           ],
         ),
       ),

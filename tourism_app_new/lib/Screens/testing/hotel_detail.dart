@@ -254,50 +254,6 @@ class _EnhancedHotelDetailsScreenState
     return Icons.check_circle;
   }
 
-  // Future<void> _toggleFavorite() async {
-  //   if (isUpdatingFavorite) return;
-
-  //   setState(() {
-  //     isUpdatingFavorite = true;
-  //   });
-
-  //   try {
-  //     if (isFavorite) {
-  //       await FavouriteApiService.removeFavourite(widget.hotel.id);
-  //     } else {
-  //       await FavouriteApiService.addFavourite(
-  //         userId: "current_user_id",
-  //         hotelId: widget.hotel.id,
-  //       );
-  //     }
-
-  //     setState(() {
-  //       isFavorite = !isFavorite;
-  //     });
-
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(
-  //         content: Text(
-  //           isFavorite ? 'Added to favorites' : 'Removed from favorites',
-  //         ),
-  //         duration: Duration(seconds: 2),
-  //       ),
-  //     );
-  //   } catch (e) {
-  //     print('Error toggling favorite: $e');
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       const SnackBar(
-  //         content: Text('Failed to update favorites'),
-  //         duration: Duration(seconds: 2),
-  //       ),
-  //     );
-  //   } finally {
-  //     setState(() {
-  //       isUpdatingFavorite = false;
-  //     });
-  //   }
-  // }
-
   // Combined availability check and navigation function
   Future<void> _checkAvailabilityAndNavigate() async {
     setState(() {
@@ -1575,7 +1531,7 @@ class _EnhancedHotelDetailsScreenState
                     const SizedBox(height: 10),
                     SizedBox(
                       height: MediaQuery.of(context).size.height * 0.4,
-                      child: ReviewCarousel(),
+                      child: ReviewCarousel(hotelId: widget.hotel.id),
                     ),
 
                     const SizedBox(height: 16),

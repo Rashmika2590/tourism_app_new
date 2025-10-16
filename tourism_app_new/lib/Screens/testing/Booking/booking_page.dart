@@ -1,4 +1,5 @@
 // Screens/booking_screen.dart
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:tourism_app_new/models/booking_model.dart';
 import 'package:tourism_app_new/models/hotel_model.dart';
@@ -1036,6 +1037,74 @@ class _BookingScreenState extends State<BookingScreen> {
             ),
 
             const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Checkbox(
+                        activeColor: AppColors.mainGreen,
+                        value: _agreeToTerms,
+                        onChanged: (value) {
+                          setState(() {
+                            _agreeToTerms = value ?? false;
+                          });
+                        },
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: const TextStyle(
+                              color: Colors.black,
+                            ), // base style
+                            children: [
+                              const TextSpan(text: 'I agree to the '),
+                              TextSpan(
+                                text: 'Terms & Conditions',
+                                style: const TextStyle(
+                                  color: AppColors.mainGreen,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        TermsConditionsWidget.showTermsAndConditions(
+                                          context: context,
+                                          terms:
+                                              widget
+                                                  .hotel
+                                                  .terms, // 👈 pass hotel terms list
+                                          title: "Terms & Conditions",
+                                        );
+                                      },
+                              ),
+                              const TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: const TextStyle(
+                                  color: AppColors.mainGreen,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer:
+                                    TapGestureRecognizer()
+                                      ..onTap = () {
+                                        // 👉 show Privacy Policy page or bottom sheet here
+                                      },
+                              ),
+                              const TextSpan(text: '.'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
             const SizedBox(height: 100), // Space for floating button
           ],

@@ -22,10 +22,6 @@ class _HotelCardState extends State<HotelCard> {
   double? lowestRoomPrice;
   bool isLoadingPrice = true;
 
-  // Dummy review data
-  final double reviewRating = 4.8;
-  final int reviewCount = 73;
-
   @override
   void initState() {
     super.initState();
@@ -62,8 +58,52 @@ class _HotelCardState extends State<HotelCard> {
     }
   }
 
+  // Helper method to format rating display
+  String _getRatingDisplay() {
+    final rating =
+        widget
+            .hotel
+            .rating; // This uses the getter that prioritizes averageRating
+    final totalReviews = widget.hotel.totalReviews;
+
+    if (rating == null || rating == 0.0) {
+      return 'No ratings';
+    }
+
+    // Format the rating to 1 decimal place if needed
+    final formattedRating =
+        rating % 1 == 0 ? rating.toInt().toString() : rating.toStringAsFixed(1);
+
+    if (totalReviews == 0) {
+      return formattedRating;
+    }
+
+    return '$formattedRating ($totalReviews)';
+  }
+
+  // Helper method to get rating color based on value
+  Color _getRatingColor() {
+    final rating = widget.hotel.rating ?? 0;
+
+    if (rating >= 4.5) return Colors.amber;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.0) return Colors.amber;
+    if (rating >= 2.0) return Colors.orange;
+    return Colors.red;
+  }
+
   @override
   Widget build(BuildContext context) {
+    print('=== Hotel Data Debug ===');
+    print('Hotel: ${widget.hotel.name}');
+    print('Rating: ${widget.hotel.rating}');
+    print('Average Rating: ${widget.hotel.averageRating}');
+    //print('Review Rating: ${widget.hotel.reviewRating}');
+    print('Total Reviews: ${widget.hotel.totalReviews}');
+    print('========================');
+    final hasRatings = widget.hotel.rating != null && widget.hotel.rating! > 0;
+    final ratingDisplay = _getRatingDisplay();
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -96,6 +136,20 @@ class _HotelCardState extends State<HotelCard> {
                                 width: double.infinity,
                                 height: 200,
                                 fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                        colors: [
+                                          Color(0xFF1E3A8A),
+                                          Color(0xFF3B82F6),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
                               Container(
                                 width: double.infinity,
@@ -148,6 +202,7 @@ class _HotelCardState extends State<HotelCard> {
                                 style: const TextStyle(
                                   color: Color.fromARGB(255, 5, 230, 208),
                                   fontSize: 28,
+                                  fontWeight: FontWeight.bold,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -161,19 +216,27 @@ class _HotelCardState extends State<HotelCard> {
                                 ),
                               ),
                               const SizedBox(height: 15),
+
+                              // Rating Section - Updated with real data
                               Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(
+                                  Icon(
                                     Icons.star,
-                                    color: Colors.amber,
+                                    color:
+                                        hasRatings
+                                            ? _getRatingColor()
+                                            : Colors.grey,
                                     size: 16,
                                   ),
-                                  const SizedBox(width: 15),
+                                  const SizedBox(width: 8),
                                   Text(
-                                    '$reviewRating ($reviewCount)',
-                                    style: const TextStyle(
-                                      color: Colors.white,
+                                    ratingDisplay,
+                                    style: TextStyle(
+                                      color:
+                                          hasRatings
+                                              ? Colors.white
+                                              : Colors.grey,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -181,6 +244,7 @@ class _HotelCardState extends State<HotelCard> {
                                 ],
                               ),
                               const SizedBox(height: 3),
+
                               // Price info
                               isLoadingPrice
                                   ? const SizedBox(
@@ -267,6 +331,31 @@ class _HotelCardState extends State<HotelCard> {
                         },
                       ),
                     ),
+
+                    // Optional: Show "New" badge if no reviews yet
+                    // if (!hasRatings)
+                    //   Positioned(
+                    //     top: 0,
+                    //     right: 0,
+                    //     child: Container(
+                    //       padding: const EdgeInsets.symmetric(
+                    //         horizontal: 8,
+                    //         vertical: 4,
+                    //       ),
+                    //       decoration: BoxDecoration(
+                    //         color: Colors.blue.withOpacity(0.8),
+                    //         borderRadius: BorderRadius.circular(12),
+                    //       ),
+                    //       child: const Text(
+                    //         'New',
+                    //         style: TextStyle(
+                    //           color: Colors.white,
+                    //           fontSize: 10,
+                    //           fontWeight: FontWeight.bold,
+                    //         ),
+                    //       ),
+                    //     ),
+                    //   ),
                   ],
                 ),
               ),

@@ -25,20 +25,24 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   bool _isBatchCreation = false;
   int? _createdRoomId;
   List<File> _selectedImages = [];
-  List<String> _uploadedImageUrls = [];
   bool _uploadingImages = false;
   bool _allowFreeCancellation = false;
+  bool _enableShortStay = false;
+  bool _enableLongStay = false;
+
+  // New: For room type updates
+  bool _isUpdatingRoomType = false;
 
   Future<void> _pickImagesFromGallery() async {
     try {
-      final File? imageFile = await RoomApiService.pickImageFromGallery();
-      if (imageFile != null) {
+      final images = await RoomApiService.pickMultipleImagesFromGallery();
+      if (images.isNotEmpty) {
         setState(() {
-          _selectedImages.add(imageFile);
+          _selectedImages.addAll(images);
         });
       }
     } catch (e) {
-      _showErrorSnackBar("Error picking image: $e");
+      _showErrorSnackBar("Error picking images: $e");
     }
   }
 
@@ -55,28 +59,87 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     }
   }
 
-  Future<void> _uploadImagesToS3() async {
-    if (_selectedImages.isEmpty) return;
+  // New: Upload images using the new room type endpoint
+  Future<void> _uploadRoomTypeImages() async {
+    if (_selectedImages.isEmpty || _typeController.text.isEmpty) {
+      _showErrorSnackBar("Please select images and enter room type");
+      return;
+    }
 
     setState(() => _uploadingImages = true);
 
     try {
-      for (var imageFile in _selectedImages) {
-        final imageUrl = await RoomApiService.uploadImageToS3(imageFile);
-        _uploadedImageUrls.add(imageUrl);
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "${_selectedImages.length} images uploaded successfully!",
-          ),
-        ),
+      final result = await RoomApiService.uploadRoomTypeImages(
+        hotelId: widget.hotelId,
+        roomType: _typeController.text.trim(),
+        imageFiles: _selectedImages,
       );
+
+      _showSuccessSnackBar(
+        "${_selectedImages.length} images uploaded successfully for room type ${_typeController.text}",
+      );
+
+      print("Upload response: $result");
+
+      // If the response contains image URLs, you can use them
+      if (result['image_urls'] != null) {
+        print("Uploaded image URLs: ${result['image_urls']}");
+      }
     } catch (e) {
       _showErrorSnackBar("Error uploading images: $e");
+      print("Detailed upload error: $e");
     } finally {
       setState(() => _uploadingImages = false);
+    }
+  }
+
+  // New: Update room type attributes
+  Future<void> _updateRoomType() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_typeController.text.isEmpty) {
+      _showErrorSnackBar("Please enter room type");
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    try {
+      final result = await RoomApiService.updateRoomTypeAttributes(
+        hotelId: widget.hotelId,
+        roomType: _typeController.text.trim(),
+        typeDescription:
+            _descriptionController.text.isEmpty
+                ? null
+                : _descriptionController.text,
+        price:
+            _priceController.text.isEmpty
+                ? null
+                : double.tryParse(_priceController.text),
+        maxOccupancy:
+            _occupancyController.text.isEmpty
+                ? null
+                : int.tryParse(_occupancyController.text),
+        name: _nameController.text.isEmpty ? null : _nameController.text,
+        amenities:
+            _amenitiesController.text.isEmpty
+                ? null
+                : _amenitiesController.text
+                    .split(",")
+                    .map((e) => e.trim())
+                    .toList(),
+        freeCancellation: _allowFreeCancellation,
+        enableShortStay: _enableShortStay,
+        enableLongStay: _enableLongStay,
+      );
+
+      _showSuccessSnackBar(
+        result['message'] ?? "Room type updated successfully!",
+      );
+      Navigator.pop(context, result);
+    } catch (e) {
+      _showErrorSnackBar("Error updating room type: $e");
+    } finally {
+      setState(() => _loading = false);
     }
   }
 
@@ -87,35 +150,39 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
     try {
       if (_isBatchCreation) {
-        // Batch room creation (no images)
-        // In single room creation section
-        final result = await RoomApiService.createRoom(
-          hotelId: widget.hotelId,
-          name: _nameController.text,
-          type: _typeController.text,
-          description: _descriptionController.text,
-          freeCancellation: _allowFreeCancellation, // Add this line
-          price: double.tryParse(_priceController.text) ?? 0.0,
-          maxOccupancy: int.tryParse(_occupancyController.text) ?? 0,
-          amenities:
-              _amenitiesController.text
-                  .split(",")
-                  .map((e) => e.trim())
-                  .toList(),
-        );
+        final numberOfRooms = int.tryParse(_numberOfRoomsController.text) ?? 1;
 
-        _showSuccessSnackBar(
-          "${_numberOfRoomsController.text} rooms created successfully!",
-        );
-        Navigator.pop(context, result);
+        // Create multiple rooms in batch
+        for (int i = 0; i < numberOfRooms; i++) {
+          await RoomApiService.createRoom(
+            hotelId: widget.hotelId,
+            name: "${_nameController.text} ${i + 1}",
+            type: _typeController.text,
+            description: _descriptionController.text,
+            freeCancellation: _allowFreeCancellation,
+            enableShortStay: _enableShortStay,
+            enableLongStay: _enableLongStay,
+            price: double.tryParse(_priceController.text) ?? 0.0,
+            maxOccupancy: int.tryParse(_occupancyController.text) ?? 0,
+            amenities:
+                _amenitiesController.text
+                    .split(",")
+                    .map((e) => e.trim())
+                    .toList(),
+          );
+        }
+
+        _showSuccessSnackBar("$numberOfRooms rooms created successfully!");
+        Navigator.pop(context, {'batch_created': true, 'count': numberOfRooms});
       } else {
-        // Single room creation
         final result = await RoomApiService.createRoom(
           hotelId: widget.hotelId,
           name: _nameController.text,
           type: _typeController.text,
           description: _descriptionController.text,
           freeCancellation: _allowFreeCancellation,
+          enableShortStay: _enableShortStay,
+          enableLongStay: _enableLongStay,
           price: double.tryParse(_priceController.text) ?? 0.0,
           maxOccupancy: int.tryParse(_occupancyController.text) ?? 0,
           amenities:
@@ -127,58 +194,12 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
 
         _createdRoomId = result['id'];
         _showSuccessSnackBar("Room created successfully! ID: $_createdRoomId");
-
-        // Upload images if any are selected
-        if (_selectedImages.isNotEmpty) {
-          await _uploadImagesAndAddToRoom();
-        } else {
-          Navigator.pop(context, result);
-        }
+        Navigator.pop(context, result);
       }
     } catch (e) {
       _showErrorSnackBar("Error: $e");
     } finally {
-      if (mounted && !(_selectedImages.isNotEmpty && _createdRoomId != null)) {
-        setState(() => _loading = false);
-      }
-    }
-  }
-
-  Future<void> _uploadImagesAndAddToRoom() async {
-    if (_createdRoomId == null) return;
-
-    setState(() => _uploadingImages = true);
-
-    try {
-      // Upload images to S3
-      for (var imageFile in _selectedImages) {
-        final imageUrl = await RoomApiService.uploadImageToS3(imageFile);
-        _uploadedImageUrls.add(imageUrl);
-      }
-
-      // Add image URLs to room
-      if (_uploadedImageUrls.isNotEmpty) {
-        await RoomApiService.addRoomImages(
-          roomId: _createdRoomId!,
-          imageUrls: _uploadedImageUrls,
-        );
-      }
-
-      _showSuccessSnackBar("Room images uploaded successfully!");
-    } catch (e) {
-      _showErrorSnackBar("Error uploading images: $e");
-    } finally {
-      if (mounted) {
-        setState(() {
-          _uploadingImages = false;
-          _loading = false;
-        });
-        Navigator.pop(context, {
-          'roomId': _createdRoomId,
-          'imagesUploaded': true,
-          'imageUrls': _uploadedImageUrls,
-        });
-      }
+      setState(() => _loading = false);
     }
   }
 
@@ -248,6 +269,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
               child: GestureDetector(
                 onTap: () => _removeImage(index),
                 child: Container(
+                  padding: EdgeInsets.all(2),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     shape: BoxShape.circle,
@@ -265,34 +287,94 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Create Room")),
+      appBar: AppBar(
+        title: Text(_isUpdatingRoomType ? "Update Room Type" : "Create Room"),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              // Batch Creation Toggle
-              Row(
-                children: [
-                  Text("Batch Creation:", style: TextStyle(fontSize: 16)),
-                  Switch(
-                    value: _isBatchCreation,
-                    onChanged: (value) {
-                      setState(() {
-                        _isBatchCreation = value;
-                        if (value) {
-                          _selectedImages.clear();
-                        }
-                      });
-                    },
+              // Mode Selection
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Select Mode:",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<bool>(
+                              title: Text("Create Room"),
+                              value: false,
+                              groupValue: _isUpdatingRoomType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isUpdatingRoomType = value!;
+                                  _isBatchCreation = false;
+                                });
+                              },
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<bool>(
+                              title: Text("Update Room Type"),
+                              value: true,
+                              groupValue: _isUpdatingRoomType,
+                              onChanged: (value) {
+                                setState(() {
+                                  _isUpdatingRoomType = value!;
+                                  _isBatchCreation = false;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
+
               SizedBox(height: 10),
 
+              // Batch Creation Toggle (only for create mode)
+              if (!_isUpdatingRoomType)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Text("Batch Creation:", style: TextStyle(fontSize: 16)),
+                        Spacer(),
+                        Switch(
+                          value: _isBatchCreation,
+                          onChanged: (value) {
+                            setState(() {
+                              _isBatchCreation = value;
+                              if (value) {
+                                _selectedImages.clear();
+                              }
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
               // Number of Rooms (only for batch creation)
-              if (_isBatchCreation)
+              if (_isBatchCreation && !_isUpdatingRoomType)
                 TextFormField(
                   controller: _numberOfRoomsController,
                   decoration: InputDecoration(
@@ -312,59 +394,79 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                   },
                 ),
 
-              if (_isBatchCreation) SizedBox(height: 10),
+              SizedBox(height: 10),
 
+              // Room Type (required for both create and update)
               TextFormField(
-                controller: _nameController,
+                controller: _typeController,
                 decoration: InputDecoration(
-                  labelText: "Room Name",
+                  labelText: "Room Type*",
+                  hintText:
+                      _isUpdatingRoomType
+                          ? "e.g., Suite, Deluxe, Standard"
+                          : "Enter room type",
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => v!.isEmpty ? "Enter name" : null,
+                validator: (v) => v!.isEmpty ? "Enter room type" : null,
               ),
               SizedBox(height: 10),
 
               TextFormField(
-                controller: _typeController,
+                controller: _nameController,
                 decoration: InputDecoration(
-                  labelText: "Room Type",
+                  labelText: "Room Name${_isUpdatingRoomType ? '' : '*'}",
+                  hintText: "e.g., Ocean View Room, Executive Suite",
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => v!.isEmpty ? "Enter type" : null,
+                validator:
+                    _isUpdatingRoomType
+                        ? null
+                        : (v) => v!.isEmpty ? "Enter room name" : null,
               ),
               SizedBox(height: 10),
 
               TextFormField(
                 controller: _priceController,
                 decoration: InputDecoration(
-                  labelText: "Price",
+                  labelText: "Price${_isUpdatingRoomType ? '' : '*'}",
+                  hintText: "e.g., 1500.00",
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => v!.isEmpty ? "Enter price" : null,
+                validator:
+                    _isUpdatingRoomType
+                        ? null
+                        : (v) => v!.isEmpty ? "Enter price" : null,
               ),
               SizedBox(height: 10),
 
               TextFormField(
                 controller: _descriptionController,
                 decoration: InputDecoration(
-                  labelText: "Description",
+                  labelText: "Description${_isUpdatingRoomType ? '' : '*'}",
+                  hintText: "Describe the room features and amenities...",
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) => v!.isEmpty ? "Enter description" : null,
+                maxLines: 3,
+                validator:
+                    _isUpdatingRoomType
+                        ? null
+                        : (v) => v!.isEmpty ? "Enter description" : null,
               ),
               SizedBox(height: 10),
-
-              _buildFreeCancellationToggle(),
 
               TextFormField(
                 controller: _occupancyController,
                 decoration: InputDecoration(
-                  labelText: "Max Occupancy",
+                  labelText: "Max Occupancy${_isUpdatingRoomType ? '' : '*'}",
+                  hintText: "e.g., 2",
                   border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
-                validator: (v) => v!.isEmpty ? "Enter occupancy" : null,
+                validator:
+                    _isUpdatingRoomType
+                        ? null
+                        : (v) => v!.isEmpty ? "Enter occupancy" : null,
               ),
               SizedBox(height: 10),
 
@@ -372,112 +474,168 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 controller: _amenitiesController,
                 decoration: InputDecoration(
                   labelText: "Amenities (comma separated)",
-                  hintText: "WiFi, TV, AC, etc.",
+                  hintText: "WiFi, TV, AC, Breakfast, Parking, etc.",
                   border: OutlineInputBorder(),
                 ),
+                maxLines: 2,
               ),
+              SizedBox(height: 10),
 
-              // Image Upload Section (only for single room creation)
+              // Cancellation Policy
+              _buildFreeCancellationToggle(),
+              SizedBox(height: 10),
+
+              // Stay Type Toggles
+              _buildStayTypeToggles(),
+              SizedBox(height: 10),
+
+              // Image Upload Section (not for batch creation)
               if (!_isBatchCreation) ...[
                 SizedBox(height: 20),
-                Text(
-                  "Room Images:",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 10),
-
-                // Image Selection Buttons
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _pickImagesFromGallery,
-                        icon: Icon(Icons.photo_library),
-                        label: Text('Gallery'),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 12),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Room Type Images:",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                    ),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: _captureImageFromCamera,
-                        icon: Icon(Icons.camera_alt),
-                        label: Text('Camera'),
-                        style: ElevatedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: 12),
+                        SizedBox(height: 10),
+                        Text(
+                          _isUpdatingRoomType
+                              ? "Upload images for this room type"
+                              : "Upload images for the room (optional)",
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
-                      ),
-                    ),
-                  ],
-                ),
+                        SizedBox(height: 10),
 
-                SizedBox(height: 10),
+                        // Image Selection Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _pickImagesFromGallery,
+                                icon: Icon(Icons.photo_library),
+                                label: Text('Gallery'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _captureImageFromCamera,
+                                icon: Icon(Icons.camera_alt),
+                                label: Text('Camera'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
 
-                // Manual Upload Button
-                if (_selectedImages.isNotEmpty)
-                  ElevatedButton.icon(
-                    onPressed: _uploadingImages ? null : _uploadImagesToS3,
-                    icon:
-                        _uploadingImages
-                            ? SizedBox(
-                              height: 16,
-                              width: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                            : Icon(Icons.cloud_upload),
-                    label: Text(
-                      _uploadingImages ? 'Uploading...' : 'Upload Images to S3',
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      foregroundColor: Colors.white,
+                        SizedBox(height: 10),
+
+                        // Upload Images Button (for room type)
+                        if (_selectedImages.isNotEmpty)
+                          ElevatedButton.icon(
+                            onPressed:
+                                _uploadingImages ? null : _uploadRoomTypeImages,
+                            icon:
+                                _uploadingImages
+                                    ? SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                    : Icon(Icons.cloud_upload),
+                            label: Text(
+                              _uploadingImages
+                                  ? 'Uploading...'
+                                  : 'Upload Images for Room Type',
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+
+                        SizedBox(height: 10),
+
+                        // Selected Images Preview
+                        _buildImagePreview(),
+
+                        SizedBox(height: 10),
+
+                        // Selected Images Count
+                        if (_selectedImages.isNotEmpty)
+                          Text(
+                            'Selected images: ${_selectedImages.length}',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                      ],
                     ),
                   ),
-
-                SizedBox(height: 10),
-
-                // Selected Images Preview
-                _buildImagePreview(),
-
-                SizedBox(height: 10),
-
-                // Selected Images Count
-                if (_selectedImages.isNotEmpty)
-                  Text(
-                    'Selected images: ${_selectedImages.length}',
-                    style: TextStyle(color: Colors.grey, fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
+                ),
               ],
 
               const SizedBox(height: 20),
 
-              // Create Room Button
-              ElevatedButton(
-                onPressed: _loading ? null : _createRoom,
-                style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 15),
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                ),
-                child:
-                    _loading
-                        ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+              // Action Buttons
+              if (_isUpdatingRoomType)
+                ElevatedButton(
+                  onPressed: _loading ? null : _updateRoomType,
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                  child:
+                      _loading
+                          ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : Text("Update Room Type Attributes"),
+                )
+              else
+                ElevatedButton(
+                  onPressed: _loading ? null : _createRoom,
+                  style: ElevatedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                  ),
+                  child:
+                      _loading
+                          ? SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : Text(
+                            _isBatchCreation
+                                ? "Create ${_numberOfRoomsController.text} Rooms"
+                                : "Create Room",
                           ),
-                        )
-                        : Text(
-                          _isBatchCreation
-                              ? "Create Rooms in Batch"
-                              : "Create Room",
-                        ),
-              ),
+                ),
 
               SizedBox(height: 10),
 
@@ -501,6 +659,7 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
     _occupancyController.dispose();
     _amenitiesController.dispose();
     _numberOfRoomsController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -539,6 +698,68 @@ class _RoomCreationScreenState extends State<RoomCreationScreen> {
                 child: const Text(
                   'This room will have free cancellation. Price will be adjusted.',
                   style: TextStyle(fontSize: 12, color: Colors.green),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStayTypeToggles() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Stay Type Options',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text("Enable Short Stay:"),
+                const Spacer(),
+                Switch(
+                  value: _enableShortStay,
+                  onChanged: (value) {
+                    setState(() => _enableShortStay = value);
+                  },
+                  activeColor: Colors.blue,
+                ),
+              ],
+            ),
+            const Divider(),
+            Row(
+              children: [
+                const Text("Enable Long Stay:"),
+                const Spacer(),
+                Switch(
+                  value: _enableLongStay,
+                  onChanged: (value) {
+                    setState(() => _enableLongStay = value);
+                  },
+                  activeColor: Colors.blue,
+                ),
+              ],
+            ),
+            if (_enableShortStay || _enableLongStay)
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _enableShortStay && _enableLongStay
+                      ? 'Room available for both short and long stays'
+                      : _enableShortStay
+                      ? 'Room available for short stays only'
+                      : 'Room available for long stays only',
+                  style: TextStyle(fontSize: 12, color: Colors.blue[700]),
                 ),
               ),
           ],

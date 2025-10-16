@@ -321,6 +321,7 @@ class _RoomAvailabilityScreenState extends State<RoomAvailabilityScreen>
 
     try {
       final hotels = await HotelApiService.getAllHotels();
+
       setState(() {
         _filteredHotels = hotels;
         _isLoadingHotels = false;

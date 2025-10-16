@@ -44,42 +44,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   List<Room> _filteredRooms = [];
   Set<int> _availableRoomIds = {};
 
-  // Dummy data for each room type (will be replaced by actual room data)
-  final Map<String, List<String>> _roomImages = {
-    "Standard": [
-      "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400",
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400",
-      "https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=400",
-    ],
-    "Deluxe": [
-      "https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=400",
-      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400",
-      "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=400",
-      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=400",
-      "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400",
-    ],
-    "Superior": [
-      "https://images.unsplash.com/photo-1595576508898-0ad5c879a061?w=400",
-      "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=400",
-      "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=400",
-    ],
-    "Suite": [
-      "https://images.unsplash.com/photo-1591088398332-8f60103fc96?w=400",
-      "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400",
-      "https://images.unsplash.com/photo-1567767292278-a4f21aa2d36e?w=400",
-      "https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=400",
-    ],
-  };
-
-  final List<Map<String, dynamic>> _defaultAmenities = [
-    {"icon": Icons.bed, "text": "Sleeps 2-3 guests"},
-    {"icon": Icons.king_bed, "text": "1 King Bed"},
-    {"icon": Icons.bathroom, "text": "1 Private Bathroom"},
-    {"icon": Icons.hot_tub, "text": "Hot Water"},
-    {"icon": Icons.checkroom, "text": "Wardrobe"},
-    {"icon": Icons.tv, "text": "Smart TV"},
-  ];
-
   // Add-ons without showing prices
   final List<Map<String, dynamic>> _addOns = [
     {"icon": Icons.directions_bike, "title": "Cycling", "price": 1500.0},
@@ -259,40 +223,61 @@ class _RoomsListScreenState extends State<RoomsListScreen>
   }
 
   List<String> _getCurrentRoomImages() {
-    if (_selectedRoom == null) return _roomImages["Deluxe"] ?? [];
+    if (_selectedRoom == null) return [];
 
-    // Try to match room type/name to get appropriate images
-    String roomType = "Deluxe"; // default
-    if (_selectedRoom!.type.toLowerCase().contains("standard")) {
-      roomType = "Standard";
-    } else if (_selectedRoom!.type.toLowerCase().contains("superior")) {
-      roomType = "Superior";
-    } else if (_selectedRoom!.type.toLowerCase().contains("suite")) {
-      roomType = "Suite";
-    }
-
-    return _roomImages[roomType] ?? _roomImages["Deluxe"]!;
+    // Use actual room images from backend
+    return _selectedRoom!.images.isNotEmpty
+        ? _selectedRoom!.images
+        : [
+          // Fallback placeholder if no images from backend
+          "https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=400",
+        ];
   }
 
   List<Map<String, dynamic>> _getCurrentAmenities() {
     if (_selectedRoom == null || _selectedRoom!.amenities.isEmpty) {
-      return _defaultAmenities;
+      return [
+        {
+          "icon": Icons.bed,
+          "text": "Sleeps ${_selectedRoom?.maxOccupancy ?? 2} guests",
+        },
+        {"icon": Icons.bathroom, "text": "Private Bathroom"},
+        {"icon": Icons.wifi, "text": "WiFi"},
+        {"icon": Icons.ac_unit, "text": "Air Conditioning"},
+      ];
     }
 
-    // Convert room amenities to format with icons
+    // Convert actual room amenities to format with icons
     return _selectedRoom!.amenities.map((amenity) {
       IconData icon = Icons.check_circle;
-      if (amenity.toLowerCase().contains("bed"))
+      if (amenity.toLowerCase().contains("bed") ||
+          amenity.toLowerCase().contains("sleep"))
         icon = Icons.bed;
-      else if (amenity.toLowerCase().contains("bathroom"))
+      else if (amenity.toLowerCase().contains("bathroom") ||
+          amenity.toLowerCase().contains("bath"))
         icon = Icons.bathroom;
-      else if (amenity.toLowerCase().contains("tv"))
+      else if (amenity.toLowerCase().contains("tv") ||
+          amenity.toLowerCase().contains("television"))
         icon = Icons.tv;
-      else if (amenity.toLowerCase().contains("wifi"))
+      else if (amenity.toLowerCase().contains("wifi") ||
+          amenity.toLowerCase().contains("internet"))
         icon = Icons.wifi;
       else if (amenity.toLowerCase().contains("ac") ||
-          amenity.toLowerCase().contains("air"))
+          amenity.toLowerCase().contains("air conditioning"))
         icon = Icons.ac_unit;
+      else if (amenity.toLowerCase().contains("kitchen") ||
+          amenity.toLowerCase().contains("cooking"))
+        icon = Icons.kitchen;
+      else if (amenity.toLowerCase().contains("parking"))
+        icon = Icons.local_parking;
+      else if (amenity.toLowerCase().contains("pool") ||
+          amenity.toLowerCase().contains("swim"))
+        icon = Icons.pool;
+      else if (amenity.toLowerCase().contains("breakfast"))
+        icon = Icons.restaurant;
+      else if (amenity.toLowerCase().contains("gym") ||
+          amenity.toLowerCase().contains("fitness"))
+        icon = Icons.fitness_center;
 
       return {"icon": icon, "text": amenity};
     }).toList();
@@ -395,10 +380,11 @@ class _RoomsListScreenState extends State<RoomsListScreen>
 
   // Safe function to get displayed amenities
   List<Map<String, dynamic>> get _displayedAmenities {
+    final amenities = _getCurrentAmenities();
     if (_showAllAmenities) {
-      return _getCurrentAmenities();
+      return amenities;
     } else {
-      return _getCurrentAmenities().take(4).toList(); // Show only first 4
+      return amenities.take(4).toList(); // Show only first 4
     }
   }
 
@@ -438,7 +424,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Icon(Icons.circle, size: 6, color: Colors.black),
+        Icon(amenity["icon"], size: 18, color: AppColors.mainGreen),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -514,9 +500,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    // Text(
-                    //   "Max Occupancy: ${_selectedRoom?.maxOccupancy} guests",
-                    // ),
                     const SizedBox(height: 12),
                     TabBar(
                       controller: _tabController,
@@ -538,7 +521,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                               children: [
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 40, // increased width
+                                    horizontal: 40,
                                     vertical: 7,
                                   ),
                                   decoration: BoxDecoration(
@@ -572,7 +555,6 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                     if (!isAvailable) return "Unavailable";
 
                                     if (_selectedRoom == null) {
-                                      // Before any room is selected, just show base price
                                       return "≈ ${room.effectivePrice.toInt()} LKR";
                                     }
 
@@ -583,7 +565,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                     } else if (priceDiff > 0) {
                                       return "+${priceDiff.toInt()} LKR";
                                     } else {
-                                      return "${priceDiff.toInt()} LKR"; // already negative
+                                      return "${priceDiff.toInt()} LKR";
                                     }
                                   }(),
                                   style: TextStyle(
@@ -685,17 +667,40 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                               // Room Description
                               Padding(
                                 padding: const EdgeInsets.all(16.0),
-                                child: Text(
-                                  "- ${_selectedRoom!.name} - ${_selectedRoom!.description} ",
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 14,
-                                  ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _selectedRoom!.name,
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      _selectedRoom!.description,
+                                      style: const TextStyle(
+                                        color: Colors.grey,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Max Occupancy: ${_selectedRoom!.maxOccupancy} guests",
+                                      style: const TextStyle(
+                                        color: Colors.black54,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               SizedBox(height: 10),
 
-                              // Included Amenities - Updated section
+                              // Included Amenities
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 16.0,
@@ -720,8 +725,8 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10.0,
-                                      vertical: 8.0,
+                                      horizontal: 16.0,
+                                      vertical: 12.0,
                                     ),
                                     child: Column(
                                       children: [
@@ -741,95 +746,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                             ),
                                           )
                                         else
-                                          // Use ListView.builder instead of GridView for better safety
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16.0,
-                                            ),
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                color: Colors.grey[200],
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16.0,
-                                                      vertical: 12.0,
-                                                    ),
-                                                child: Column(
-                                                  children: [
-                                                    // Handle empty amenities
-                                                    if (amenities.isEmpty)
-                                                      const Padding(
-                                                        padding:
-                                                            EdgeInsets.symmetric(
-                                                              vertical: 16.0,
-                                                            ),
-                                                        child: Text(
-                                                          "No amenities available",
-                                                          style: TextStyle(
-                                                            fontSize: 14,
-                                                            color: Colors.grey,
-                                                            fontStyle:
-                                                                FontStyle
-                                                                    .italic,
-                                                          ),
-                                                        ),
-                                                      )
-                                                    else
-                                                      _buildAmenitiesGrid(),
-
-                                                    // Show "see more" button only if there are more than 4 amenities
-                                                    if (amenities.length > 4 &&
-                                                        !_showAllAmenities)
-                                                      GestureDetector(
-                                                        onTap:
-                                                            () => setState(
-                                                              () =>
-                                                                  _showAllAmenities =
-                                                                      true,
-                                                            ),
-                                                        child: const Padding(
-                                                          padding:
-                                                              EdgeInsets.only(
-                                                                top: 8.0,
-                                                              ),
-                                                          child: Text(
-                                                            "See more...",
-                                                            style: TextStyle(
-                                                              color:
-                                                                  AppColors
-                                                                      .mainGreen,
-                                                              fontSize: 14,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-
-                                                    // Show "see less" button only when expanded and there are more than 4
-                                                    if (_showAllAmenities &&
-                                                        amenities.length > 4)
-                                                      GestureDetector(
-                                                        onTap:
-                                                            () => setState(
-                                                              () =>
-                                                                  _showAllAmenities =
-                                                                      false,
-                                                            ),
-                                                        child: const Padding(
-                                                          padding:
-                                                              EdgeInsets.only(
-                                                                top: 8.0,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
+                                          _buildAmenitiesGrid(),
 
                                         // Show "see more" button only if there are more than 4 amenities
                                         if (amenities.length > 4 &&
@@ -843,6 +760,13 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                             child: const Padding(
                                               padding: EdgeInsets.only(
                                                 top: 8.0,
+                                              ),
+                                              child: Text(
+                                                "See more...",
+                                                style: TextStyle(
+                                                  color: AppColors.mainGreen,
+                                                  fontSize: 14,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -861,9 +785,9 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                                 top: 8.0,
                                               ),
                                               child: Text(
-                                                "see less",
+                                                "See less",
                                                 style: TextStyle(
-                                                  color: Colors.blue,
+                                                  color: AppColors.mainGreen,
                                                   fontSize: 14,
                                                   decoration:
                                                       TextDecoration.underline,
@@ -877,22 +801,8 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                 ),
                               ),
                               const SizedBox(height: 16),
-                              Center(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    // Extend stay functionality
-                                  },
-                                  child: const Text(
-                                    "Want to extend your stay? Just tap here.",
-                                    style: TextStyle(
-                                      color: Colors.orange,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ),
 
-                              // Exclusive Add-ons - Removed price display
+                              // Exclusive Add-ons
                               Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: Column(
@@ -973,7 +883,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                 ),
                               ),
 
-                              // My selections - Updated with grey container
+                              // My selections
                               Padding(
                                 padding: const EdgeInsets.all(16.0),
                                 child: const Text(
@@ -1134,7 +1044,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                                                                     flex: 2,
                                                                   ),
                                                                   _buildInfoColumn(
-                                                                    "'Guests'",
+                                                                    "Guests",
                                                                     selection["guests"],
                                                                     flex: 1,
                                                                   ),
@@ -1193,7 +1103,7 @@ class _RoomsListScreenState extends State<RoomsListScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "LKR${_calculateTotal().toStringAsFixed(0)} / all inclusive",
+                      "LKR ${_calculateTotal().toStringAsFixed(0)} / all inclusive",
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
